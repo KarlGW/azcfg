@@ -18,8 +18,8 @@ const (
 func Parse(v any) error {
 	var err error
 	var cred azcore.TokenCredential
-	if opts.Credential != nil {
-		cred = opts.Credential
+	if opts.client.credential != nil {
+		cred = opts.client.credential
 	} else {
 		cred, err = azidentity.NewDefaultAzureCredential(nil)
 		if err != nil {
@@ -28,8 +28,8 @@ func Parse(v any) error {
 	}
 
 	var vault string
-	if len(opts.Vault) != 0 {
-		vault = opts.Vault
+	if len(opts.client.vault) != 0 {
+		vault = opts.client.vault
 	} else {
 		vault, err = getVaultFromEnvironment()
 		if err != nil {
@@ -37,7 +37,12 @@ func Parse(v any) error {
 		}
 	}
 
-	return parse(v, keyvault.NewClient(vault, cred, nil))
+	client := keyvault.NewClient(vault, cred, &keyvault.ClientOptions{
+		Concurrency: opts.client.concurrency,
+		Timeout:     opts.client.timeout,
+	})
+
+	return parse(v, client)
 }
 
 // keyvaultClient is the interface that wrap arounds method GetSecrets.

@@ -5,35 +5,114 @@ import (
 	"errors"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/google/go-cmp/cmp"
 )
 
+func TestSetClientOptions(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input *ClientOptions
+		want  *options
+	}{
+		{
+			name: "full",
+			input: &ClientOptions{
+				Credential:  mockCredential{},
+				Vault:       "vault-name",
+				Concurrency: 20,
+				Timeout:     time.Millisecond * 1000 * 20,
+			},
+			want: &options{
+				client: client{
+					credential:  mockCredential{},
+					vault:       "vault-name",
+					concurrency: 20,
+					timeout:     time.Millisecond * 1000 * 20,
+				},
+			},
+		},
+		{
+			name: "partial",
+			input: &ClientOptions{
+				Credential: mockCredential{},
+				Vault:      "vault-name",
+			},
+			want: &options{
+				client: client{
+					credential:  mockCredential{},
+					vault:       "vault-name",
+					concurrency: defaultConcurrency,
+					timeout:     defaultTimeout,
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			SetClientOptions(test.input)
+
+			if !cmp.Equal(test.want, opts, cmp.AllowUnexported(options{}, client{})) {
+				t.Log(cmp.Diff(test.want, opts, cmp.AllowUnexported(options{}, client{})))
+				t.Errorf("results differ")
+			}
+
+			resetOptions()
+		})
+	}
+}
+
 func TestSetCredential(t *testing.T) {
 	SetCredential(mockCredential{})
 	want := "token"
-	token, _ := opts.Credential.GetToken(context.TODO(), policy.TokenRequestOptions{})
+	token, _ := opts.client.credential.GetToken(context.TODO(), policy.TokenRequestOptions{})
 	got := token.Token
 
 	if !cmp.Equal(want, got) {
 		t.Log(cmp.Diff(want, got))
 		t.Errorf("results differ")
 	}
-	reset()
+	resetOptions()
 }
 
-func TestVault(t *testing.T) {
+func TestSetVault(t *testing.T) {
 	want := "testvault"
 	SetVault(want)
-	got := opts.Vault
+	got := opts.client.vault
 
 	if !cmp.Equal(want, got) {
 		t.Log(cmp.Diff(want, got))
 		t.Errorf("results differ")
 	}
-	reset()
+	resetOptions()
+}
+
+func TestSetConcurrency(t *testing.T) {
+	want := 20
+	SetConcurrency(want)
+	got := opts.client.concurrency
+
+	if !cmp.Equal(want, got) {
+		t.Log(cmp.Diff(want, got))
+		t.Errorf("results differ")
+	}
+	resetOptions()
+}
+
+func TestSetTimeout(t *testing.T) {
+	want := time.Millisecond * 1000 * 20
+	SetTimeout(want)
+	got := opts.client.timeout
+
+	if !cmp.Equal(want, got) {
+		t.Log(cmp.Diff(want, got))
+		t.Errorf("results differ")
+	}
+	resetOptions()
 }
 
 func TestGetVaultFromEnvironment(t *testing.T) {
@@ -97,10 +176,14 @@ func TestGetVaultFromEnvironment(t *testing.T) {
 	}
 }
 
-func reset() {
+func resetOptions() {
 	opts = &options{
-		Credential: nil,
-		Vault:      "",
+		client: client{
+			credential:  defaultOpts.client.credential,
+			vault:       defaultOpts.client.vault,
+			concurrency: defaultOpts.client.concurrency,
+			timeout:     defaultOpts.client.timeout,
+		},
 	}
 }
 

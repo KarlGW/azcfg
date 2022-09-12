@@ -119,7 +119,7 @@ func SetTimeout(d time.Duration) {
 
 // SetExternalClient sets an external alternative client to
 // use for Azure Key Vault requests. Must implement
-// keyvaultClient.
+// KeyVaultClient.
 func SetExternalClient(client KeyVaultClient) {
 	opts.externalClient = client
 }

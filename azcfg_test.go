@@ -16,13 +16,14 @@ var (
 	initialBool            = false
 	newBool                = true
 	secrets                = map[string]string{
-		"string":      "new string",
-		"string-ptr":  "new string ptr",
-		"int":         "100",
-		"float64":     "100",
-		"float64-ptr": "100",
-		"bool":        "true",
-		"bool-ptr":    "true",
+		"string":        "new string",
+		"string-ptr":    "new string ptr",
+		"int":           "100",
+		"float64":       "100",
+		"float64-ptr":   "100",
+		"bool":          "true",
+		"bool-ptr":      "true",
+		"nested-string": "new nested string",
 	}
 )
 
@@ -40,28 +41,44 @@ func TestParse(t *testing.T) {
 				Bool:      false,
 				BoolPtr:   &initialBool,
 				StringPtr: &initialStr,
-				TestSubStructA: TestSubStructA{
+				TestNestedStructA: TestNestedStructA{
 					Int:         1,
 					IntNotParse: 1,
+					TestNestedNestedStruct: TestNestedNestedStruct{
+						NestedString: "initial nested string",
+					},
 				},
-				TestSubStructB: &TestSubStructB{
+				TestNestedStructB: &TestNestedStructB{
 					Float64:    1,
 					Float64Ptr: &initialFloat64,
 				},
+				unexportedTestNestedStructA: TestNestedStructA{
+					Int:         2,
+					IntNotParse: 2,
+				},
+				unexportedField: "initial string",
 			},
 			want: TestStruct{
 				String:    "new string",
 				StringPtr: &newStr,
 				Bool:      true,
 				BoolPtr:   &newBool,
-				TestSubStructA: TestSubStructA{
+				TestNestedStructA: TestNestedStructA{
 					Int:         100,
 					IntNotParse: 1,
+					TestNestedNestedStruct: TestNestedNestedStruct{
+						NestedString: "new nested string",
+					},
 				},
-				TestSubStructB: &TestSubStructB{
+				TestNestedStructB: &TestNestedStructB{
 					Float64:    100,
 					Float64Ptr: &newFloat64,
 				},
+				unexportedTestNestedStructA: TestNestedStructA{
+					Int:         2,
+					IntNotParse: 2,
+				},
+				unexportedField: "initial string",
 			},
 		},
 	}
@@ -143,23 +160,29 @@ func TestGetBitSize(t *testing.T) {
 }
 
 type TestStruct struct {
-	String                   string  `secret:"string"`
-	StringPtr                *string `secret:"string-ptr"`
-	Bool                     bool    `secret:"bool"`
-	BoolPtr                  *bool   `secret:"bool-ptr"`
-	TestSubStructA           TestSubStructA
-	TestSubStructB           *TestSubStructB
-	unexportedTestSubStructA TestSubStructA
+	String                      string  `secret:"string"`
+	StringPtr                   *string `secret:"string-ptr"`
+	Bool                        bool    `secret:"bool"`
+	BoolPtr                     *bool   `secret:"bool-ptr"`
+	TestNestedStructA           TestNestedStructA
+	TestNestedStructB           *TestNestedStructB
+	unexportedTestNestedStructA TestNestedStructA
+	unexportedField             string `secret:"string"`
 }
 
-type TestSubStructA struct {
-	Int         int `secret:"int"`
-	IntNotParse int
+type TestNestedStructA struct {
+	Int                    int `secret:"int"`
+	IntNotParse            int
+	TestNestedNestedStruct TestNestedNestedStruct
 }
 
-type TestSubStructB struct {
+type TestNestedStructB struct {
 	Float64    float64  `secret:"float64"`
 	Float64Ptr *float64 `secret:"float64-ptr"`
+}
+
+type TestNestedNestedStruct struct {
+	NestedString string `secret:"nested-string"`
 }
 
 type mockKeyVaultClient struct {

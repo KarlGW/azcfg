@@ -2,7 +2,9 @@ package keyvault
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
 	"strings"
 	"time"
 
@@ -117,6 +119,10 @@ func (c Client) getSecretWorker(ctx context.Context, secrets <-chan string, resu
 		sr := &result{name: secret}
 		s, err := c.client.GetSecret(ctx, secret, "", nil)
 		if err != nil {
+			var rerr *azcore.ResponseError
+			if errors.As(err, &rerr) {
+				err = parseError(rerr)
+			}
 			sr.err = err
 			results <- *sr
 			return
@@ -124,4 +130,28 @@ func (c Client) getSecretWorker(ctx context.Context, secrets <-chan string, resu
 		sr.value = *s.SecretBundle.Value
 		results <- *sr
 	}
+}
+
+// responseError represents the error response body from the Azure Key Vault
+// API.
+type responseError struct {
+	Error struct {
+		Message string `json:"message"`
+		Code    string `json:"code"`
+	} `json:"error"`
+}
+
+// parseError takes error of type *azcore.ResponseError and returns
+// a new error based on the error message from the Azure Key Vault API.
+func parseError(e *azcore.ResponseError) error {
+	var re responseError
+	b, err := io.ReadAll(e.RawResponse.Body)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(b, &re); err != nil {
+		return err
+	}
+	return errors.New(re.Error.Message)
 }

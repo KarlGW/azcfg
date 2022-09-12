@@ -17,6 +17,8 @@ of the secret in Azure Key Vault, like so:
 ```
 Nested structs and pointers are supported.
 
+**Note**: Unexported fields will be ignored.
+
 See [example](#example) for more.
 
 ## Getting started

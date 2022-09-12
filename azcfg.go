@@ -70,7 +70,7 @@ func parse(d any, client keyvaultClient) error {
 	return nil
 }
 
-// getFieldsWithTag gets fields with the specified tag.
+// getFields gets fields with the specified tag.
 func getFields(v reflect.Value, tag string) []string {
 	t := v.Type()
 	fields := make([]string, 0)

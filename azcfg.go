@@ -95,6 +95,10 @@ func getFields(v reflect.Value, tag string) []string {
 func setFields(v reflect.Value, secrets map[string]string) error {
 	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {
+		if !v.Field(i).CanSet() {
+			continue
+		}
+
 		if v.Field(i).Kind() == reflect.Pointer && v.Field(i).Elem().Kind() == reflect.Struct {
 			setFields(v.Field(i).Elem(), secrets)
 		} else if v.Field(i).Kind() == reflect.Struct {

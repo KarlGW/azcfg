@@ -75,8 +75,8 @@ func TestParse(t *testing.T) {
 				t.Logf("should not return error, error: %v", err)
 			}
 
-			if !cmp.Equal(test.want, test.input) {
-				t.Log(cmp.Diff(test.want, test.input))
+			if !cmp.Equal(test.want, test.input, cmp.AllowUnexported(TestStruct{})) {
+				t.Log(cmp.Diff(test.want, test.input, cmp.AllowUnexported(TestStruct{})))
 				t.Errorf("results differ")
 			}
 
@@ -143,12 +143,13 @@ func TestGetBitSize(t *testing.T) {
 }
 
 type TestStruct struct {
-	String         string  `secret:"string"`
-	StringPtr      *string `secret:"string-ptr"`
-	Bool           bool    `secret:"bool"`
-	BoolPtr        *bool   `secret:"bool-ptr"`
-	TestSubStructA TestSubStructA
-	TestSubStructB *TestSubStructB
+	String                   string  `secret:"string"`
+	StringPtr                *string `secret:"string-ptr"`
+	Bool                     bool    `secret:"bool"`
+	BoolPtr                  *bool   `secret:"bool-ptr"`
+	TestSubStructA           TestSubStructA
+	TestSubStructB           *TestSubStructB
+	unexportedTestSubStructA TestSubStructA
 }
 
 type TestSubStructA struct {

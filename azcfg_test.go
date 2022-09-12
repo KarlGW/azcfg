@@ -9,13 +9,7 @@ import (
 )
 
 var (
-	initialStr             = "inital str pointer"
-	newStr                 = "new string ptr"
-	initialFloat64 float64 = 1
-	newFloat64     float64 = 100
-	initialBool            = false
-	newBool                = true
-	secrets                = map[string]string{
+	secrets = map[string]string{
 		"string":        "new string",
 		"string-ptr":    "new string ptr",
 		"int":           "100",
@@ -24,57 +18,61 @@ var (
 		"bool":          "true",
 		"bool-ptr":      "true",
 		"nested-string": "new nested string",
+		"string-slice":  "a,b,c",
+		"int-slice":     "1,2,3",
 	}
 )
 
 func TestParse(t *testing.T) {
 	var tests = []struct {
 		name    string
-		input   TestStruct
-		want    TestStruct
+		input   Struct
+		want    Struct
 		wantErr error
 	}{
 		{
 			name: "parse",
-			input: TestStruct{
+			input: Struct{
 				String:    "initial string",
 				Bool:      false,
-				BoolPtr:   &initialBool,
-				StringPtr: &initialStr,
-				TestNestedStructA: TestNestedStructA{
+				BoolPtr:   toPtr(false),
+				StringPtr: toPtr("initial string ptr"),
+				NestedStructA: NestedStructA{
 					Int:         1,
 					IntNotParse: 1,
-					TestNestedNestedStruct: TestNestedNestedStruct{
+					NestedNestedStruct: NestedNestedStruct{
 						NestedString: "initial nested string",
 					},
 				},
-				TestNestedStructB: &TestNestedStructB{
+				NestedStructB: &NestedStructB{
 					Float64:    1,
-					Float64Ptr: &initialFloat64,
+					Float64Ptr: toPtr[float64](1),
 				},
-				unexportedTestNestedStructA: TestNestedStructA{
+				unexportedNestedStructA: NestedStructA{
 					Int:         2,
 					IntNotParse: 2,
 				},
 				unexportedField: "initial string",
 			},
-			want: TestStruct{
+			want: Struct{
 				String:    "new string",
-				StringPtr: &newStr,
+				StringPtr: toPtr("new string ptr"),
 				Bool:      true,
-				BoolPtr:   &newBool,
-				TestNestedStructA: TestNestedStructA{
+				BoolPtr:   toPtr(true),
+				NestedStructA: NestedStructA{
 					Int:         100,
 					IntNotParse: 1,
-					TestNestedNestedStruct: TestNestedNestedStruct{
+					StringSlice: []string{"a", "b", "c"},
+					IntSlice:    []int{1, 2, 3},
+					NestedNestedStruct: NestedNestedStruct{
 						NestedString: "new nested string",
 					},
 				},
-				TestNestedStructB: &TestNestedStructB{
+				NestedStructB: &NestedStructB{
 					Float64:    100,
-					Float64Ptr: &newFloat64,
+					Float64Ptr: toPtr[float64](100),
 				},
-				unexportedTestNestedStructA: TestNestedStructA{
+				unexportedNestedStructA: NestedStructA{
 					Int:         2,
 					IntNotParse: 2,
 				},
@@ -92,8 +90,8 @@ func TestParse(t *testing.T) {
 				t.Logf("should not return error, error: %v", err)
 			}
 
-			if !cmp.Equal(test.want, test.input, cmp.AllowUnexported(TestStruct{})) {
-				t.Log(cmp.Diff(test.want, test.input, cmp.AllowUnexported(TestStruct{})))
+			if !cmp.Equal(test.want, test.input, cmp.AllowUnexported(Struct{})) {
+				t.Log(cmp.Diff(test.want, test.input, cmp.AllowUnexported(Struct{})))
 				t.Errorf("results differ")
 			}
 
@@ -159,29 +157,69 @@ func TestGetBitSize(t *testing.T) {
 	}
 }
 
-type TestStruct struct {
-	String                      string  `secret:"string"`
-	StringPtr                   *string `secret:"string-ptr"`
-	Bool                        bool    `secret:"bool"`
-	BoolPtr                     *bool   `secret:"bool-ptr"`
-	TestNestedStructA           TestNestedStructA
-	TestNestedStructB           *TestNestedStructB
-	unexportedTestNestedStructA TestNestedStructA
-	unexportedField             string `secret:"string"`
+func TestSplitTrim(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input string
+		sep   string
+		want  []string
+	}{
+		{
+			name:  "nosep",
+			input: "aaaa,bbbb, cccc,     dddd",
+			want:  []string{"aaaa", "bbbb", "cccc", "dddd"},
+		},
+		{
+			name:  "comma",
+			input: "aaaa,bbbb, cccc,     dddd",
+			sep:   ",",
+			want:  []string{"aaaa", "bbbb", "cccc", "dddd"},
+		},
+		{
+			name:  "colon",
+			input: "aaaa:bbbb: cccc:     dddd",
+			sep:   ":",
+			want:  []string{"aaaa", "bbbb", "cccc", "dddd"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := splitTrim(test.input, test.sep)
+
+			if !cmp.Equal(test.want, got) {
+				t.Log(cmp.Diff(test.want, got))
+				t.Errorf("results differ")
+			}
+		})
+	}
 }
 
-type TestNestedStructA struct {
-	Int                    int `secret:"int"`
-	IntNotParse            int
-	TestNestedNestedStruct TestNestedNestedStruct
+type Struct struct {
+	String                  string  `secret:"string"`
+	StringPtr               *string `secret:"string-ptr"`
+	Bool                    bool    `secret:"bool"`
+	BoolPtr                 *bool   `secret:"bool-ptr"`
+	NestedStructA           NestedStructA
+	NestedStructB           *NestedStructB
+	unexportedNestedStructA NestedStructA
+	unexportedField         string `secret:"string"`
 }
 
-type TestNestedStructB struct {
+type NestedStructA struct {
+	Int                int `secret:"int"`
+	IntNotParse        int
+	StringSlice        []string `secret:"string-slice"`
+	IntSlice           []int    `secret:"int-slice"`
+	NestedNestedStruct NestedNestedStruct
+}
+
+type NestedStructB struct {
 	Float64    float64  `secret:"float64"`
 	Float64Ptr *float64 `secret:"float64-ptr"`
 }
 
-type TestNestedNestedStruct struct {
+type NestedNestedStruct struct {
 	NestedString string `secret:"nested-string"`
 }
 
@@ -190,10 +228,12 @@ type mockKeyVaultClient struct {
 }
 
 func (c mockKeyVaultClient) GetSecrets(names []string) (map[string]string, error) {
-
 	if c.err == true {
 		return nil, errors.New("could not get secret")
 	}
-
 	return secrets, nil
+}
+
+func toPtr[V any](v V) *V {
+	return &v
 }

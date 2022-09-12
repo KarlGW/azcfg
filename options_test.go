@@ -115,6 +115,18 @@ func TestSetTimeout(t *testing.T) {
 	resetOptions()
 }
 
+func TestSetExternalClient(t *testing.T) {
+	want := mockKeyVaultClient{}
+	SetExternalClient(mockKeyVaultClient{})
+	got := opts.externalClient
+
+	if !cmp.Equal(want, got, cmp.AllowUnexported(mockKeyVaultClient{})) {
+		t.Log(cmp.Diff(want, got, cmp.AllowUnexported(mockKeyVaultClient{})))
+		t.Errorf("results differ")
+	}
+	resetOptions()
+}
+
 func TestGetVaultFromEnvironment(t *testing.T) {
 	var tests = []struct {
 		name    string

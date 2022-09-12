@@ -7,8 +7,8 @@
   * [Prerequisites](#prerequisites)
   * [Example](#example)
 
-This library is used to get secrets from an Azure Key Vault and set them into a struct. The idea on usage
-was inspired by [`env`](https://github.com/caarlos0/env).
+This library is used to get secrets from an Azure Key Vault and set them into a struct. The idea of parsing
+configuration values into a struct was inspired by [`env`](https://github.com/caarlos0/env).
 
 To mark a field in a struct to be populated by a secret set the struct tag `secret` followed by the name
 of the secret in Azure Key Vault, like so:
@@ -88,10 +88,14 @@ azcfg.SetTimeout(time.Millsecond * 1000 * 20)
 // Setting the entire client options:
 azcfg.SetClientOptions(&azcfg.ClientOptions{
     Credential: cred,       // Defaults to nil, the built-in credential auth.
-    Vault: "vault-name",    // Defaults to "" (empty string), which will check environment variables.
+    Vault: "vault-name",    // Defaults to "", which will check environment variables.
     Concurrency: 20,        // Defaults to 10.
     Timeout: duration,      // Defaults to time.Millisecond * 1000 * 10 (10 seconds)
 })
+// Setting an external client for Azure Key Vault. Provided client must implement
+// KeyVaultClient. Useful for stubbing dependencies when testing applications
+// using this library.
+azcfg.SetExternalClient(client)
 ```
 
 ### Example
@@ -106,10 +110,10 @@ type config struct {
     Username string `secret:"username"`
     Password string `secret:"password"`
 
-    SubConfig subConfig
+    Credential credential
 }
 
-type subConfig struct {
+type credential struct {
     Key int `secret:"key"`
 }
 

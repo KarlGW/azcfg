@@ -18,42 +18,46 @@ const (
 
 // Parse secrets from an Azure Key Vault into a struct.
 func Parse(v any) error {
-	var err error
-	var cred azcore.TokenCredential
-	if opts.client.credential != nil {
-		cred = opts.client.credential
-	} else {
-		cred, err = azidentity.NewDefaultAzureCredential(nil)
-		if err != nil {
-			return err
+	var client KeyVaultClient
+	if opts.externalClient == nil {
+		var err error
+		var cred azcore.TokenCredential
+		if opts.client.credential != nil {
+			cred = opts.client.credential
+		} else {
+			cred, err = azidentity.NewDefaultAzureCredential(nil)
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	var vault string
-	if len(opts.client.vault) != 0 {
-		vault = opts.client.vault
-	} else {
-		vault, err = getVaultFromEnvironment()
-		if err != nil {
-			return err
+		var vault string
+		if len(opts.client.vault) != 0 {
+			vault = opts.client.vault
+		} else {
+			vault, err = getVaultFromEnvironment()
+			if err != nil {
+				return err
+			}
 		}
+		client = keyvault.NewClient(vault, cred, &keyvault.ClientOptions{
+			Concurrency: opts.client.concurrency,
+			Timeout:     opts.client.timeout,
+		})
+	} else {
+		client = opts.externalClient
 	}
-
-	client := keyvault.NewClient(vault, cred, &keyvault.ClientOptions{
-		Concurrency: opts.client.concurrency,
-		Timeout:     opts.client.timeout,
-	})
 
 	return parse(v, client)
 }
 
-// keyvaultClient is the interface that wrap arounds method GetSecrets.
-type keyvaultClient interface {
+// KeyVaultClient is the interface that wraps around method GetSecrets.
+type KeyVaultClient interface {
 	GetSecrets(names []string) (map[string]string, error)
 }
 
 // Parse secrets into the configuration.
-func parse(d any, client keyvaultClient) error {
+func parse(d any, client KeyVaultClient) error {
 	v := reflect.ValueOf(d)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("must provide a pointer to a struct")

@@ -3,7 +3,9 @@ package azcfg
 import (
 	"errors"
 	"reflect"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -80,11 +82,9 @@ func getFields(v reflect.Value, tag string) []string {
 		} else if v.Field(i).Kind() == reflect.Struct {
 			fields = append(fields, getFields(v.Field(i), tag)...)
 		} else {
-			tagValue := t.Field(i).Tag.Get(tag)
-			if len(tagValue) > 0 {
+			if tagValue, ok := t.Field(i).Tag.Lookup(tag); ok {
 				fields = append(fields, tagValue)
 			}
-
 		}
 	}
 	return fields
@@ -98,20 +98,31 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 		if !v.Field(i).CanSet() {
 			continue
 		}
-
 		if v.Field(i).Kind() == reflect.Pointer && v.Field(i).Elem().Kind() == reflect.Struct {
 			setFields(v.Field(i).Elem(), secrets)
 		} else if v.Field(i).Kind() == reflect.Struct {
 			setFields(v.Field(i), secrets)
 		} else {
-			tagValue := t.Field(i).Tag.Get(defaultTag)
-			if len(tagValue) == 0 {
+			tagValue, ok := t.Field(i).Tag.Lookup(defaultTag)
+			if !ok {
 				continue
 			}
 			if val, ok := secrets[tagValue]; ok {
-				if err := setValue(v.Field(i), val); err != nil {
-					return err
+				if v.Field(i).Kind() == reflect.Slice {
+					vals := splitTrim(val, ",")
+					sl := reflect.MakeSlice(v.Field(i).Type(), len(vals), len(vals))
+					for j := 0; j < sl.Cap(); j++ {
+						if err := setValue(sl.Index(j), vals[j]); err != nil {
+							return err
+						}
+					}
+					v.Field(i).Set(sl)
+				} else {
+					if err := setValue(v.Field(i), val); err != nil {
+						return err
+					}
 				}
+
 			}
 		}
 	}
@@ -120,12 +131,9 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 
 // setValue sets the new value on the incoming reflect.Value.
 func setValue(v reflect.Value, val string) error {
-	// TODO:
-	// Support more types.
 	switch v.Kind() {
 	case reflect.Pointer:
-		v = v.Elem()
-		setValue(v, val)
+		setValue(v.Elem(), val)
 	case reflect.String:
 		v.SetString(val)
 	case reflect.Bool:
@@ -170,4 +178,16 @@ func getBitSize(k reflect.Kind) int {
 		bit = 64
 	}
 	return bit
+}
+
+// splitTrim splits a string by the provided separator, after
+// trimming whitespaces.
+func splitTrim(s, sep string) []string {
+	if len(s) == 0 {
+		return nil
+	}
+	if len(sep) == 0 {
+		sep = ","
+	}
+	return strings.Split(regexp.MustCompile(sep+`\s+`).ReplaceAllString(s, sep), sep)
 }

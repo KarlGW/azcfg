@@ -11,19 +11,21 @@ import (
 
 var (
 	secrets = map[string]string{
-		"string":        "new string",
-		"string-ptr":    "new string ptr",
-		"int":           "100",
-		"int64":         "100",
-		"uint":          "100",
-		"uint64":        "100",
-		"float64":       "100",
-		"float64-ptr":   "100",
-		"bool":          "true",
-		"bool-ptr":      "true",
-		"nested-string": "new nested string",
-		"string-slice":  "a,b,c",
-		"int-slice":     "1,2,3",
+		"string":           "new string",
+		"string-ptr":       "new string ptr",
+		"int":              "100",
+		"int64":            "100",
+		"uint":             "100",
+		"uint64":           "100",
+		"float64":          "100",
+		"float64-ptr":      "100",
+		"bool":             "true",
+		"bool-ptr":         "true",
+		"nested-string":    "new nested string",
+		"string-slice":     "a,b,c",
+		"string-slice-ptr": "a,b,c",
+		"int-slice":        "1,2,3",
+		"int-slice-ptr":    "1,2,3",
 	}
 )
 
@@ -67,13 +69,15 @@ func TestParse(t *testing.T) {
 				Bool:      true,
 				BoolPtr:   toPtr(true),
 				NestedStructA: NestedStructA{
-					Int:         100,
-					Int64:       100,
-					IntNotParse: 1,
-					Uint:        100,
-					Uint64:      100,
-					StringSlice: []string{"a", "b", "c"},
-					IntSlice:    []int{1, 2, 3},
+					Int:            100,
+					Int64:          100,
+					IntNotParse:    1,
+					Uint:           100,
+					Uint64:         100,
+					StringSlice:    []string{"a", "b", "c"},
+					StringSlicePtr: []*string{toPtr("a"), toPtr("b"), toPtr("c")},
+					IntSlice:       []int{1, 2, 3},
+					IntSlicePtr:    []*int{toPtr(1), toPtr(2), toPtr(3)},
 					NestedNestedStruct: NestedNestedStruct{
 						NestedString: "new nested string",
 					},
@@ -237,8 +241,10 @@ type NestedStructA struct {
 	Uint               uint   `secret:"uint"`
 	Uint64             uint64 `secret:"uint64"`
 	IntNotParse        int
-	StringSlice        []string `secret:"string-slice"`
-	IntSlice           []int    `secret:"int-slice"`
+	StringSlice        []string  `secret:"string-slice"`
+	StringSlicePtr     []*string `secret:"string-slice-ptr"`
+	IntSlice           []int     `secret:"int-slice"`
+	IntSlicePtr        []*int    `secret:"int-slice-ptr"`
 	NestedNestedStruct NestedNestedStruct
 }
 

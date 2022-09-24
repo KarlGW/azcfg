@@ -13,6 +13,9 @@ var (
 		"string":        "new string",
 		"string-ptr":    "new string ptr",
 		"int":           "100",
+		"int64":         "100",
+		"uint":          "100",
+		"uint64":        "100",
 		"float64":       "100",
 		"float64-ptr":   "100",
 		"bool":          "true",
@@ -39,6 +42,9 @@ func TestParse(t *testing.T) {
 				StringPtr: toPtr("initial string ptr"),
 				NestedStructA: NestedStructA{
 					Int:         1,
+					Int64:       1,
+					Uint:        1,
+					Uint64:      1,
 					IntNotParse: 1,
 					NestedNestedStruct: NestedNestedStruct{
 						NestedString: "initial nested string",
@@ -61,7 +67,10 @@ func TestParse(t *testing.T) {
 				BoolPtr:   toPtr(true),
 				NestedStructA: NestedStructA{
 					Int:         100,
+					Int64:       100,
 					IntNotParse: 1,
+					Uint:        100,
+					Uint64:      100,
 					StringSlice: []string{"a", "b", "c"},
 					IntSlice:    []int{1, 2, 3},
 					NestedNestedStruct: NestedNestedStruct{
@@ -120,6 +129,21 @@ func TestGetBitSize(t *testing.T) {
 		input any
 		want  int
 	}{
+		{
+			name: "uint", input: uint(1), want: 32,
+		},
+		{
+			name: "uint8", input: uint8(1), want: 8,
+		},
+		{
+			name: "uint16", input: uint16(1), want: 16,
+		},
+		{
+			name: "uint32", input: uint32(1), want: 32,
+		},
+		{
+			name: "uint64", input: uint64(1), want: 64,
+		},
 		{
 			name: "int", input: int(1), want: 32,
 		},
@@ -207,7 +231,10 @@ type Struct struct {
 }
 
 type NestedStructA struct {
-	Int                int `secret:"int"`
+	Int                int    `secret:"int"`
+	Int64              int64  `secret:"int64"`
+	Uint               uint   `secret:"uint"`
+	Uint64             uint64 `secret:"uint64"`
 	IntNotParse        int
 	StringSlice        []string `secret:"string-slice"`
 	IntSlice           []int    `secret:"int-slice"`

@@ -137,6 +137,9 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 func setValue(v reflect.Value, val string) error {
 	switch v.Kind() {
 	case reflect.Pointer:
+		if v.IsNil() {
+			v.Set(reflect.New(v.Type().Elem()))
+		}
 		setValue(v.Elem(), val)
 	case reflect.String:
 		v.SetString(val)

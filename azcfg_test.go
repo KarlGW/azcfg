@@ -3,6 +3,7 @@ package azcfg
 import (
 	"errors"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -130,7 +131,7 @@ func TestGetBitSize(t *testing.T) {
 		want  int
 	}{
 		{
-			name: "uint", input: uint(1), want: 64,
+			name: "uint", input: uint(1), want: strconv.IntSize,
 		},
 		{
 			name: "uint8", input: uint8(1), want: 8,
@@ -145,7 +146,7 @@ func TestGetBitSize(t *testing.T) {
 			name: "uint64", input: uint64(1), want: 64,
 		},
 		{
-			name: "int", input: int(1), want: 64,
+			name: "int", input: int(1), want: strconv.IntSize,
 		},
 		{
 			name: "int8", input: int8(1), want: 8,

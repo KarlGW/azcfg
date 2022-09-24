@@ -175,9 +175,7 @@ func getBitSize(k reflect.Kind) int {
 	var bit int
 	switch k {
 	case reflect.Uint, reflect.Int:
-		// TODO:
-		// Handle based on OS ARCH, revisit and update.
-		bit = 32
+		bit = strconv.IntSize
 	case reflect.Uint8, reflect.Int8:
 		bit = 8
 	case reflect.Uint16, reflect.Int16:

@@ -146,6 +146,12 @@ func setValue(v reflect.Value, val string) error {
 			b = false
 		}
 		v.SetBool(b)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		i, err := strconv.ParseUint(val, 10, getBitSize(v.Kind()))
+		if err != nil {
+			return err
+		}
+		v.SetUint(i)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		i, err := strconv.ParseInt(val, 10, getBitSize(v.Kind()))
 		if err != nil {
@@ -168,17 +174,15 @@ func setValue(v reflect.Value, val string) error {
 func getBitSize(k reflect.Kind) int {
 	var bit int
 	switch k {
-	case reflect.Int:
-		// TODO:
-		// Handle based on OS ARCH, revisit and update.
-		bit = 32
-	case reflect.Int8:
+	case reflect.Uint, reflect.Int:
+		bit = strconv.IntSize
+	case reflect.Uint8, reflect.Int8:
 		bit = 8
-	case reflect.Int16:
+	case reflect.Uint16, reflect.Int16:
 		bit = 16
-	case reflect.Int32, reflect.Float32:
+	case reflect.Uint32, reflect.Int32, reflect.Float32:
 		bit = 32
-	case reflect.Int64, reflect.Float64:
+	case reflect.Uint64, reflect.Int64, reflect.Float64:
 		bit = 64
 	}
 	return bit

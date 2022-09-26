@@ -126,7 +126,7 @@ azcfg.SetClientOptions(&azcfg.ClientOptions{
 })
 
 // Setting an external client for Azure Key Vault. Provided client must implement
-// KeyVaultClient. Useful for stubbing dependencies when testing applications
+// VaultClient. Useful for stubbing dependencies when testing applications
 // using this library.
 azcfg.SetExternalClient(client)
 ```

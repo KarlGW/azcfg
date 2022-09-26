@@ -18,7 +18,7 @@ const (
 
 // Parse secrets from an Azure Key Vault into a struct.
 func Parse(v any) error {
-	var client KeyVaultClient
+	var client VaultClient
 	if opts.externalClient == nil {
 		var err error
 		var cred azcore.TokenCredential
@@ -51,13 +51,13 @@ func Parse(v any) error {
 	return parse(v, client)
 }
 
-// KeyVaultClient is the interface that wraps around method GetSecrets.
-type KeyVaultClient interface {
+// VaultClient is the interface that wraps around method GetSecrets.
+type VaultClient interface {
 	GetSecrets(names []string) (map[string]string, error)
 }
 
 // Parse secrets into the configuration.
-func parse(d any, client KeyVaultClient) error {
+func parse(d any, client VaultClient) error {
 	v := reflect.ValueOf(d)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("must provide a pointer to a struct")

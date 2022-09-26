@@ -52,7 +52,7 @@ var (
 // options contains options for the package.
 type options struct {
 	client         client
-	externalClient KeyVaultClient
+	externalClient VaultClient
 }
 
 // client contains options for the Key Vault client.
@@ -119,8 +119,8 @@ func SetTimeout(d time.Duration) {
 
 // SetExternalClient sets an external alternative client to
 // use for Azure Key Vault requests. Must implement
-// KeyVaultClient.
-func SetExternalClient(client KeyVaultClient) {
+// VaultClient.
+func SetExternalClient(client VaultClient) {
 	opts.externalClient = client
 }
 

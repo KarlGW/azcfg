@@ -19,7 +19,7 @@ const (
 // Parse secrets from an Azure Key Vault into a struct.
 func Parse(v any) error {
 	var client VaultClient
-	if opts.externalClient == nil {
+	if opts.client.VaultClient == nil {
 		var err error
 		var cred azcore.TokenCredential
 		if opts.client.credential != nil {
@@ -45,7 +45,7 @@ func Parse(v any) error {
 			Timeout:     opts.client.timeout,
 		})
 	} else {
-		client = opts.externalClient
+		client = opts.client.VaultClient
 	}
 
 	return parse(v, client)

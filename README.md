@@ -125,10 +125,10 @@ azcfg.SetClientOptions(&azcfg.ClientOptions{
     Timeout: duration,      // Defaults to time.Millisecond * 1000 * 10 (10 seconds)
 })
 
-// Setting an external client for Azure Key Vault. Provided client must implement
+// Setting a client for Azure Key Vault. Provided client must implement
 // VaultClient. Useful for stubbing dependencies when testing applications
 // using this library.
-azcfg.SetExternalClient(client)
+azcfg.SetClient(client)
 ```
 
 

@@ -31,7 +31,7 @@ var (
 // opts sets and contains options for the package.
 var (
 	defaultOpts = options{
-		client: client{
+		client: &client{
 			credential:  nil,
 			vault:       "",
 			concurrency: defaultConcurrency,
@@ -40,7 +40,7 @@ var (
 	}
 
 	opts = &options{
-		client: client{
+		client: &client{
 			credential:  defaultOpts.client.credential,
 			vault:       defaultOpts.client.vault,
 			concurrency: defaultOpts.client.concurrency,
@@ -51,12 +51,12 @@ var (
 
 // options contains options for the package.
 type options struct {
-	client         client
-	externalClient VaultClient
+	client *client
 }
 
 // client contains options for the Key Vault client.
 type client struct {
+	VaultClient
 	credential  azcore.TokenCredential
 	vault       string
 	concurrency int
@@ -85,7 +85,7 @@ func SetClientOptions(o *ClientOptions) {
 		o.Timeout = defaultTimeout
 	}
 
-	opts.client = client{
+	opts.client = &client{
 		credential:  o.Credential,
 		vault:       o.Vault,
 		concurrency: o.Concurrency,
@@ -117,11 +117,10 @@ func SetTimeout(d time.Duration) {
 	opts.client.timeout = d
 }
 
-// SetExternalClient sets an external alternative client to
-// use for Azure Key Vault requests. Must implement
-// VaultClient.
-func SetExternalClient(client VaultClient) {
-	opts.externalClient = client
+// SetClient sets an alternative client for Azure Key Vault requests.
+// Must implement VaultClient.
+func SetClient(c VaultClient) {
+	opts.client.VaultClient = c
 }
 
 // getVault checks the environment if any of the variables AZURE_KEY_VAULT,

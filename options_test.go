@@ -27,7 +27,7 @@ func TestSetClientOptions(t *testing.T) {
 				Timeout:     time.Millisecond * 1000 * 20,
 			},
 			want: &options{
-				client: client{
+				client: &client{
 					credential:  mockCredential{},
 					vault:       "vault-name",
 					concurrency: 20,
@@ -42,7 +42,7 @@ func TestSetClientOptions(t *testing.T) {
 				Vault:      "vault-name",
 			},
 			want: &options{
-				client: client{
+				client: &client{
 					credential:  mockCredential{},
 					vault:       "vault-name",
 					concurrency: defaultConcurrency,
@@ -115,10 +115,10 @@ func TestSetTimeout(t *testing.T) {
 	resetOptions()
 }
 
-func TestSetExternalClient(t *testing.T) {
+func TestSetClient(t *testing.T) {
 	want := mockKeyVaultClient{}
-	SetExternalClient(mockKeyVaultClient{})
-	got := opts.externalClient
+	SetClient(mockKeyVaultClient{})
+	got := opts.client.VaultClient
 
 	if !cmp.Equal(want, got, cmp.AllowUnexported(mockKeyVaultClient{})) {
 		t.Log(cmp.Diff(want, got, cmp.AllowUnexported(mockKeyVaultClient{})))
@@ -190,7 +190,7 @@ func TestGetVaultFromEnvironment(t *testing.T) {
 
 func resetOptions() {
 	opts = &options{
-		client: client{
+		client: &client{
 			credential:  defaultOpts.client.credential,
 			vault:       defaultOpts.client.vault,
 			concurrency: defaultOpts.client.concurrency,

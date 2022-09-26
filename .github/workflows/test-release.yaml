@@ -32,16 +32,16 @@ jobs:
         cache: true
     
     - name: Download dependencies
-      run:
+      run: |
         go get
         go install golang.org/x/vuln/cmd/govulncheck@latest
     
     - name: Test
-      run:
+      run: |
         go vet && go test -v ./...
 
     - name: Run vulnerability check
-      run:
+      run: |
         govulncheck ./...
         if [ $? -eq 3 ]; then
           echo "::warning::Vulnerabilities found"

@@ -32,6 +32,7 @@ go get github.com/KarlGW/azcfg
 
 ### Prerequisites
 
+* Go 1.18
 * Azure Key Vault
   * Identity with access to secrets in the Key Vault
 

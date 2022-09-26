@@ -42,7 +42,9 @@ jobs:
     needs: [test]
     runs-on: ubuntu-20.04
     steps:
-    - name: Release
+    - uses: actions/checkout@v3
+
+    - name: Create release
       run: gh release create $TAG --generate-notes
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

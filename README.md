@@ -1,5 +1,7 @@
 # azcfg
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/KarlGW/azcfg.svg)](https://pkg.go.dev/github.com/KarlGW/azcfg)
+
 > Set Azure Key Vault secrets to a struct
 
 * [Getting started](#getting-started)
@@ -90,8 +92,12 @@ func main() {
         // Handle error.
     }
 
-    fmt.Printf("%+v", cfg)
+    fmt.Printf("%+v\n", cfg)
 }
+```
+
+```sh
+{Host: Port:0 Username:username-from-keyvault Password:password-from-keyvault Credential:{Key:12345}}
 ```
 
 ## Setting options

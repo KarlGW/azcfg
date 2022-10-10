@@ -8,7 +8,7 @@ fi
 
 if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   echo "Version must be valid semver."
-  exit 0
+  exit 1
 fi
 
 if [[ $(git branch --show-current) != "main" ]]; then

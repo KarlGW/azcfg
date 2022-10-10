@@ -17,7 +17,7 @@ if [[ $(git branch --show-current) != "main" ]]; then
 fi
 
 tag=v$version
-echo "Creating tag $tag for version $version"
+echo "Creating tag $tag for version $version."
 echo ""
 
 echo "Pulling from main branch..."

@@ -40,10 +40,13 @@ func Parse(v any) error {
 				return err
 			}
 		}
-		client = keyvault.NewClient(vault, cred, &keyvault.ClientOptions{
+		client, err = keyvault.NewClient(vault, cred, &keyvault.ClientOptions{
 			Concurrency: opts.client.concurrency,
 			Timeout:     opts.client.timeout,
 		})
+		if err != nil {
+			return err
+		}
 	} else {
 		client = opts.client.VaultClient
 	}

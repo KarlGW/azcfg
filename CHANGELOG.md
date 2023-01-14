@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.1
+
+### What's Changed
+
+* Update dependency azcore to v1.1.4
+
 ## v0.3.0
 
 ### What's Changed

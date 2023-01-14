@@ -44,7 +44,7 @@ type ClientOptions struct {
 }
 
 // NewClient creates and returns a new Client.
-func NewClient(vault string, cred azcore.TokenCredential, opts *ClientOptions) *Client {
+func NewClient(vault string, cred azcore.TokenCredential, opts *ClientOptions) (*Client, error) {
 	if opts == nil {
 		opts = &ClientOptions{
 			Concurrency: defaultConcurrency,
@@ -56,12 +56,15 @@ func NewClient(vault string, cred azcore.TokenCredential, opts *ClientOptions) *
 		opts.Timeout = defaultTimeout
 	}
 
-	client := azsecrets.NewClient(strings.Replace(baseURL, "{vault}", vault, 1), cred, nil)
+	client, err := azsecrets.NewClient(strings.Replace(baseURL, "{vault}", vault, 1), cred, nil)
+	if err != nil {
+		return nil, err
+	}
 	return &Client{
 		client:      client,
 		concurrency: opts.Concurrency,
 		timeout:     opts.Timeout,
-	}
+	}, nil
 }
 
 // GetSecrets calls the Azure Key Vault API for secrets based on their

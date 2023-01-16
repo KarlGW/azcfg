@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	secrets = map[string]string{
+	responseSecrets = map[string]string{
 		"string":           "new string",
 		"string-ptr":       "new string ptr",
 		"int":              "100",
@@ -265,7 +265,7 @@ func (c mockKeyVaultClient) GetSecrets(names []string) (map[string]string, error
 	if c.err == true {
 		return nil, errors.New("could not get secret")
 	}
-	return secrets, nil
+	return responseSecrets, nil
 }
 
 func toPtr[V any](v V) *V {

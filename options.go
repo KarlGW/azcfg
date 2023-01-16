@@ -8,19 +8,10 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 )
 
-const (
-	// defaultConcurrency is the default amount of concurrent calls
-	// to the Azure Key Vault Secret API.
-	defaultConcurrency = 10
-	// defaultTimeout is the default timeout for the requests
-	// for the secrets.
-	defaultTimeout = time.Millisecond * 1000 * 10
-)
-
 // envKeyVault contains environment variables to check for
 // Azure Key Vault name.
 var (
-	envKeyVault = []string{
+	envKeyVault = [4]string{
 		"AZURE_KEY_VAULT",
 		"AZURE_KEY_VAULT_NAME",
 		"AZURE_KEYVAULT",
@@ -31,101 +22,115 @@ var (
 // opts sets and contains options for the package.
 var (
 	defaultOpts = options{
-		client: &client{
-			credential:  nil,
-			vault:       "",
-			concurrency: defaultConcurrency,
-			timeout:     defaultTimeout,
-		},
+		secrets:     &secrets{},
+		concurrency: 10,
+		timeout:     time.Millisecond * 1000 * 10,
 	}
 
 	opts = &options{
-		client: &client{
-			credential:  defaultOpts.client.credential,
-			vault:       defaultOpts.client.vault,
-			concurrency: defaultOpts.client.concurrency,
-			timeout:     defaultOpts.client.timeout,
-		},
+		secrets:     defaultOpts.secrets,
+		concurrency: defaultOpts.concurrency,
+		timeout:     defaultOpts.timeout,
 	}
 )
 
-// options contains options for the package.
+// options contains options and settings for the package.
 type options struct {
-	client *client
+	secrets         *secrets
+	azureCredential azcore.TokenCredential
+	concurrency     int
+	timeout         time.Duration
 }
 
-// client contains options for the Key Vault client.
-type client struct {
-	VaultClient
-	credential  azcore.TokenCredential
-	vault       string
-	concurrency int
-	timeout     time.Duration
+// secrets contains options for the Secrets client.
+type secrets struct {
+	client SecretsClient
+	vault  string
 }
 
-// ClientOptions contains options for the Key Vault client.
-type ClientOptions struct {
-	Credential  azcore.TokenCredential
-	Vault       string
-	Concurrency int
-	Timeout     time.Duration
+// Options for package and Parse.
+type Options struct {
+	Secrets         *SecretsOptions
+	AzureCredential azcore.TokenCredential
+	Concurrency     int
+	Timeout         time.Duration
 }
 
-// SetClientOptions sets client options from the provided ClientOptions.
-func SetClientOptions(o *ClientOptions) {
-	if o == nil {
-		return
+// SecretsOptions contains options for secrets
+// and secrets client.
+type SecretsOptions struct {
+	Client SecretsClient
+	Vault  string
+}
+
+// SetOptions sets package level options.
+func SetOptions(options *Options) *options {
+	if options == nil {
+		return opts
 	}
 
-	if o.Concurrency == 0 {
-		o.Concurrency = defaultConcurrency
+	if options.AzureCredential != nil {
+		opts.azureCredential = options.AzureCredential
 	}
 
-	if o.Timeout == 0 {
-		o.Timeout = defaultTimeout
+	if options.Concurrency != 0 {
+		opts.concurrency = options.Concurrency
 	}
 
-	opts.client = &client{
-		credential:  o.Credential,
-		vault:       o.Vault,
-		concurrency: o.Concurrency,
-		timeout:     o.Timeout,
+	if options.Timeout != 0 {
+		opts.timeout = options.Timeout
 	}
+
+	if options.Secrets != nil {
+		if options.Secrets.Client != nil {
+			opts.secrets.client = options.Secrets.Client
+		}
+
+		if len(options.Secrets.Vault) != 0 {
+			opts.secrets.vault = options.Secrets.Vault
+		}
+	}
+
+	return opts
 }
 
-// SetCredentials sets credentials to be used for requests to Azure Key Vault.
-// Use when credential reuse is desireable.
-func SetCredential(cred azcore.TokenCredential) {
-	opts.client.credential = cred
+// SetSecretsClient sets an alternative client for Azure Key Vault requests.
+// Must implement SecretsClient.
+func SetSecretsClient(c SecretsClient) *options {
+	opts.secrets.client = c
+	return opts
 }
 
-// SetVault sets the Azure Key Vault to query for
+// SetSecretsVault sets the Azure Key Vault to query for
 // secrets.
-func SetVault(vault string) {
-	opts.client.vault = vault
+func SetSecretsVault(vault string) *options {
+	opts.secrets.vault = vault
+	return opts
 }
 
-// SetConcurrency sets amount of concurrent calls to
-// Azure Key Vault.
-func SetConcurrency(c int) {
-	opts.client.concurrency = c
+// SetAzureCredential sets credentials to be used for requests to Azure Key Vault.
+// Use when credential reuse is desireable.
+func SetAzureCredential(cred azcore.TokenCredential) *options {
+	opts.azureCredential = cred
+	return opts
 }
 
-// SetTimeout sets the total timeout for the requests
-// to Azure Key Vault.
-func SetTimeout(d time.Duration) {
-	opts.client.timeout = d
+// SetConcurrency sets amount of concurrent calls for fetching secrets.
+func SetConcurrency(c int) *options {
+	opts.concurrency = c
+	return opts
 }
 
-// SetClient sets an alternative client for Azure Key Vault requests.
-// Must implement VaultClient.
-func SetClient(c VaultClient) {
-	opts.client.VaultClient = c
+// SetTimeout sets the total timeout for the requests for fetching
+// secrets.
+func SetTimeout(d time.Duration) *options {
+	opts.timeout = d
+	return opts
 }
 
-// getVault checks the environment if any of the variables AZURE_KEY_VAULT,
+// getSecretsVault checks the environment if any of the variables AZURE_KEY_VAULT,
 // AZURE_KEY_VAULT_NAME, AZURE_KEYVAULT or AZURE_KEYVAULT_NAME is set.
-func getVaultFromEnvironment() (string, error) {
+func getSecretsVaultFromEnvironment() (string, error) {
 	for _, v := range envKeyVault {
 		if len(os.Getenv(v)) != 0 {
 			return os.Getenv(v), nil

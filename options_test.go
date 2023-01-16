@@ -12,52 +12,56 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestSetClientOptions(t *testing.T) {
+func TestSetOptions(t *testing.T) {
 	var tests = []struct {
 		name  string
-		input *ClientOptions
+		input *Options
 		want  *options
 	}{
 		{
 			name: "full",
-			input: &ClientOptions{
-				Credential:  mockCredential{},
-				Vault:       "vault-name",
-				Concurrency: 20,
-				Timeout:     time.Millisecond * 1000 * 20,
+			input: &Options{
+				Secrets: &SecretsOptions{
+					Vault: "vault-name",
+				},
+				AzureCredential: mockAzureCredential{},
+				Concurrency:     20,
+				Timeout:         time.Millisecond * 1000 * 20,
 			},
 			want: &options{
-				client: &client{
-					credential:  mockCredential{},
-					vault:       "vault-name",
-					concurrency: 20,
-					timeout:     time.Millisecond * 1000 * 20,
+				secrets: &secrets{
+					vault: "vault-name",
 				},
+				azureCredential: mockAzureCredential{},
+				concurrency:     20,
+				timeout:         time.Millisecond * 1000 * 20,
 			},
 		},
 		{
 			name: "partial",
-			input: &ClientOptions{
-				Credential: mockCredential{},
-				Vault:      "vault-name",
+			input: &Options{
+				Secrets: &SecretsOptions{
+					Vault: "vault-name",
+				},
+				AzureCredential: mockAzureCredential{},
 			},
 			want: &options{
-				client: &client{
-					credential:  mockCredential{},
-					vault:       "vault-name",
-					concurrency: defaultConcurrency,
-					timeout:     defaultTimeout,
+				secrets: &secrets{
+					vault: "vault-name",
 				},
+				azureCredential: mockAzureCredential{},
+				concurrency:     defaultOpts.concurrency,
+				timeout:         defaultOpts.timeout,
 			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			SetClientOptions(test.input)
+			SetOptions(test.input)
 
-			if !cmp.Equal(test.want, opts, cmp.AllowUnexported(options{}, client{})) {
-				t.Log(cmp.Diff(test.want, opts, cmp.AllowUnexported(options{}, client{})))
+			if !cmp.Equal(test.want, opts, cmp.AllowUnexported(options{}, secrets{})) {
+				t.Log(cmp.Diff(test.want, opts, cmp.AllowUnexported(options{}, secrets{})))
 				t.Errorf("results differ")
 			}
 
@@ -66,11 +70,22 @@ func TestSetClientOptions(t *testing.T) {
 	}
 }
 
-func TestSetCredential(t *testing.T) {
-	SetCredential(mockCredential{})
-	want := "token"
-	token, _ := opts.client.credential.GetToken(context.TODO(), policy.TokenRequestOptions{})
-	got := token.Token
+func TestSetSecretsClient(t *testing.T) {
+	want := mockKeyVaultClient{}
+	SetSecretsClient(mockKeyVaultClient{})
+	got := opts.secrets.client
+
+	if !cmp.Equal(want, got, cmp.AllowUnexported(mockKeyVaultClient{})) {
+		t.Log(cmp.Diff(want, got, cmp.AllowUnexported(mockKeyVaultClient{})))
+		t.Errorf("results differ")
+	}
+	resetOptions()
+}
+
+func TestSetSecretsVault(t *testing.T) {
+	want := "testvault"
+	SetSecretsVault(want)
+	got := opts.secrets.vault
 
 	if !cmp.Equal(want, got) {
 		t.Log(cmp.Diff(want, got))
@@ -79,10 +94,11 @@ func TestSetCredential(t *testing.T) {
 	resetOptions()
 }
 
-func TestSetVault(t *testing.T) {
-	want := "testvault"
-	SetVault(want)
-	got := opts.client.vault
+func TestSetAzureCredential(t *testing.T) {
+	SetAzureCredential(mockAzureCredential{})
+	want := "token"
+	token, _ := opts.azureCredential.GetToken(context.TODO(), policy.TokenRequestOptions{})
+	got := token.Token
 
 	if !cmp.Equal(want, got) {
 		t.Log(cmp.Diff(want, got))
@@ -94,7 +110,7 @@ func TestSetVault(t *testing.T) {
 func TestSetConcurrency(t *testing.T) {
 	want := 20
 	SetConcurrency(want)
-	got := opts.client.concurrency
+	got := opts.concurrency
 
 	if !cmp.Equal(want, got) {
 		t.Log(cmp.Diff(want, got))
@@ -106,7 +122,7 @@ func TestSetConcurrency(t *testing.T) {
 func TestSetTimeout(t *testing.T) {
 	want := time.Millisecond * 1000 * 20
 	SetTimeout(want)
-	got := opts.client.timeout
+	got := opts.timeout
 
 	if !cmp.Equal(want, got) {
 		t.Log(cmp.Diff(want, got))
@@ -115,19 +131,7 @@ func TestSetTimeout(t *testing.T) {
 	resetOptions()
 }
 
-func TestSetClient(t *testing.T) {
-	want := mockKeyVaultClient{}
-	SetClient(mockKeyVaultClient{})
-	got := opts.client.VaultClient
-
-	if !cmp.Equal(want, got, cmp.AllowUnexported(mockKeyVaultClient{})) {
-		t.Log(cmp.Diff(want, got, cmp.AllowUnexported(mockKeyVaultClient{})))
-		t.Errorf("results differ")
-	}
-	resetOptions()
-}
-
-func TestGetVaultFromEnvironment(t *testing.T) {
+func TestGetSecretsVaultFromEnvironment(t *testing.T) {
 	var tests = []struct {
 		name    string
 		input   map[string]string
@@ -169,7 +173,7 @@ func TestGetVaultFromEnvironment(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			setEnv(test.input)
-			got, err := getVaultFromEnvironment()
+			got, err := getSecretsVaultFromEnvironment()
 			unsetEnv(test.input)
 
 			if test.wantErr == nil && err != nil {
@@ -190,18 +194,18 @@ func TestGetVaultFromEnvironment(t *testing.T) {
 
 func resetOptions() {
 	opts = &options{
-		client: &client{
-			credential:  defaultOpts.client.credential,
-			vault:       defaultOpts.client.vault,
-			concurrency: defaultOpts.client.concurrency,
-			timeout:     defaultOpts.client.timeout,
+		secrets: &secrets{
+			vault: defaultOpts.secrets.vault,
 		},
+		azureCredential: defaultOpts.azureCredential,
+		concurrency:     defaultOpts.concurrency,
+		timeout:         defaultOpts.timeout,
 	}
 }
 
-type mockCredential struct{}
+type mockAzureCredential struct{}
 
-func (c mockCredential) GetToken(ctx context.Context, options policy.TokenRequestOptions) (azcore.AccessToken, error) {
+func (c mockAzureCredential) GetToken(ctx context.Context, options policy.TokenRequestOptions) (azcore.AccessToken, error) {
 	return azcore.AccessToken{Token: "token"}, nil
 }
 

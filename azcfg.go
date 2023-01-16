@@ -17,13 +17,13 @@ const (
 )
 
 // Parse secrets from an Azure Key Vault into a struct.
-func Parse(v any) error {
-	var client VaultClient
-	if opts.client.VaultClient == nil {
+func Parse(v any, options ...Options) error {
+	var client SecretsClient
+	if opts.secrets.client == nil {
 		var err error
 		var cred azcore.TokenCredential
-		if opts.client.credential != nil {
-			cred = opts.client.credential
+		if opts.azureCredential != nil {
+			cred = opts.azureCredential
 		} else {
 			cred, err = azidentity.NewDefaultAzureCredential(nil)
 			if err != nil {
@@ -32,35 +32,35 @@ func Parse(v any) error {
 		}
 
 		var vault string
-		if len(opts.client.vault) != 0 {
-			vault = opts.client.vault
+		if len(opts.secrets.vault) != 0 {
+			vault = opts.secrets.vault
 		} else {
-			vault, err = getVaultFromEnvironment()
+			vault, err = getSecretsVaultFromEnvironment()
 			if err != nil {
 				return err
 			}
 		}
 		client, err = keyvault.NewClient(vault, cred, &keyvault.ClientOptions{
-			Concurrency: opts.client.concurrency,
-			Timeout:     opts.client.timeout,
+			Concurrency: opts.concurrency,
+			Timeout:     opts.timeout,
 		})
 		if err != nil {
 			return err
 		}
 	} else {
-		client = opts.client.VaultClient
+		client = opts.secrets.client
 	}
 
 	return parse(v, client)
 }
 
-// VaultClient is the interface that wraps around method GetSecrets.
-type VaultClient interface {
+// SecretsClient is the interface that wraps around method GetSecrets.
+type SecretsClient interface {
 	GetSecrets(names []string) (map[string]string, error)
 }
 
 // Parse secrets into the configuration.
-func parse(d any, client VaultClient) error {
+func parse(d any, client SecretsClient) error {
 	v := reflect.ValueOf(d)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("must provide a pointer to a struct")

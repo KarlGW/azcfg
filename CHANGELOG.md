@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3.2
+
+* Update dependencies azcore, azidentity and azsecrets
+
 ## v0.3.1
 
 ### What's Changed

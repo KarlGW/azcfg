@@ -96,6 +96,29 @@ func main() {
 }
 ```
 
+It is possible to pass options to `Parse` that will override the package options for that particular call:
+
+```go
+package main
+
+func main() {
+    cfg := config{}
+    if err := azcfg.Parse(&cfg, &azcfg.Options{
+        Secrets: &azcfg.SecretOptions{
+            Client: client,
+            Vault: "vault"
+        }
+        AzureCredential: cred,
+        Concurrency: 20,
+        Timeout: time.Millisecond * 1000 * 20
+    })
+}
+```
+
+**Note**: When using options `Secrets.Client` it will take precedence over `AzureCredential`. Use one of them.
+
+For supported options see `Options` struct.
+
 ```sh
 {Host: Port:0 Username:username-from-keyvault Password:password-from-keyvault Credential:{Key:12345}}
 ```
@@ -139,6 +162,9 @@ azcfg.SetOptions(&azcfg.Options{
 // SecretsClient. Useful for stubbing dependencies when testing applications
 // using this library.
 azcfg.SetSecretsClient(client)
+
+// The "Set"-functions are chainable (with the exception of SetOptions), and can be called like so:
+azcfg.SetConcurrency(20).SetTimeout(time.Millisecond * 1000 * 10)
 ```
 
 

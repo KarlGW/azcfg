@@ -17,46 +17,17 @@ const (
 )
 
 // Parse secrets from an Azure Key Vault into a struct.
-func Parse(v any, options ...Options) error {
-	var client SecretsClient
-	if opts.secrets.client == nil {
-		var err error
-		var cred azcore.TokenCredential
-		if opts.azureCredential != nil {
-			cred = opts.azureCredential
-		} else {
-			cred, err = azidentity.NewDefaultAzureCredential(nil)
-			if err != nil {
-				return err
-			}
-		}
-
-		var vault string
-		if len(opts.secrets.vault) != 0 {
-			vault = opts.secrets.vault
-		} else {
-			vault, err = getSecretsVaultFromEnvironment()
-			if err != nil {
-				return err
-			}
-		}
-		client, err = keyvault.NewClient(vault, cred, &keyvault.ClientOptions{
-			Concurrency: opts.concurrency,
-			Timeout:     opts.timeout,
-		})
-		if err != nil {
-			return err
-		}
-	} else {
-		client = opts.secrets.client
+func Parse(v any, o ...Options) error {
+	client, err := evalClient(
+		evalOptions(o...),
+		newAzureCredential,
+		newKeyvaultClient,
+	)
+	if err != nil {
+		return err
 	}
 
 	return parse(v, client)
-}
-
-// SecretsClient is the interface that wraps around method GetSecrets.
-type SecretsClient interface {
-	GetSecrets(names []string) (map[string]string, error)
 }
 
 // Parse secrets into the configuration.
@@ -204,4 +175,14 @@ func splitTrim(s, sep string) []string {
 		sep = ","
 	}
 	return strings.Split(regexp.MustCompile(sep+`\s+`).ReplaceAllString(s, sep), sep)
+}
+
+// newAzureCredential calls azidentity.NewDefaultAzureCredential.
+func newAzureCredential() (azcore.TokenCredential, error) {
+	return azidentity.NewDefaultAzureCredential(nil)
+}
+
+// newKeyVaultClient calls keyvault.NewClient.
+func newKeyvaultClient(vault string, cred azcore.TokenCredential, options *keyvault.ClientOptions) (SecretsClient, error) {
+	return keyvault.NewClient(vault, cred, options)
 }

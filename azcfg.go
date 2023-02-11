@@ -17,50 +17,21 @@ const (
 )
 
 // Parse secrets from an Azure Key Vault into a struct.
-func Parse(v any) error {
-	var client VaultClient
-	if opts.client.VaultClient == nil {
-		var err error
-		var cred azcore.TokenCredential
-		if opts.client.credential != nil {
-			cred = opts.client.credential
-		} else {
-			cred, err = azidentity.NewDefaultAzureCredential(nil)
-			if err != nil {
-				return err
-			}
-		}
-
-		var vault string
-		if len(opts.client.vault) != 0 {
-			vault = opts.client.vault
-		} else {
-			vault, err = getVaultFromEnvironment()
-			if err != nil {
-				return err
-			}
-		}
-		client, err = keyvault.NewClient(vault, cred, &keyvault.ClientOptions{
-			Concurrency: opts.client.concurrency,
-			Timeout:     opts.client.timeout,
-		})
-		if err != nil {
-			return err
-		}
-	} else {
-		client = opts.client.VaultClient
+func Parse(v any, o ...Options) error {
+	client, err := evalClient(
+		evalOptions(o...),
+		newAzureCredential,
+		newKeyvaultClient,
+	)
+	if err != nil {
+		return err
 	}
 
 	return parse(v, client)
 }
 
-// VaultClient is the interface that wraps around method GetSecrets.
-type VaultClient interface {
-	GetSecrets(names []string) (map[string]string, error)
-}
-
 // Parse secrets into the configuration.
-func parse(d any, client VaultClient) error {
+func parse(d any, client SecretsClient) error {
 	v := reflect.ValueOf(d)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("must provide a pointer to a struct")
@@ -204,4 +175,14 @@ func splitTrim(s, sep string) []string {
 		sep = ","
 	}
 	return strings.Split(regexp.MustCompile(sep+`\s+`).ReplaceAllString(s, sep), sep)
+}
+
+// newAzureCredential calls azidentity.NewDefaultAzureCredential.
+func newAzureCredential() (azcore.TokenCredential, error) {
+	return azidentity.NewDefaultAzureCredential(nil)
+}
+
+// newKeyVaultClient calls keyvault.NewClient.
+func newKeyvaultClient(vault string, cred azcore.TokenCredential, options *keyvault.ClientOptions) (SecretsClient, error) {
+	return keyvault.NewClient(vault, cred, options)
 }

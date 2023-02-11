@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	secrets = map[string]string{
+	responseSecrets = map[string]string{
 		"string":           "new string",
 		"string-ptr":       "new string ptr",
 		"int":              "100",
@@ -100,32 +100,15 @@ func TestParse(t *testing.T) {
 			client := mockKeyVaultClient{}
 
 			err := parse(&test.input, client)
-			if test.wantErr == nil && err != nil {
-				t.Logf("should not return error, error: %v", err)
-			}
-
-			if !cmp.Equal(test.want, test.input, cmp.AllowUnexported(Struct{})) {
-				t.Log(cmp.Diff(test.want, test.input, cmp.AllowUnexported(Struct{})))
-				t.Errorf("results differ")
+			if diff := cmp.Diff(test.want, test.input, cmp.AllowUnexported(Struct{})); diff != "" {
+				t.Errorf("parse(%+v, %+v) = unexpected result, (-want, +got)\n%s\n", test.input, client, diff)
 			}
 
 			if test.wantErr != nil && err == nil {
-				t.Errorf("should return error")
+				t.Errorf("Unexpected result, should return error\n")
 			}
 		})
 	}
-}
-
-func TestGetFields(t *testing.T) {
-
-}
-
-func TestSetFields(t *testing.T) {
-
-}
-
-func TestSetValue(t *testing.T) {
-
 }
 
 func TestGetBitSize(t *testing.T) {
@@ -177,9 +160,8 @@ func TestGetBitSize(t *testing.T) {
 			v := reflect.TypeOf(test.input)
 			got := getBitSize(v.Kind())
 
-			if !cmp.Equal(test.want, got) {
-				t.Log(cmp.Diff(test.want, got))
-				t.Errorf("results differ")
+			if diff := cmp.Diff(test.want, got); diff != "" {
+				t.Errorf("getBitSize(%q) = unexpected result, (-want, +got)\n%s\n", test.input, diff)
 			}
 		})
 
@@ -216,9 +198,8 @@ func TestSplitTrim(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := splitTrim(test.input, test.sep)
 
-			if !cmp.Equal(test.want, got) {
-				t.Log(cmp.Diff(test.want, got))
-				t.Errorf("results differ")
+			if diff := cmp.Diff(test.want, got); diff != "" {
+				t.Errorf("splitTrim(%q, %q) = unexpected result, (-want, +got)\n%s\n", test.input, test.sep, diff)
 			}
 		})
 	}
@@ -265,7 +246,7 @@ func (c mockKeyVaultClient) GetSecrets(names []string) (map[string]string, error
 	if c.err == true {
 		return nil, errors.New("could not get secret")
 	}
-	return secrets, nil
+	return responseSecrets, nil
 }
 
 func toPtr[V any](v V) *V {

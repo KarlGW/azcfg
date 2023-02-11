@@ -96,6 +96,29 @@ func main() {
 }
 ```
 
+It is possible to pass options to `Parse` that will override the package options for that particular call:
+
+```go
+package main
+
+func main() {
+    cfg := config{}
+    if err := azcfg.Parse(&cfg, &azcfg.Options{
+        Secrets: &azcfg.SecretOptions{
+            Client: client,
+            Vault: "vault"
+        }
+        AzureCredential: cred,
+        Concurrency: 20,
+        Timeout: time.Millisecond * 1000 * 20
+    })
+}
+```
+
+**Note**: When using options `Secrets.Client` it will take precedence over `AzureCredential`. Use one of them.
+
+For supported options see `Options` struct.
+
 ```sh
 {Host: Port:0 Username:username-from-keyvault Password:password-from-keyvault Credential:{Key:12345}}
 ```
@@ -113,29 +136,35 @@ cred, err := azidentity.<FunctionForCredentialType>
 if err != nil {
     // Handle error.
 }
-azcfg.SetCredential(cred)
+azcfg.SetAzureCredential(cred)
 
-// Setting Key Vault name:
-azcfg.SetVault("vault-name")
+// Setting secrets vault name:
+azcfg.SetSecretsVault("vault-name")
 
-// Setting Key Vault client concurrent calls (defaults to 10):
+// Setting concurrent calls for the client (defaults to 10):
 azcfg.SetConcurrency(20)
 
-// Setting Key Vault client timeout for the total amount of requests (default to 10 seconds):
+// Setting timeout for the total amount of requests (default to 10 seconds):
 azcfg.SetTimeout(time.Millsecond * 1000 * 20)
 
-// Setting the entire client options:
-azcfg.SetClientOptions(&azcfg.ClientOptions{
-    Credential: cred,       // Defaults to nil, the built-in credential auth.
-    Vault: "vault-name",    // Defaults to "", which will check environment variables.
+// Setting options for the package:
+azcfg.SetOptions(&azcfg.Options{
+    Secrets: SecretsOptions{
+        Client: SecretsClient // Defaults to nil, the built-in secrets client.
+        Vault: "vault-name",    // Defaults to "", which will check environment variables.
+    }
+    AzureCredential: cred,       // Defaults to nil, the built-in Azure credential auth.
     Concurrency: 20,        // Defaults to 10.
     Timeout: duration,      // Defaults to time.Millisecond * 1000 * 10 (10 seconds)
 })
 
 // Setting a client for Azure Key Vault. Provided client must implement
-// VaultClient. Useful for stubbing dependencies when testing applications
+// SecretsClient. Useful for stubbing dependencies when testing applications
 // using this library.
-azcfg.SetClient(client)
+azcfg.SetSecretsClient(client)
+
+// The "Set"-functions are chainable (with the exception of SetOptions), and can be called like so:
+azcfg.SetConcurrency(20).SetTimeout(time.Millisecond * 1000 * 10)
 ```
 
 

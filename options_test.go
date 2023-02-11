@@ -30,7 +30,7 @@ func TestSetOptions(t *testing.T) {
 				Timeout:         time.Millisecond * 1000 * 20,
 			},
 			want: &options{
-				secrets: &secrets{
+				secrets: secrets{
 					vault: "vault-name",
 				},
 				azureCredential: mockAzureCredential{},
@@ -47,7 +47,7 @@ func TestSetOptions(t *testing.T) {
 				AzureCredential: mockAzureCredential{},
 			},
 			want: &options{
-				secrets: &secrets{
+				secrets: secrets{
 					vault: "vault-name",
 				},
 				azureCredential: mockAzureCredential{},
@@ -184,7 +184,7 @@ func TestGetSecretsVaultFromEnvironment(t *testing.T) {
 
 func TestSetChaining(t *testing.T) {
 	want := &options{
-		secrets: &secrets{
+		secrets: secrets{
 			client: &mockKeyVaultClient{},
 			vault:  "test-vault",
 		},
@@ -213,12 +213,12 @@ func TestEvalOptions(t *testing.T) {
 			name:  "package options",
 			input: []Options{},
 			want: &options{
-				secrets:     &secrets{},
+				secrets:     secrets{},
 				concurrency: defaultConcurrency,
 				timeout:     defaultTimeout,
 			},
 			wantPkgOpts: &options{
-				secrets:     &secrets{},
+				secrets:     secrets{},
 				concurrency: 10,
 				timeout:     time.Millisecond * 1000 * 10,
 			},
@@ -236,7 +236,7 @@ func TestEvalOptions(t *testing.T) {
 				},
 			},
 			want: &options{
-				secrets: &secrets{
+				secrets: secrets{
 					client: mockKeyVaultClient{},
 					vault:  "vault-name",
 				},
@@ -244,7 +244,7 @@ func TestEvalOptions(t *testing.T) {
 				timeout:     time.Second * 20,
 			},
 			wantPkgOpts: &options{
-				secrets:         &secrets{},
+				secrets:         secrets{},
 				azureCredential: nil,
 				concurrency:     10,
 				timeout:         time.Millisecond * 1000 * 10,
@@ -263,7 +263,7 @@ func TestEvalOptions(t *testing.T) {
 				},
 			},
 			want: &options{
-				secrets: &secrets{
+				secrets: secrets{
 					vault: "vault-name",
 				},
 				azureCredential: &mockAzureCredential{},
@@ -271,7 +271,7 @@ func TestEvalOptions(t *testing.T) {
 				timeout:         time.Second * 20,
 			},
 			wantPkgOpts: &options{
-				secrets:         &secrets{},
+				secrets:         secrets{},
 				azureCredential: nil,
 				concurrency:     10,
 				timeout:         time.Millisecond * 1000 * 10,
@@ -308,7 +308,7 @@ func TestEvalClient(t *testing.T) {
 		{
 			name: "client is provided",
 			input: &options{
-				secrets: &secrets{
+				secrets: secrets{
 					client: &mockKeyVaultClient{},
 				},
 			},
@@ -320,7 +320,7 @@ func TestEvalClient(t *testing.T) {
 		{
 			name: "credentials and vault are provided",
 			input: &options{
-				secrets: &secrets{
+				secrets: secrets{
 					vault: "vault-name",
 				},
 				azureCredential: &mockAzureCredential{},
@@ -332,7 +332,7 @@ func TestEvalClient(t *testing.T) {
 		{
 			name: "credentials provided (vault environment variable)",
 			input: &options{
-				secrets: &secrets{},
+				secrets: secrets{},
 			},
 			options: evalClientOptions{},
 			env: map[string]string{
@@ -422,7 +422,7 @@ type evalClientOptions struct {
 
 func resetOptions() {
 	pkgOpts = &options{
-		secrets:         &secrets{},
+		secrets:         secrets{},
 		azureCredential: nil,
 		concurrency:     defaultConcurrency,
 		timeout:         defaultTimeout,

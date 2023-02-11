@@ -26,7 +26,7 @@ var (
 	defaultTimeout     = time.Millisecond * 1000 * 10
 
 	pkgOpts = &options{
-		secrets:     &secrets{},
+		secrets:     secrets{},
 		concurrency: defaultConcurrency,
 		timeout:     defaultTimeout,
 	}
@@ -39,7 +39,7 @@ type SecretsClient interface {
 
 // options contains options and settings for the package.
 type options struct {
-	secrets         *secrets
+	secrets         secrets
 	azureCredential azcore.TokenCredential
 	concurrency     int
 	timeout         time.Duration
@@ -152,7 +152,7 @@ func getSecretsVaultFromEnvironment() (string, error) {
 // a new options evaluated from them both. The provided options overwrites package level options.
 func evalOptions(o ...Options) *options {
 	opts := options{
-		secrets: &secrets{
+		secrets: secrets{
 			client: pkgOpts.secrets.client,
 			vault:  pkgOpts.secrets.vault,
 		},
@@ -194,12 +194,12 @@ type keyvaultClientFunc func(vault string, cred azcore.TokenCredential, options 
 func evalClient(o *options, azureCredentialFn azureCredentialFunc, keyvaultClientFn keyvaultClientFunc) (SecretsClient, error) {
 	if o == nil {
 		o = &options{
-			secrets: &secrets{},
+			secrets: secrets{},
 		}
 	}
 
-	if o.secrets == nil {
-		o.secrets = &secrets{}
+	if (secrets{}) == o.secrets {
+		o.secrets = secrets{}
 	}
 
 	if o.secrets.client != nil {

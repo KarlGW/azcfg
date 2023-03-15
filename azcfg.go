@@ -72,7 +72,7 @@ func getFields(v reflect.Value, tag string) []string {
 // setFields takes incoming map of values and sets them with the
 // value with the map key/struct tag match.
 func setFields(v reflect.Value, secrets map[string]string) error {
-	var err error
+	var errs errs
 	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		if !v.Field(i).CanSet() {
@@ -90,7 +90,7 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 			tagValues := strings.Split(tagValue, ",")
 			if val, ok := secrets[tagValues[0]]; ok {
 				if len(val) == 0 && isRequired(tagValues) {
-					err = errors.Join(fmt.Errorf("secret: %q marked as required", tagValues[0]))
+					errs = append(errs, fmt.Errorf("secret: %q marked as required", tagValues[0]))
 					continue
 				}
 				if v.Field(i).Kind() == reflect.Slice {
@@ -110,7 +110,7 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 			}
 		}
 	}
-	return err
+	return errs
 }
 
 // setValue sets the new value on the incoming reflect.Value.
@@ -191,6 +191,21 @@ func isRequired(values []string) bool {
 		return false
 	}
 	return values[1] == required
+}
+
+// errs is a slice of errors.
+type errs []error
+
+// Error outputs the error messages contained in errs joined with a newline.
+func (e errs) Error() string {
+	var errs strings.Builder
+	for i := 0; i < len(e); i++ {
+		errs.WriteString(e[i].Error())
+		if i != len(e)-1 {
+			errs.WriteString("\n")
+		}
+	}
+	return errs.String()
 }
 
 // newAzureCredential calls azidentity.NewDefaultAzureCredential.

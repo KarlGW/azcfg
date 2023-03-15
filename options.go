@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/KarlGW/azcfg/internal/pkg/keyvault"
+	"github.com/KarlGW/azcfg/internal/keyvault"
 )
 
 // envKeyVault contains environment variables to check for

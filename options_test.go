@@ -9,7 +9,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/KarlGW/azcfg/internal/pkg/keyvault"
+	"github.com/KarlGW/azcfg/internal/keyvault"
 	"github.com/google/go-cmp/cmp"
 )
 

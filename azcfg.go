@@ -2,6 +2,7 @@ package azcfg
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -9,11 +10,12 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/KarlGW/azcfg/internal/pkg/keyvault"
+	"github.com/KarlGW/azcfg/internal/keyvault"
 )
 
 const (
 	defaultTag = "secret"
+	required   = "required"
 )
 
 // Parse secrets from an Azure Key Vault into a struct.
@@ -71,6 +73,7 @@ func getFields(v reflect.Value, tag string) []string {
 // setFields takes incoming map of values and sets them with the
 // value with the map key/struct tag match.
 func setFields(v reflect.Value, secrets map[string]string) error {
+	var err error
 	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		if !v.Field(i).CanSet() {
@@ -85,7 +88,12 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 			if !ok {
 				continue
 			}
-			if val, ok := secrets[tagValue]; ok {
+			tagParts := strings.Split(tagValue, ",")
+			if len(tagParts[0]) == 0 && tagParts[1] == required {
+				err = errors.Join(fmt.Errorf("secret: %s marked as required", tagParts[0]))
+				continue
+			}
+			if val, ok := secrets[tagParts[0]]; ok {
 				if v.Field(i).Kind() == reflect.Slice {
 					vals := splitTrim(val, ",")
 					sl := reflect.MakeSlice(v.Field(i).Type(), len(vals), len(vals))
@@ -100,11 +108,10 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 						return err
 					}
 				}
-
 			}
 		}
 	}
-	return nil
+	return err
 }
 
 // setValue sets the new value on the incoming reflect.Value.

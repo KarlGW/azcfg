@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net/http"
 	"strings"
 	"time"
 
@@ -71,68 +72,72 @@ func NewClient(vault string, cred azcore.TokenCredential, opts *ClientOptions) (
 // names. It performs these calls concurrently with maximum concurrent
 // calls based on provided client options.
 func (c Client) GetSecrets(names []string) (map[string]string, error) {
-	secrets := make(chan string)
-	results := make(chan result)
-
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
-	for w := 1; w <= c.concurrency; w++ {
-		go c.getSecretWorker(ctx, secrets, results)
-	}
-
-	go func() {
-		for i := 0; i < len(names); i++ {
-			secrets <- names[i]
-		}
-	}()
-
-	out := make(map[string]string, len(names))
-	errorMessages := make([]string, 0)
-	for i := 0; i < len(names); i++ {
-		secret := <-results
-		if secret.err != nil {
-			errorMessages = append(errorMessages, secret.err.Error())
-		} else {
-			out[secret.name] = secret.value
-		}
-	}
-
-	var err error
-	if len(errorMessages) != 0 {
-		errMsg := strings.Join(errorMessages, ", ")
-		err = errors.New(errMsg)
-	}
-
-	return out, err
+	return c.receiveSecrets(c.getSecrets(ctx, names), len(names))
 }
 
-// result contains the results from a GetSecret call.
-type result struct {
+// secretResult contains the results from a GetSecret call.
+type secretResult struct {
 	name  string
 	value string
 	err   error
 }
 
-// getSecretWorker is the worker that performs calls to Azure Key Vault concurrently.
-// It receives secret names from the secrets channel (string), and sends the results
-// to the results channel (result).
-func (c Client) getSecretWorker(ctx context.Context, secrets <-chan string, results chan<- result) {
-	for secret := range secrets {
-		sr := &result{name: secret}
-		s, err := c.client.GetSecret(ctx, secret, "", nil)
-		if err != nil {
-			var rerr *azcore.ResponseError
-			if errors.As(err, &rerr) {
-				err = parseError(rerr)
-			}
-			sr.err = err
-			results <- *sr
-			return
+// getSecrets performs calls to the target Azure Key Vault concurrently. It
+// returns a channel that contains the results.
+func (c Client) getSecrets(ctx context.Context, names []string) <-chan secretResult {
+	namesCh := make(chan string)
+	srCh := make(chan secretResult)
+
+	go func() {
+		for i := 0; i < len(names); i++ {
+			namesCh <- names[i]
 		}
-		sr.value = *s.SecretBundle.Value
-		results <- *sr
+		close(namesCh)
+	}()
+
+	for i := 1; i < c.concurrency; i++ {
+		go func() {
+			for secret := range namesCh {
+				sr := secretResult{name: secret}
+				s, err := c.client.GetSecret(ctx, secret, "", nil)
+				if err != nil {
+					var rerr *azcore.ResponseError
+					if errors.As(err, &rerr) {
+						if rerr.StatusCode == http.StatusNotFound {
+							srCh <- sr
+							return
+						}
+						err = parseError(rerr)
+					}
+					sr.err = err
+					srCh <- sr
+					return
+				}
+				sr.value = *s.SecretBundle.Value
+				srCh <- sr
+			}
+		}()
 	}
+	return srCh
+}
+
+// receiveSecrets receives secretResult on a channel. Returns a map[string]string with
+// containing the secrets as a key (name)/value pairs.
+func (c Client) receiveSecrets(srCh <-chan secretResult, length int) (map[string]string, error) {
+	out := make(map[string]string, length)
+	errs := make([]error, 0, 0)
+	for i := 0; i < length; i++ {
+		sr := <-srCh
+		if sr.err != nil {
+			errs = append(errs, sr.err)
+		} else {
+			out[sr.name] = sr.value
+		}
+	}
+	return out, errors.Join(errs...)
 }
 
 // responseError represents the error response body from the Azure Key Vault

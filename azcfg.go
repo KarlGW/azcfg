@@ -10,6 +10,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/KarlGW/azcfg/internal/errs"
 	"github.com/KarlGW/azcfg/internal/keyvault"
 )
 
@@ -72,7 +73,7 @@ func getFields(v reflect.Value, tag string) []string {
 // setFields takes incoming map of values and sets them with the
 // value with the map key/struct tag match.
 func setFields(v reflect.Value, secrets map[string]string) error {
-	var errs errs
+	var errs errs.Errors
 	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		if !v.Field(i).CanSet() {
@@ -191,21 +192,6 @@ func isRequired(values []string) bool {
 		return false
 	}
 	return values[1] == required
-}
-
-// errs is a slice of errors.
-type errs []error
-
-// Error outputs the error messages contained in errs joined with a newline.
-func (e errs) Error() string {
-	var errs strings.Builder
-	for i := 0; i < len(e); i++ {
-		errs.WriteString(e[i].Error())
-		if i != len(e)-1 {
-			errs.WriteString("\n")
-		}
-	}
-	return errs.String()
 }
 
 // newAzureCredential calls azidentity.NewDefaultAzureCredential.

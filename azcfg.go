@@ -48,8 +48,7 @@ func parse(d any, client SecretsClient) error {
 		return err
 	}
 
-	setFields(v, secrets)
-	return nil
+	return setFields(v, secrets)
 }
 
 // getFields gets fields with the specified tag.
@@ -88,12 +87,12 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 			if !ok {
 				continue
 			}
-			tagParts := strings.Split(tagValue, ",")
-			if len(tagParts[0]) == 0 && tagParts[1] == required {
-				err = errors.Join(fmt.Errorf("secret: %s marked as required", tagParts[0]))
-				continue
-			}
-			if val, ok := secrets[tagParts[0]]; ok {
+			tagValues := strings.Split(tagValue, ",")
+			if val, ok := secrets[tagValues[0]]; ok {
+				if len(val) == 0 && isRequired(tagValues) {
+					err = errors.Join(fmt.Errorf("secret: %q marked as required", tagValues[0]))
+					continue
+				}
 				if v.Field(i).Kind() == reflect.Slice {
 					vals := splitTrim(val, ",")
 					sl := reflect.MakeSlice(v.Field(i).Type(), len(vals), len(vals))
@@ -182,6 +181,16 @@ func splitTrim(s, sep string) []string {
 		sep = ","
 	}
 	return strings.Split(regexp.MustCompile(sep+`\s+`).ReplaceAllString(s, sep), sep)
+}
+
+// isRequired checks the provided string slice if the second element (if any)
+// has the same value as constant "required". If it has it returns true,
+// otherwise false.
+func isRequired(values []string) bool {
+	if len(values) == 1 {
+		return false
+	}
+	return values[1] == required
 }
 
 // newAzureCredential calls azidentity.NewDefaultAzureCredential.

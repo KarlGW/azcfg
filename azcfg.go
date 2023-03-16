@@ -10,7 +10,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/KarlGW/azcfg/internal/errs"
 	"github.com/KarlGW/azcfg/internal/keyvault"
 )
 
@@ -63,7 +62,7 @@ func getFields(v reflect.Value, tag string) []string {
 			fields = append(fields, getFields(v.Field(i), tag)...)
 		} else {
 			if tagValue, ok := t.Field(i).Tag.Lookup(tag); ok {
-				fields = append(fields, tagValue)
+				fields = append(fields, strings.Split(tagValue, ",")[0])
 			}
 		}
 	}
@@ -73,16 +72,19 @@ func getFields(v reflect.Value, tag string) []string {
 // setFields takes incoming map of values and sets them with the
 // value with the map key/struct tag match.
 func setFields(v reflect.Value, secrets map[string]string) error {
-	var errs errs.Errors
 	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		if !v.Field(i).CanSet() {
 			continue
 		}
 		if v.Field(i).Kind() == reflect.Pointer && v.Field(i).Elem().Kind() == reflect.Struct {
-			setFields(v.Field(i).Elem(), secrets)
+			if err := setFields(v.Field(i).Elem(), secrets); err != nil {
+				return err
+			}
 		} else if v.Field(i).Kind() == reflect.Struct {
-			setFields(v.Field(i), secrets)
+			if err := setFields(v.Field(i), secrets); err != nil {
+				return err
+			}
 		} else {
 			tagValue, ok := t.Field(i).Tag.Lookup(defaultTag)
 			if !ok {
@@ -91,7 +93,8 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 			tagValues := strings.Split(tagValue, ",")
 			if val, ok := secrets[tagValues[0]]; ok {
 				if len(val) == 0 && isRequired(tagValues) {
-					errs = append(errs, fmt.Errorf("secret: %q marked as required", tagValues[0]))
+					return fmt.Errorf("secret: %q marked as required", tagValues[0])
+				} else if len(val) == 0 {
 					continue
 				}
 				if v.Field(i).Kind() == reflect.Slice {
@@ -111,7 +114,7 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 			}
 		}
 	}
-	return errs
+	return nil
 }
 
 // setValue sets the new value on the incoming reflect.Value.

@@ -11,7 +11,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/keyvault/azsecrets"
-	"github.com/KarlGW/azcfg/internal/errs"
 )
 
 const (
@@ -129,17 +128,12 @@ func (c Client) getSecrets(ctx context.Context, names []string) <-chan secretRes
 // containing the secrets as a key (name)/value pairs.
 func (c Client) receiveSecrets(srCh <-chan secretResult, length int) (map[string]string, error) {
 	out := make(map[string]string, length)
-	var errs errs.Errors
 	for i := 0; i < length; i++ {
 		sr := <-srCh
 		if sr.err != nil {
-			errs = append(errs, sr.err)
-		} else {
-			out[sr.name] = sr.value
+			return nil, sr.err
 		}
-	}
-	if len(errs) != 0 {
-		return out, errs
+		out[sr.name] = sr.value
 	}
 	return out, nil
 }

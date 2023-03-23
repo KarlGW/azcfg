@@ -6,18 +6,8 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/KarlGW/azcfg/internal/keyvault"
-)
-
-// envKeyVault contains environment variables to check for
-// Azure Key Vault name.
-var (
-	envKeyVault = [4]string{
-		"AZURE_KEY_VAULT",
-		"AZURE_KEY_VAULT_NAME",
-		"AZURE_KEYVAULT",
-		"AZURE_KEYVAULT_NAME",
-	}
 )
 
 // pkgOpts contains options for the package.
@@ -49,50 +39,6 @@ type options struct {
 type secrets struct {
 	client SecretsClient
 	vault  string
-}
-
-// SetSecretsClient sets an alternative client for Azure Key Vault requests.
-// Must implement SecretsClient.
-func (o *options) SetSecretsClient(client SecretsClient) *options {
-	return SetSecretsClient(client)
-}
-
-// SetSecretsVault sets the Azure Key Vault to query for
-// secrets.
-func (o *options) SetSecretsVault(vault string) *options {
-	return SetSecretsVault(vault)
-}
-
-// SetAzureCredential sets credentials to be used for requests to Azure Key Vault.
-// Use when credential reuse is desireable.
-func (o *options) SetAzureCredential(cred azcore.TokenCredential) *options {
-	return SetAzureCredential(cred)
-}
-
-// SetConcurrency sets amount of concurrent calls for fetching secrets.
-func (o *options) SetConcurrency(c int) *options {
-	return SetConcurrency(c)
-}
-
-// SetTimeout sets the total timeout for the requests for fetching
-// secrets.
-func (o *options) SetTimeout(d time.Duration) *options {
-	return SetTimeout(d)
-}
-
-// Options for package and Parse.
-type Options struct {
-	Secrets         *SecretsOptions
-	AzureCredential azcore.TokenCredential
-	Concurrency     int
-	Timeout         time.Duration
-}
-
-// SecretsOptions contains options for secrets
-// and secrets client.
-type SecretsOptions struct {
-	Client SecretsClient
-	Vault  string
 }
 
 // SetOptions sets package level options.
@@ -136,6 +82,61 @@ func SetTimeout(d time.Duration) *options {
 	pkgOpts.timeout = d
 	return pkgOpts
 }
+
+// Options for package and Parse.
+type Options struct {
+	Secrets         *SecretsOptions
+	AzureCredential azcore.TokenCredential
+	Concurrency     int
+	Timeout         time.Duration
+}
+
+// SecretsOptions contains options for secrets
+// and secrets client.
+type SecretsOptions struct {
+	Client SecretsClient
+	Vault  string
+}
+
+// SetSecretsClient sets an alternative client for Azure Key Vault requests.
+// Must implement SecretsClient.
+func (o *options) SetSecretsClient(client SecretsClient) *options {
+	return SetSecretsClient(client)
+}
+
+// SetSecretsVault sets the Azure Key Vault to query for
+// secrets.
+func (o *options) SetSecretsVault(vault string) *options {
+	return SetSecretsVault(vault)
+}
+
+// SetAzureCredential sets credentials to be used for requests to Azure Key Vault.
+// Use when credential reuse is desireable.
+func (o *options) SetAzureCredential(cred azcore.TokenCredential) *options {
+	return SetAzureCredential(cred)
+}
+
+// SetConcurrency sets amount of concurrent calls for fetching secrets.
+func (o *options) SetConcurrency(c int) *options {
+	return SetConcurrency(c)
+}
+
+// SetTimeout sets the total timeout for the requests for fetching
+// secrets.
+func (o *options) SetTimeout(d time.Duration) *options {
+	return SetTimeout(d)
+}
+
+// envKeyVault contains environment variables to check for
+// Azure Key Vault name.
+var (
+	envKeyVault = [4]string{
+		"AZURE_KEY_VAULT",
+		"AZURE_KEY_VAULT_NAME",
+		"AZURE_KEYVAULT",
+		"AZURE_KEYVAULT_NAME",
+	}
+)
 
 // getSecretsVault checks the environment if any of the variables AZURE_KEY_VAULT,
 // AZURE_KEY_VAULT_NAME, AZURE_KEYVAULT or AZURE_KEYVAULT_NAME is set.
@@ -186,8 +187,18 @@ func evalOptions(o ...Options) *options {
 // azureCredentialFunc should returns azcore.TokenCredential and error.
 type azureCredentialFunc func() (azcore.TokenCredential, error)
 
+// newAzureCredential calls azidentity.NewDefaultAzureCredential.
+func newAzureCredential() (azcore.TokenCredential, error) {
+	return azidentity.NewDefaultAzureCredential(nil)
+}
+
 // keyvaultClientFunc should return SecretsClient and error.
 type keyvaultClientFunc func(vault string, cred azcore.TokenCredential, options *keyvault.ClientOptions) (SecretsClient, error)
+
+// newKeyVaultClient calls keyvault.NewClient.
+func newKeyvaultClient(vault string, cred azcore.TokenCredential, options *keyvault.ClientOptions) (SecretsClient, error) {
+	return keyvault.NewClient(vault, cred, options)
+}
 
 // evalClient takes the to provided *options, azureCredentialFunc and keyvaultClientFunc to
 // determine secrets client, azure credential and vault. Creates a SecretsClient if necessary.

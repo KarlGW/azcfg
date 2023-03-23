@@ -123,7 +123,7 @@ func TestParseRequired(t *testing.T) {
 		{
 			name:    "required",
 			input:   StructWithRequired{},
-			wantErr: fmt.Errorf("secret: %q marked as required", "empty"),
+			wantErr: fmt.Errorf("secret: %s is required", "empty"),
 		},
 	}
 

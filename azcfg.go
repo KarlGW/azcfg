@@ -43,30 +43,46 @@ func parse(d any, client SecretsClient) error {
 		return errors.New("provided value is not a struct")
 	}
 
-	secrets, err := client.GetSecrets(getFields(v, defaultTag))
+	fields, required := getFields(v, defaultTag)
+	secrets, err := client.GetSecrets(fields)
 	if err != nil {
 		return err
 	}
 
-	return setFields(v, secrets)
+	if err := setFields(v, secrets); err != nil {
+		if len(required) > 0 {
+			return errors.New(requiredErrorMessage(required))
+		}
+		return err
+	}
+	return nil
 }
 
 // getFields gets fields with the specified tag.
-func getFields(v reflect.Value, tag string) []string {
+func getFields(v reflect.Value, tag string) ([]string, []string) {
 	t := v.Type()
 	fields := make([]string, 0)
+	required := make([]string, 0)
 	for i := 0; i < v.NumField(); i++ {
 		if v.Field(i).Kind() == reflect.Pointer && v.Field(i).Elem().Kind() == reflect.Struct {
-			fields = append(fields, getFields(v.Field(i).Elem(), tag)...)
+			f, r := getFields(v.Field(i).Elem(), tag)
+			fields = append(fields, f...)
+			required = append(required, r...)
 		} else if v.Field(i).Kind() == reflect.Struct {
-			fields = append(fields, getFields(v.Field(i), tag)...)
+			f, r := getFields(v.Field(i), tag)
+			fields = append(fields, f...)
+			required = append(required, r...)
 		} else {
-			if tagValue, ok := t.Field(i).Tag.Lookup(tag); ok {
-				fields = append(fields, strings.Split(tagValue, ",")[0])
+			if value, ok := t.Field(i).Tag.Lookup(tag); ok {
+				tags := strings.Split(value, ",")
+				fields = append(fields, tags[0])
+				if len(tags) > 1 {
+					required = append(required, tags[0])
+				}
 			}
 		}
 	}
-	return fields
+	return fields, required
 }
 
 // setFields takes incoming map of values and sets them with the
@@ -86,14 +102,14 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 				return err
 			}
 		} else {
-			tagValue, ok := t.Field(i).Tag.Lookup(defaultTag)
+			value, ok := t.Field(i).Tag.Lookup(defaultTag)
 			if !ok {
 				continue
 			}
-			tagValues := strings.Split(tagValue, ",")
-			if val, ok := secrets[tagValues[0]]; ok {
-				if len(val) == 0 && isRequired(tagValues) {
-					return fmt.Errorf("secret: %q marked as required", tagValues[0])
+			tags := strings.Split(value, ",")
+			if val, ok := secrets[tags[0]]; ok {
+				if len(val) == 0 && isRequired(tags) {
+					return fmt.Errorf("secret: %q marked as required", tags[0])
 				} else if len(val) == 0 {
 					continue
 				}
@@ -205,4 +221,30 @@ func newAzureCredential() (azcore.TokenCredential, error) {
 // newKeyVaultClient calls keyvault.NewClient.
 func newKeyvaultClient(vault string, cred azcore.TokenCredential, options *keyvault.ClientOptions) (SecretsClient, error) {
 	return keyvault.NewClient(vault, cred, options)
+}
+
+// requiredErrorMessage builds a message based on the provided []string.
+func requiredErrorMessage(required []string) string {
+	if len(required) == 0 {
+		return ""
+	}
+
+	var message strings.Builder
+	l := len(required)
+	if l == 1 {
+		message.WriteString("secret: " + required[0] + " is required")
+		return message.String()
+	}
+	message.WriteString("secrets: ")
+	for i, r := range required {
+		message.WriteString(r)
+		if i < l-1 && l > 2 && i != l-2 {
+			message.WriteString(", ")
+		}
+		if i == l-2 {
+			message.WriteString(" and ")
+		}
+	}
+	message.WriteString(" are required")
+	return message.String()
 }

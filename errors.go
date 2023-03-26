@@ -8,7 +8,7 @@ type RequiredError struct {
 	message string
 }
 
-// Error implements the error interface.
+// Error implements interface error.
 func (e *RequiredError) Error() string {
 	return e.message
 }

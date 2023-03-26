@@ -2,7 +2,6 @@ package azcfg
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -46,8 +45,9 @@ func parse(d any, client SecretsClient) error {
 	}
 
 	if err := setFields(v, secrets); err != nil {
-		if len(required) > 0 {
-			return newRequiredError(secrets, required)
+		var requiredErr *RequiredError
+		if errors.As(err, &requiredErr) && len(required) > 0 {
+			return requiredErr.setMessage(secrets, required)
 		}
 		return err
 	}
@@ -105,7 +105,7 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 			tags := strings.Split(value, ",")
 			if val, ok := secrets[tags[0]]; ok {
 				if len(val) == 0 && isRequired(tags) {
-					return fmt.Errorf("secret: %q marked as required", tags[0])
+					return &RequiredError{secret: tags[0]}
 				} else if len(val) == 0 {
 					continue
 				}

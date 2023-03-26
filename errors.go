@@ -4,6 +4,7 @@ import "strings"
 
 // RequiredError is returned when a secret is marked as required.
 type RequiredError struct {
+	secret  string
 	message string
 }
 
@@ -12,11 +13,10 @@ func (e *RequiredError) Error() string {
 	return e.message
 }
 
-// newRequiredError creates and returns a *RequiredError.
-func newRequiredError(secrets map[string]string, required []string) *RequiredError {
-	return &RequiredError{
-		message: requiredErrorMessage(secrets, required),
-	}
+// setMessage sets the message of *RequiredError.
+func (e *RequiredError) setMessage(secrets map[string]string, required []string) error {
+	e.message = requiredErrorMessage(secrets, required)
+	return e
 }
 
 // requiredErrorMessage builds a message based on the provided map[string]string (secrets)

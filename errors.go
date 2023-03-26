@@ -27,14 +27,15 @@ func requiredErrorMessage(secrets map[string]string, required []string) string {
 	}
 
 	req := make([]string, 0)
+	l := 0
 	for _, r := range required {
 		if len(secrets[r]) == 0 {
 			req = append(req, r)
+			l++
 		}
 	}
 
 	var message strings.Builder
-	l := len(req)
 	if l == 1 {
 		message.WriteString("secret: " + req[0] + " is required")
 		return message.String()

@@ -33,11 +33,13 @@ func TestGetSecrets(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name:      "failure",
+			name:      "secret not found",
 			input:     []string{"no-secret-a"},
 			errorType: errorType(2),
-			want:      map[string]string{},
-			wantErr:   errors.New("secret not found"),
+			want: map[string]string{
+				"no-secret-a": "",
+			},
+			wantErr: nil,
 		},
 	}
 
@@ -103,6 +105,7 @@ func (c mockKeyVaultClient) GetSecret(ctx context.Context, name, version string,
 	if v, ok := c.secrets[name]; !ok {
 		if c.errorType == errorTypeResponseError {
 			rerr := &azcore.ResponseError{
+				StatusCode: http.StatusNotFound,
 				RawResponse: &http.Response{
 					Body: io.NopCloser(bytes.NewBuffer([]byte(`{"error":{"code":"SecretNotFound","message":"secret not found"}}`))),
 				},

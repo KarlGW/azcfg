@@ -13,6 +13,7 @@ var (
 	responseSecrets = map[string]string{
 		"string":           "new string",
 		"string-ptr":       "new string ptr",
+		"empty":            "",
 		"int":              "100",
 		"int64":            "100",
 		"uint":             "100",
@@ -43,6 +44,7 @@ func TestParse(t *testing.T) {
 				Bool:      false,
 				BoolPtr:   toPtr(false),
 				StringPtr: toPtr("initial string ptr"),
+				Empty:     "",
 				NestedStructA: NestedStructA{
 					Int:         1,
 					Int64:       1,
@@ -106,6 +108,37 @@ func TestParse(t *testing.T) {
 
 			if test.wantErr != nil && err == nil {
 				t.Errorf("Unexpected result, should return error\n")
+			}
+		})
+	}
+}
+
+func TestParseRequired(t *testing.T) {
+	var tests = []struct {
+		name    string
+		input   StructWithRequired
+		wantErr error
+	}{
+		{
+			name:    "required",
+			input:   StructWithRequired{},
+			wantErr: &RequiredError{message: "secrets: empty and empty-float64 are required"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			client := mockKeyVaultClient{}
+
+			err := parse(&test.input, client)
+			if test.wantErr != nil && err == nil {
+				t.Errorf("Unexpected result, should return error\n")
+			}
+
+			if test.wantErr != nil && err != nil {
+				if diff := cmp.Diff(test.wantErr.Error(), err.Error()); diff != "" {
+					t.Errorf("parse(%+v, %+v) = unexpected result, (-want, +got)\n%s\n", test.wantErr.Error(), err.Error(), diff)
+				}
 			}
 		})
 	}
@@ -210,6 +243,7 @@ type Struct struct {
 	StringPtr               *string `secret:"string-ptr"`
 	Bool                    bool    `secret:"bool"`
 	BoolPtr                 *bool   `secret:"bool-ptr"`
+	Empty                   string  `secret:"empty"`
 	NestedStructA           NestedStructA
 	NestedStructB           *NestedStructB
 	unexportedNestedStructA NestedStructA
@@ -236,6 +270,17 @@ type NestedStructB struct {
 
 type NestedNestedStruct struct {
 	NestedString string `secret:"nested-string"`
+}
+
+type StructWithRequired struct {
+	String                   string `secret:"string"`
+	Empty                    string `secret:"empty,required"`
+	NestedStructWithRequired NestedStructWithRequired
+}
+
+type NestedStructWithRequired struct {
+	Int     int     `secret:"number"`
+	Float64 float64 `secret:"empty-float64,required"`
 }
 
 type mockKeyVaultClient struct {

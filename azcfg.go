@@ -6,14 +6,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/KarlGW/azcfg/internal/pkg/keyvault"
 )
 
 const (
 	defaultTag = "secret"
+	required   = "required"
 )
 
 // Parse secrets from an Azure Key Vault into a struct.
@@ -41,31 +38,47 @@ func parse(d any, client SecretsClient) error {
 		return errors.New("provided value is not a struct")
 	}
 
-	secrets, err := client.GetSecrets(getFields(v, defaultTag))
+	fields, required := getFields(v, defaultTag)
+	secrets, err := client.GetSecrets(fields)
 	if err != nil {
 		return err
 	}
 
-	setFields(v, secrets)
+	if err := setFields(v, secrets); err != nil {
+		var requiredErr *RequiredError
+		if errors.As(err, &requiredErr) && len(required) > 0 {
+			return requiredErr.setMessage(secrets, required)
+		}
+		return err
+	}
 	return nil
 }
 
 // getFields gets fields with the specified tag.
-func getFields(v reflect.Value, tag string) []string {
+func getFields(v reflect.Value, tag string) ([]string, []string) {
 	t := v.Type()
 	fields := make([]string, 0)
+	required := make([]string, 0)
 	for i := 0; i < v.NumField(); i++ {
 		if v.Field(i).Kind() == reflect.Pointer && v.Field(i).Elem().Kind() == reflect.Struct {
-			fields = append(fields, getFields(v.Field(i).Elem(), tag)...)
+			f, r := getFields(v.Field(i).Elem(), tag)
+			fields = append(fields, f...)
+			required = append(required, r...)
 		} else if v.Field(i).Kind() == reflect.Struct {
-			fields = append(fields, getFields(v.Field(i), tag)...)
+			f, r := getFields(v.Field(i), tag)
+			fields = append(fields, f...)
+			required = append(required, r...)
 		} else {
-			if tagValue, ok := t.Field(i).Tag.Lookup(tag); ok {
-				fields = append(fields, tagValue)
+			if value, ok := t.Field(i).Tag.Lookup(tag); ok {
+				tags := strings.Split(value, ",")
+				fields = append(fields, tags[0])
+				if isRequired(tags) {
+					required = append(required, tags[0])
+				}
 			}
 		}
 	}
-	return fields
+	return fields, required
 }
 
 // setFields takes incoming map of values and sets them with the
@@ -77,15 +90,25 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 			continue
 		}
 		if v.Field(i).Kind() == reflect.Pointer && v.Field(i).Elem().Kind() == reflect.Struct {
-			setFields(v.Field(i).Elem(), secrets)
+			if err := setFields(v.Field(i).Elem(), secrets); err != nil {
+				return err
+			}
 		} else if v.Field(i).Kind() == reflect.Struct {
-			setFields(v.Field(i), secrets)
+			if err := setFields(v.Field(i), secrets); err != nil {
+				return err
+			}
 		} else {
-			tagValue, ok := t.Field(i).Tag.Lookup(defaultTag)
+			value, ok := t.Field(i).Tag.Lookup(defaultTag)
 			if !ok {
 				continue
 			}
-			if val, ok := secrets[tagValue]; ok {
+			tags := strings.Split(value, ",")
+			if val, ok := secrets[tags[0]]; ok {
+				if len(val) == 0 && isRequired(tags) {
+					return &RequiredError{secret: tags[0]}
+				} else if len(val) == 0 {
+					continue
+				}
 				if v.Field(i).Kind() == reflect.Slice {
 					vals := splitTrim(val, ",")
 					sl := reflect.MakeSlice(v.Field(i).Type(), len(vals), len(vals))
@@ -100,7 +123,6 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 						return err
 					}
 				}
-
 			}
 		}
 	}
@@ -177,12 +199,12 @@ func splitTrim(s, sep string) []string {
 	return strings.Split(regexp.MustCompile(sep+`\s+`).ReplaceAllString(s, sep), sep)
 }
 
-// newAzureCredential calls azidentity.NewDefaultAzureCredential.
-func newAzureCredential() (azcore.TokenCredential, error) {
-	return azidentity.NewDefaultAzureCredential(nil)
-}
-
-// newKeyVaultClient calls keyvault.NewClient.
-func newKeyvaultClient(vault string, cred azcore.TokenCredential, options *keyvault.ClientOptions) (SecretsClient, error) {
-	return keyvault.NewClient(vault, cred, options)
+// isRequired checks the provided string slice if the second element (if any)
+// has the same value as constant "required". If it has it returns true,
+// otherwise false.
+func isRequired(values []string) bool {
+	if len(values) == 1 {
+		return false
+	}
+	return values[1] == required
 }

@@ -8,7 +8,9 @@
   * [Install](#install)
   * [Prerequisites](#prerequisites)
   * [Example](#example)
-* [Setting options](#setting-options)
+* [Usage](#usage)
+  * [Options](#options)
+  * [Required](#required)
 
 This library is used to get secrets from an Azure Key Vault and set them into a struct. The idea of parsing
 configuration values into a struct was inspired by [`env`](https://github.com/caarlos0/env).
@@ -18,7 +20,18 @@ of the secret in Azure Key Vault, like so:
 ```
 `secret:"<secret-name>"`
 ```
-Nested structs and pointers are supported.
+
+If the secret does not exist the field will keep the value it had prior to the call to `Parse`.
+
+
+The secret can be marked as required, this will make the call to `Parse` return an error if the secret
+does not exist:
+
+```
+secret:"<secret-name>,required"
+```
+
+The error message contains all fields that have been marked as required that didn't have a secret associated with them.
 
 **Note**: Unexported fields will be ignored.
 
@@ -96,6 +109,10 @@ func main() {
 }
 ```
 
+```sh
+{Host: Port:0 Username:username-from-keyvault Password:password-from-keyvault Credential:{Key:12345}}
+```
+
 It is possible to pass options to `Parse` that will override the package options for that particular call:
 
 ```go
@@ -115,15 +132,23 @@ func main() {
 }
 ```
 
+
 **Note**: When using options `Secrets.Client` it will take precedence over `AzureCredential`. Use one of them.
 
 For supported options see `Options` struct.
 
-```sh
-{Host: Port:0 Username:username-from-keyvault Password:password-from-keyvault Credential:{Key:12345}}
-```
+## Usage
 
-## Setting options
+**Supported types**
+
+* `string`
+* `bool`
+* `uint`, `uint8`, `uint16`, `uint32`, `uint64`
+* `int`, `int8`, `int16`, `int32`, `int64`
+* `float32`, `float64`
+
+
+### Options
 
 The behaviour of the module can be modified with the help of various options.
 
@@ -167,11 +192,15 @@ azcfg.SetSecretsClient(client)
 azcfg.SetConcurrency(20).SetTimeout(time.Millisecond * 1000 * 10)
 ```
 
+### Required
 
-**Supported types**
+The default behaviour of `Parse` is to ignore secrets that does not exist and let the field contain it's original value.
+To enforce secrets to be set the option `required` can be used.
 
-* `string`
-* `bool`
-* `uint`, `uint8`, `uint16`, `uint32`, `uint64`
-* `int`, `int8`, `int16`, `int32`, `int64`
-* `float32`, `float64`
+```go
+type Example struct {
+    FieldA `secret:"field-a"`
+    FieldB `secret:"field-b,required"`
+}
+```
+

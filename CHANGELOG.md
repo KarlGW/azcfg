@@ -1,6 +1,18 @@
 # Changelog
 
+## v0.4.1
+
+* fix: Update dependencies
+
+## v0.4.0
+
+### What's changed
+
+* Feature/parse options
+
 ## v0.3.2
+
+### What's changed
 
 * Update dependencies azcore, azidentity and azsecrets
 

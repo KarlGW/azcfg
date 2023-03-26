@@ -120,7 +120,7 @@ func TestParseRequired(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name:    "1 required",
+			name:    "required",
 			input:   StructWithRequired{},
 			wantErr: &RequiredError{message: "secrets: empty and empty-float64 are required"},
 		},

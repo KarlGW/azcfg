@@ -1,0 +1,53 @@
+package azcfg
+
+import "strings"
+
+// RequiredError is returned when a secret is marked as required.
+type RequiredError struct {
+	message string
+}
+
+// Error implements the error interface.
+func (e *RequiredError) Error() string {
+	return e.message
+}
+
+// newRequiredError creates and returns a *RequiredError.
+func newRequiredError(secrets map[string]string, required []string) *RequiredError {
+	return &RequiredError{
+		message: requiredErrorMessage(secrets, required),
+	}
+}
+
+// requiredErrorMessage builds a message based on the provided []string.
+func requiredErrorMessage(secrets map[string]string, required []string) string {
+	if len(required) == 0 {
+		return ""
+	}
+
+	req := make([]string, 0)
+	for _, r := range required {
+		if len(secrets[r]) == 0 {
+			req = append(req, r)
+		}
+	}
+
+	var message strings.Builder
+	l := len(req)
+	if l == 1 {
+		message.WriteString("secret: " + req[0] + " is required")
+		return message.String()
+	}
+	message.WriteString("secrets: ")
+	for i, r := range req {
+		message.WriteString(r)
+		if i < l-1 && l > 2 && i != l-2 {
+			message.WriteString(", ")
+		}
+		if i == l-2 {
+			message.WriteString(" and ")
+		}
+	}
+	message.WriteString(" are required")
+	return message.String()
+}

@@ -2,7 +2,7 @@ package azcfg
 
 import "strings"
 
-// RequiredError is returned when a secret is marked as required.
+// RequiredError represents an error when a secret is required.
 type RequiredError struct {
 	secret  string
 	message string

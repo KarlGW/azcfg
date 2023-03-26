@@ -19,7 +19,8 @@ func newRequiredError(secrets map[string]string, required []string) *RequiredErr
 	}
 }
 
-// requiredErrorMessage builds a message based on the provided []string.
+// requiredErrorMessage builds a message based on the provided map[string]string (secrets)
+// and []string (required).
 func requiredErrorMessage(secrets map[string]string, required []string) string {
 	if len(required) == 0 {
 		return ""

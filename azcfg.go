@@ -72,7 +72,7 @@ func getFields(v reflect.Value, tag string) ([]string, []string) {
 			if value, ok := t.Field(i).Tag.Lookup(tag); ok {
 				tags := strings.Split(value, ",")
 				fields = append(fields, tags[0])
-				if len(tags) > 1 {
+				if isRequired(tags) {
 					required = append(required, tags[0])
 				}
 			}

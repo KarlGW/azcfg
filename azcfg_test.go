@@ -2,7 +2,6 @@ package azcfg
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strconv"
 	"testing"
@@ -123,7 +122,7 @@ func TestParseRequired(t *testing.T) {
 		{
 			name:    "1 required",
 			input:   StructWithRequired{},
-			wantErr: fmt.Errorf("secrets: %s and %s are required", "empty", "empty-float64"),
+			wantErr: &RequiredError{message: "secrets: empty and empty-float64 are required"},
 		},
 	}
 

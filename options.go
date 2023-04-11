@@ -12,9 +12,6 @@ import (
 
 // pkgOpts contains options for the package.
 var (
-	defaultConcurrency = 10
-	defaultTimeout     = time.Millisecond * 1000 * 10
-
 	pkgOpts = &options{
 		secrets:     secrets{},
 		concurrency: defaultConcurrency,
@@ -29,16 +26,9 @@ type SecretsClient interface {
 
 // options contains options and settings for the package.
 type options struct {
-	secrets         secrets
-	azureCredential azcore.TokenCredential
-	concurrency     int
-	timeout         time.Duration
-}
-
-// secrets contains options for the Secrets client.
-type secrets struct {
-	client SecretsClient
-	vault  string
+	secrets     secrets
+	timeout     time.Duration
+	concurrency int
 }
 
 // SetOptions sets package level options.
@@ -66,7 +56,7 @@ func SetSecretsVault(vault string) *options {
 // SetAzureCredential sets credentials to be used for requests to Azure Key Vault.
 // Use when credential reuse is desireable.
 func SetAzureCredential(cred azcore.TokenCredential) *options {
-	pkgOpts.azureCredential = cred
+	pkgOpts.secrets.credential = cred
 	return pkgOpts
 }
 
@@ -81,14 +71,6 @@ func SetConcurrency(c int) *options {
 func SetTimeout(d time.Duration) *options {
 	pkgOpts.timeout = d
 	return pkgOpts
-}
-
-// Options for package and Parse.
-type Options struct {
-	Secrets         *SecretsOptions
-	AzureCredential azcore.TokenCredential
-	Concurrency     int
-	Timeout         time.Duration
 }
 
 // SecretsOptions contains options for secrets
@@ -154,25 +136,24 @@ func getSecretsVaultFromEnvironment() (string, error) {
 func evalOptions(o ...Options) *options {
 	opts := options{
 		secrets: secrets{
-			client: pkgOpts.secrets.client,
-			vault:  pkgOpts.secrets.vault,
+			client:     pkgOpts.secrets.client,
+			vault:      pkgOpts.secrets.vault,
+			credential: pkgOpts.secrets.credential,
 		},
-		azureCredential: pkgOpts.azureCredential,
-		concurrency:     pkgOpts.concurrency,
-		timeout:         pkgOpts.timeout,
+		concurrency: pkgOpts.concurrency,
+		timeout:     pkgOpts.timeout,
 	}
 
 	for _, o := range o {
-		if o.Secrets != nil {
-			if o.Secrets.Client != nil {
-				opts.secrets.client = o.Secrets.Client
-			}
-			if len(o.Secrets.Vault) != 0 {
-				opts.secrets.vault = o.Secrets.Vault
-			}
+		if o.SecretsClient != nil {
+			opts.secrets.client = o.SecretsClient
 		}
-		if o.AzureCredential != nil {
-			opts.azureCredential = o.AzureCredential
+		if len(o.Vault) != 0 {
+			opts.secrets.vault = o.Vault
+		}
+
+		if o.Credential != nil {
+			opts.secrets.credential = o.Credential
 		}
 		if o.Concurrency != 0 {
 			opts.concurrency = o.Concurrency
@@ -218,8 +199,8 @@ func evalClient(o *options, azureCredentialFn azureCredentialFunc, keyvaultClien
 	}
 
 	var cred azcore.TokenCredential
-	if o.azureCredential != nil {
-		cred = o.azureCredential
+	if o.secrets.credential != nil {
+		cred = o.secrets.credential
 	} else {
 		var err error
 		cred, err = azureCredentialFn()

@@ -47,7 +47,7 @@ func (p *Parser) SetClient(client Client) *Parser {
 	return p
 }
 
-// SetCredential sets credentials to be used for requests to Azure Key Vault.
+// SetCredential sets credential to be used for requests to Azure Key Vault.
 // Use when credential reuse is desirable.
 func (p *Parser) SetCredential(cred azcore.TokenCredential) *Parser {
 	p.credential = cred

@@ -17,7 +17,7 @@ func TestSetOptions(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input *Options
-		want  *options
+		want  *Parser
 	}{
 		{
 			name: "full",
@@ -27,11 +27,9 @@ func TestSetOptions(t *testing.T) {
 				Concurrency: 20,
 				Timeout:     time.Millisecond * 1000 * 20,
 			},
-			want: &options{
-				secrets: secrets{
-					vault:      "vault-name",
-					credential: mockAzureCredential{},
-				},
+			want: &Parser{
+				vault:       "vault-name",
+				credential:  mockAzureCredential{},
 				concurrency: 20,
 				timeout:     time.Millisecond * 1000 * 20,
 			},
@@ -42,11 +40,9 @@ func TestSetOptions(t *testing.T) {
 				Credential: mockAzureCredential{},
 				Vault:      "vault-name",
 			},
-			want: &options{
-				secrets: secrets{
-					vault:      "vault-name",
-					credential: mockAzureCredential{},
-				},
+			want: &Parser{
+				vault:       "vault-name",
+				credential:  mockAzureCredential{},
 				concurrency: defaultConcurrency,
 				timeout:     defaultTimeout,
 			},
@@ -57,7 +53,7 @@ func TestSetOptions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			SetOptions(test.input)
 
-			if diff := cmp.Diff(test.want, pkgOpts, cmp.AllowUnexported(options{}, secrets{})); diff != "" {
+			if diff := cmp.Diff(test.want, parser, cmp.AllowUnexported(Parser{})); diff != "" {
 				t.Errorf("SetOptions(%+v) = unexpected result, (-want, +got)\n%s\n", test.input, diff)
 			}
 			resetOptions()
@@ -65,36 +61,36 @@ func TestSetOptions(t *testing.T) {
 	}
 }
 
-func TestSetSecretsClient(t *testing.T) {
+func TestSetClient(t *testing.T) {
 	want := mockKeyVaultClient{}
-	SetSecretsClient(mockKeyVaultClient{})
-	got := pkgOpts.secrets.client
+	SetClient(mockKeyVaultClient{})
+	got := parser.client
 
 	if diff := cmp.Diff(want, got, cmp.AllowUnexported(mockKeyVaultClient{})); diff != "" {
-		t.Errorf("SetSecretsClient(%+v) = unexpected result, (-want, +got)\n%s\n", mockKeyVaultClient{}, diff)
+		t.Errorf("SetClient(%+v) = unexpected result, (-want, +got)\n%s\n", mockKeyVaultClient{}, diff)
 	}
 	resetOptions()
 }
 
-func TestSetSecretsVault(t *testing.T) {
+func TestVault(t *testing.T) {
 	want := "testvault"
-	SetSecretsVault(want)
-	got := pkgOpts.secrets.vault
+	SetVault(want)
+	got := parser.vault
 
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("SetSecretsVault(%q) = unexpected result, (-want, +got)\n%s\n", want, diff)
+		t.Errorf("SetVault(%q) = unexpected result, (-want, +got)\n%s\n", want, diff)
 	}
 	resetOptions()
 }
 
-func TestSetAzureCredential(t *testing.T) {
-	SetAzureCredential(mockAzureCredential{})
+func TestSetCredential(t *testing.T) {
+	SetCredential(mockAzureCredential{})
 	want := "token"
-	token, _ := pkgOpts.secrets.credential.GetToken(context.TODO(), policy.TokenRequestOptions{})
+	token, _ := parser.credential.GetToken(context.TODO(), policy.TokenRequestOptions{})
 	got := token.Token
 
 	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("SetAzureCredential(%q) = unexpected result, (-want, +got)\n%s\n", want, diff)
+		t.Errorf("SetCredential(%q) = unexpected result, (-want, +got)\n%s\n", want, diff)
 	}
 	resetOptions()
 }
@@ -102,7 +98,7 @@ func TestSetAzureCredential(t *testing.T) {
 func TestSetConcurrency(t *testing.T) {
 	want := 20
 	SetConcurrency(want)
-	got := pkgOpts.concurrency
+	got := parser.concurrency
 
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("SetConcurrency(%q) = unexpected result, (-want, +got)\n%s\n", want, diff)
@@ -113,7 +109,7 @@ func TestSetConcurrency(t *testing.T) {
 func TestSetTimeout(t *testing.T) {
 	want := time.Millisecond * 1000 * 20
 	SetTimeout(want)
-	got := pkgOpts.timeout
+	got := parser.timeout
 
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("SetTimeout(%q) = unexpected result, (-want, +got)\n%s\n", want, diff)
@@ -121,7 +117,7 @@ func TestSetTimeout(t *testing.T) {
 	resetOptions()
 }
 
-func TestGetSecretsVaultFromEnvironment(t *testing.T) {
+func TestGetVaultFromEnvironment(t *testing.T) {
 	var tests = []struct {
 		name    string
 		input   map[string]string
@@ -163,11 +159,11 @@ func TestGetSecretsVaultFromEnvironment(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			setEnv(test.input)
-			got, gotErr := getSecretsVaultFromEnvironment()
+			got, gotErr := getVaultFromEnvironment()
 			unsetEnv(test.input)
 
 			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("getSecretsVaultFromEnvironment() = unexpected result, (-want, +got)\n%s\n", diff)
+				t.Errorf("getVaultFromEnvironment() = unexpected result, (-want, +got)\n%s\n", diff)
 			}
 
 			if test.wantErr != nil && gotErr == nil {
@@ -179,19 +175,17 @@ func TestGetSecretsVaultFromEnvironment(t *testing.T) {
 }
 
 func TestSetChaining(t *testing.T) {
-	want := &options{
-		secrets: secrets{
-			client:     &mockKeyVaultClient{},
-			credential: &mockAzureCredential{},
-			vault:      "test-vault",
-		},
+	want := &Parser{
+		client:      &mockKeyVaultClient{},
+		credential:  &mockAzureCredential{},
+		vault:       "test-vault",
 		concurrency: 20,
 		timeout:     time.Millisecond * 1000 * 20,
 	}
 
-	got := SetSecretsClient(&mockKeyVaultClient{}).SetSecretsVault("test-vault").SetAzureCredential(&mockAzureCredential{}).SetConcurrency(20).SetTimeout(time.Millisecond * 1000 * 20).SetSecretsClient(&mockKeyVaultClient{})
+	got := SetClient(&mockKeyVaultClient{}).SetVault("test-vault").SetCredential(&mockAzureCredential{}).SetConcurrency(20).SetTimeout(time.Millisecond * 1000 * 20).SetClient(&mockKeyVaultClient{})
 
-	if diff := cmp.Diff(want, got, cmp.AllowUnexported(options{}, secrets{}, mockKeyVaultClient{}, mockAzureCredential{})); diff != "" {
+	if diff := cmp.Diff(want, got, cmp.AllowUnexported(Parser{}, mockKeyVaultClient{}, mockAzureCredential{})); diff != "" {
 		t.Errorf("Unexpected result, (-want, +got)\n%s\n", diff)
 	}
 
@@ -200,84 +194,77 @@ func TestSetChaining(t *testing.T) {
 
 func TestEvalOptions(t *testing.T) {
 	var tests = []struct {
-		name        string
-		input       []Options
-		want        *options
-		wantPkgOpts *options
+		name  string
+		input struct {
+			parser  *Parser
+			options []Options
+		}
+		want *Parser
 	}{
 		{
-			name:  "package options",
-			input: []Options{},
-			want: &options{
-				secrets:     secrets{},
-				concurrency: defaultConcurrency,
-				timeout:     defaultTimeout,
+			name: "package options",
+			input: struct {
+				parser  *Parser
+				options []Options
+			}{
+				parser:  &Parser{},
+				options: []Options{},
 			},
-			wantPkgOpts: &options{
-				secrets:     secrets{},
-				concurrency: 10,
-				timeout:     time.Millisecond * 1000 * 10,
-			},
+			want: &Parser{},
 		},
 		{
 			name: "provided options (client)",
-			input: []Options{
-				{
-					SecretsClient: mockKeyVaultClient{},
-					Vault:         "vault-name",
-					Concurrency:   5,
-					Timeout:       time.Second * 20,
+			input: struct {
+				parser  *Parser
+				options []Options
+			}{
+				parser: &Parser{},
+				options: []Options{
+					{
+						Client:      mockKeyVaultClient{},
+						Vault:       "vault-name",
+						Concurrency: 5,
+						Timeout:     time.Second * 20,
+					},
 				},
 			},
-			want: &options{
-				secrets: secrets{
-					client: mockKeyVaultClient{},
-					vault:  "vault-name",
-				},
+			want: &Parser{
+				client:      mockKeyVaultClient{},
+				vault:       "vault-name",
 				concurrency: 5,
 				timeout:     time.Second * 20,
-			},
-			wantPkgOpts: &options{
-				secrets:     secrets{},
-				concurrency: 10,
-				timeout:     time.Millisecond * 1000 * 10,
 			},
 		},
 		{
 			name: "provided options (credential)",
-			input: []Options{
-				{
-					Credential:  &mockAzureCredential{},
-					Vault:       "vault-name",
-					Concurrency: 5,
-					Timeout:     time.Second * 20,
+			input: struct {
+				parser  *Parser
+				options []Options
+			}{
+				parser: &Parser{},
+				options: []Options{
+					{
+						Credential:  &mockAzureCredential{},
+						Vault:       "vault-name",
+						Concurrency: 5,
+						Timeout:     time.Second * 20,
+					},
 				},
 			},
-			want: &options{
-				secrets: secrets{
-					credential: &mockAzureCredential{},
-					vault:      "vault-name",
-				},
+			want: &Parser{
+				credential:  &mockAzureCredential{},
+				vault:       "vault-name",
 				concurrency: 5,
 				timeout:     time.Second * 20,
-			},
-			wantPkgOpts: &options{
-				secrets:     secrets{},
-				concurrency: 10,
-				timeout:     time.Millisecond * 1000 * 10,
 			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := evalOptions(test.input...)
+			got := evalOptions(test.input.parser, test.input.options...)
 
-			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(options{}, secrets{}, mockKeyVaultClient{})); diff != "" {
-				t.Errorf("evalOptions(%+v) = unexpected result, (-want, +got)\n%s\n", test.input, diff)
-			}
-
-			if diff := cmp.Diff(test.wantPkgOpts, pkgOpts, cmp.AllowUnexported(options{}, secrets{}, mockKeyVaultClient{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Parser{}, mockKeyVaultClient{})); diff != "" {
 				t.Errorf("evalOptions(%+v) = unexpected result, (-want, +got)\n%s\n", test.input, diff)
 			}
 
@@ -289,92 +276,93 @@ func TestEvalOptions(t *testing.T) {
 func TestEvalClient(t *testing.T) {
 	var tests = []struct {
 		name    string
-		input   *options
+		input   *Parser
 		options evalClientOptions
 		env     map[string]string
-		want    SecretsClient
+		want    *Parser
 		wantErr error
 	}{
 		{
 			name: "client is provided",
-			input: &options{
-				secrets: secrets{
-					client: &mockKeyVaultClient{},
-				},
+			input: &Parser{
+				client: &mockKeyVaultClient{},
 			},
 			options: evalClientOptions{},
 			env:     nil,
-			want:    &mockKeyVaultClient{},
+			want: &Parser{
+				client: &mockKeyVaultClient{},
+			},
 			wantErr: nil,
 		},
 		{
 			name: "credentials and vault are provided",
-			input: &options{
-				secrets: secrets{
-					credential: &mockAzureCredential{},
-					vault:      "vault-name",
-				},
+			input: &Parser{
+				credential: &mockAzureCredential{},
+				vault:      "vault-name",
 			},
 			options: evalClientOptions{},
 			env:     nil,
-			want:    &mockKeyVaultClient{},
+			want: &Parser{
+				client:     &mockKeyVaultClient{},
+				credential: &mockAzureCredential{},
+				vault:      "vault-name",
+			},
 		},
 		{
-			name: "credentials provided (vault environment variable)",
-			input: &options{
-				secrets: secrets{},
-			},
+			name:    "credentials provided (vault environment variable)",
+			input:   &Parser{},
 			options: evalClientOptions{},
 			env: map[string]string{
 				"AZURE_KEYVAULT_NAME": "vault-name",
 			},
-			want:    &mockKeyVaultClient{},
-			wantErr: nil,
-		},
-		{
-			name:    "Empty secrets",
-			input:   &options{},
-			options: evalClientOptions{},
-			env: map[string]string{
-				"AZURE_KEYVAULT_NAME": "vault-name",
+			want: &Parser{
+				client:     &mockKeyVaultClient{},
+				credential: &mockAzureCredential{},
+				vault:      "vault-name",
 			},
-			want:    &mockKeyVaultClient{},
 			wantErr: nil,
 		},
 		{
-			name:    "nil options",
+			name:    "nil parser",
 			input:   nil,
 			options: evalClientOptions{},
 			env: map[string]string{
 				"AZURE_KEYVAULT_NAME": "vault-name",
 			},
-			want:    &mockKeyVaultClient{},
-			wantErr: nil,
+			want:    nil,
+			wantErr: errors.New("a *Parser must be provided"),
 		},
 		{
 			name:    "credential error",
-			input:   &options{},
+			input:   &Parser{},
 			options: evalClientOptions{credentialErr: errors.New("error")},
 			env:     nil,
-			want:    nil,
+			want: &Parser{
+				credential: &mockAzureCredential{},
+			},
 			wantErr: errors.New("error"),
 		},
 		{
 			name:    "vault name error",
-			input:   &options{},
+			input:   &Parser{},
 			options: evalClientOptions{},
 			env:     nil,
-			want:    nil,
+			want: &Parser{
+				credential: &mockAzureCredential{},
+			},
 			wantErr: errors.New("error"),
 		},
 		{
 			name:    "secrets client error",
-			input:   &options{},
-			options: evalClientOptions{secretsClientErr: errors.New("error")},
+			input:   &Parser{},
+			options: evalClientOptions{ClientErr: errors.New("error")},
 			env: map[string]string{
 				"AZURE_KEYVAULT_NAME": "vault-name",
 			},
-			want:    &mockKeyVaultClient{},
+			want: &Parser{
+				credential: &mockAzureCredential{},
+				vault:      "vault-name",
+			},
 			wantErr: errors.New("error"),
 		},
 	}
@@ -385,14 +373,14 @@ func TestEvalClient(t *testing.T) {
 			got, gotErr := evalClient(
 				test.input,
 				func() (azcore.TokenCredential, error) {
-					return mockAzureCredential{}, test.options.credentialErr
+					return &mockAzureCredential{}, test.options.credentialErr
 				},
-				func(vault string, cred azcore.TokenCredential, options *keyvault.ClientOptions) (SecretsClient, error) {
-					return &mockKeyVaultClient{}, test.options.secretsClientErr
+				func(vault string, cred azcore.TokenCredential, options *keyvault.ClientOptions) (Client, error) {
+					return &mockKeyVaultClient{}, test.options.ClientErr
 				},
 			)
 
-			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(mockAzureCredential{}, mockKeyVaultClient{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Parser{}, mockAzureCredential{}, mockKeyVaultClient{})); diff != "" {
 				t.Errorf("evalClient(%+v, fn, fn) = unexpected result, (-want, +got)\n%s\n", test.input, diff)
 			}
 
@@ -406,13 +394,12 @@ func TestEvalClient(t *testing.T) {
 }
 
 type evalClientOptions struct {
-	credentialErr    error
-	secretsClientErr error
+	credentialErr error
+	ClientErr     error
 }
 
 func resetOptions() {
-	pkgOpts = &options{
-		secrets:     secrets{},
+	parser = &Parser{
 		concurrency: defaultConcurrency,
 		timeout:     defaultTimeout,
 	}

@@ -13,22 +13,21 @@ const (
 	required   = "required"
 )
 
-// Parse secrets from an Azure Key Vault into a struct.
-func Parse(v any, o ...Options) error {
-	client, err := evalClient(
-		evalOptions(o...),
-		newAzureCredential,
-		newKeyvaultClient,
-	)
-	if err != nil {
-		return err
+var (
+	// parser is the package level Parser.
+	parser = &Parser{
+		concurrency: defaultConcurrency,
+		timeout:     defaultTimeout,
 	}
+)
 
-	return parse(v, client)
+// Parse secrets from an Azure Key Vault into a struct.
+func Parse(v any, options ...Options) error {
+	return parser.Parse(v, options...)
 }
 
 // Parse secrets into the configuration.
-func parse(d any, client SecretsClient) error {
+func parse(d any, client Client) error {
 	v := reflect.ValueOf(d)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("must provide a pointer to a struct")

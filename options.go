@@ -10,103 +10,66 @@ import (
 	"github.com/KarlGW/azcfg/internal/keyvault"
 )
 
-// pkgOpts contains options for the package.
 var (
-	pkgOpts = &options{
-		secrets:     secrets{},
-		concurrency: defaultConcurrency,
-		timeout:     defaultTimeout,
-	}
+	// defaultConcurrency contains the default concurrency for the
+	// parser.
+	defaultConcurrency = 10
+	// defaultTimeout contains the default timeout for the parser.
+	defaultTimeout = time.Millisecond * 1000 * 10
 )
 
-// SecretsClient is the interface that wraps around method GetSecrets.
-type SecretsClient interface {
-	GetSecrets(names []string) (map[string]string, error)
-}
-
-// options contains options and settings for the package.
-type options struct {
-	secrets     secrets
-	timeout     time.Duration
-	concurrency int
+// Options contains options for a package level Parse operation, and
+// options for an instance of Parse created with NewParser.
+type Options struct {
+	// Client is the client used to retrieve secrets. Used to override the default
+	// Client.
+	Client Client
+	// Credential is the credential to be used with the Client. Used to override
+	// the default method of aquiring credentials.
+	Credential azcore.TokenCredential
+	// Vault is the name of the vault containing secrets. Used to override the
+	// default method of aquiring target vault.
+	Vault string
+	// Timeout is the total timeout for retrieval of secrets. Defaults to 10 seconds.
+	Timeout time.Duration
+	// Concurrency is the amount of secrets that will be retrieved concurrently.
+	// Defaults to 10.
+	Concurrency int
 }
 
 // SetOptions sets package level options.
-func SetOptions(o *Options) {
+func SetOptions(o *Options) *Parser {
 	if o == nil {
-		return
+		return parser
 	}
-	pkgOpts = evalOptions(*o)
+	return evalOptions(parser, *o)
 }
 
-// SetSecretsClient sets an alternative client for Azure Key Vault requests.
-// Must implement SecretsClient.
-func SetSecretsClient(client SecretsClient) *options {
-	pkgOpts.secrets.client = client
-	return pkgOpts
+// SetClient sets an alternative client for Azure Key Vault requests.
+// Must implement Client.
+func SetClient(client Client) *Parser {
+	return parser.SetClient(client)
 }
 
-// SetSecretsVault sets the Azure Key Vault to query for
-// secrets.
-func SetSecretsVault(vault string) *options {
-	pkgOpts.secrets.vault = vault
-	return pkgOpts
-}
-
-// SetAzureCredential sets credentials to be used for requests to Azure Key Vault.
+// SetCredential sets credential to be used for requests to Azure Key Vault.
 // Use when credential reuse is desireable.
-func SetAzureCredential(cred azcore.TokenCredential) *options {
-	pkgOpts.secrets.credential = cred
-	return pkgOpts
+func SetCredential(cred azcore.TokenCredential) *Parser {
+	return parser.SetCredential(cred)
+}
+
+// SetVault sets the Azure Key Vault to query for secrets.
+func SetVault(vault string) *Parser {
+	return parser.SetVault(vault)
 }
 
 // SetConcurrency sets amount of concurrent calls for fetching secrets.
-func SetConcurrency(c int) *options {
-	pkgOpts.concurrency = c
-	return pkgOpts
+func SetConcurrency(c int) *Parser {
+	return parser.SetConcurrency(c)
 }
 
-// SetTimeout sets the total timeout for the requests for fetching
-// secrets.
-func SetTimeout(d time.Duration) *options {
-	pkgOpts.timeout = d
-	return pkgOpts
-}
-
-// SecretsOptions contains options for secrets
-// and secrets client.
-type SecretsOptions struct {
-	Client SecretsClient
-	Vault  string
-}
-
-// SetSecretsClient sets an alternative client for Azure Key Vault requests.
-// Must implement SecretsClient.
-func (o *options) SetSecretsClient(client SecretsClient) *options {
-	return SetSecretsClient(client)
-}
-
-// SetSecretsVault sets the Azure Key Vault to query for
-// secrets.
-func (o *options) SetSecretsVault(vault string) *options {
-	return SetSecretsVault(vault)
-}
-
-// SetAzureCredential sets credentials to be used for requests to Azure Key Vault.
-// Use when credential reuse is desireable.
-func (o *options) SetAzureCredential(cred azcore.TokenCredential) *options {
-	return SetAzureCredential(cred)
-}
-
-// SetConcurrency sets amount of concurrent calls for fetching secrets.
-func (o *options) SetConcurrency(c int) *options {
-	return SetConcurrency(c)
-}
-
-// SetTimeout sets the total timeout for the requests for fetching
-// secrets.
-func (o *options) SetTimeout(d time.Duration) *options {
-	return SetTimeout(d)
+// SetTimeout sets the total timeout for the requests for fetching secrets.
+func SetTimeout(d time.Duration) *Parser {
+	return parser.SetTimeout(d)
 }
 
 // envKeyVault contains environment variables to check for
@@ -120,9 +83,9 @@ var (
 	}
 )
 
-// getSecretsVault checks the environment if any of the variables AZURE_KEY_VAULT,
+// getVaultFromEnvironment checks the environment if any of the variables AZURE_KEY_VAULT,
 // AZURE_KEY_VAULT_NAME, AZURE_KEYVAULT or AZURE_KEYVAULT_NAME is set.
-func getSecretsVaultFromEnvironment() (string, error) {
+func getVaultFromEnvironment() (string, error) {
 	for _, v := range envKeyVault {
 		if len(os.Getenv(v)) != 0 {
 			return os.Getenv(v), nil
@@ -131,38 +94,28 @@ func getSecretsVaultFromEnvironment() (string, error) {
 	return "", errors.New("a Key Vault name must be set")
 }
 
-// evalOptions takes the provide options and checks it against the package level options and returns
-// a new options evaluated from them both. The provided options overwrites package level options.
-func evalOptions(o ...Options) *options {
-	opts := options{
-		secrets: secrets{
-			client:     pkgOpts.secrets.client,
-			vault:      pkgOpts.secrets.vault,
-			credential: pkgOpts.secrets.credential,
-		},
-		concurrency: pkgOpts.concurrency,
-		timeout:     pkgOpts.timeout,
-	}
-
+// evalOptions takes the provided *Parser and checks it against the provided ...Options and
+// overrides the settings of the *Parser if they exist in the provided ...Options.
+func evalOptions(p *Parser, o ...Options) *Parser {
 	for _, o := range o {
-		if o.SecretsClient != nil {
-			opts.secrets.client = o.SecretsClient
+		if o.Client != nil {
+			p.client = o.Client
 		}
 		if len(o.Vault) != 0 {
-			opts.secrets.vault = o.Vault
+			p.vault = o.Vault
 		}
 
 		if o.Credential != nil {
-			opts.secrets.credential = o.Credential
+			p.credential = o.Credential
 		}
 		if o.Concurrency != 0 {
-			opts.concurrency = o.Concurrency
+			p.concurrency = o.Concurrency
 		}
 		if o.Timeout != 0 {
-			opts.timeout = o.Timeout
+			p.timeout = o.Timeout
 		}
 	}
-	return &opts
+	return p
 }
 
 // azureCredentialFunc should returns azcore.TokenCredential and error.
@@ -173,55 +126,48 @@ func newAzureCredential() (azcore.TokenCredential, error) {
 	return azidentity.NewDefaultAzureCredential(nil)
 }
 
-// keyvaultClientFunc should return SecretsClient and error.
-type keyvaultClientFunc func(vault string, cred azcore.TokenCredential, options *keyvault.ClientOptions) (SecretsClient, error)
+// keyvaultClientFunc should return Client and error.
+type keyvaultClientFunc func(vault string, cred azcore.TokenCredential, options *keyvault.ClientOptions) (Client, error)
 
 // newKeyVaultClient calls keyvault.NewClient.
-func newKeyvaultClient(vault string, cred azcore.TokenCredential, options *keyvault.ClientOptions) (SecretsClient, error) {
+func newKeyvaultClient(vault string, cred azcore.TokenCredential, options *keyvault.ClientOptions) (Client, error) {
 	return keyvault.NewClient(vault, cred, options)
 }
 
-// evalClient takes the to provided *options, azureCredentialFunc and keyvaultClientFunc to
-// determine secrets client, azure credential and vault. Creates a SecretsClient if necessary.
-func evalClient(o *options, azureCredentialFn azureCredentialFunc, keyvaultClientFn keyvaultClientFunc) (SecretsClient, error) {
-	if o == nil {
-		o = &options{
-			secrets: secrets{},
-		}
+// evalClient takes the to provided *Parser, azureCredentialFunc and keyvaultClientFunc to
+// determine secrets client, azure credential and vault. Creates a Client if necessary.
+func evalClient(p *Parser, azureCredentialFn azureCredentialFunc, keyvaultClientFn keyvaultClientFunc) (*Parser, error) {
+	var err error
+	if p == nil {
+		return nil, errors.New("a *Parser must be provided")
 	}
 
-	if (secrets{}) == o.secrets {
-		o.secrets = secrets{}
+	if p.client != nil {
+		return p, nil
 	}
 
-	if o.secrets.client != nil {
-		return o.secrets.client, nil
-	}
-
-	var cred azcore.TokenCredential
-	if o.secrets.credential != nil {
-		cred = o.secrets.credential
-	} else {
-		var err error
-		cred, err = azureCredentialFn()
+	if p.credential == nil {
+		p.credential, err = azureCredentialFn()
 		if err != nil {
-			return nil, err
+			return p, err
 		}
 	}
 
-	var vault string
-	if len(o.secrets.vault) != 0 {
-		vault = o.secrets.vault
-	} else {
-		var err error
-		vault, err = getSecretsVaultFromEnvironment()
+	if len(p.vault) == 0 {
+		p.vault, err = getVaultFromEnvironment()
 		if err != nil {
-			return nil, err
+			return p, err
 		}
 	}
 
-	return keyvaultClientFn(vault, cred, &keyvault.ClientOptions{
-		Concurrency: o.concurrency,
-		Timeout:     o.timeout,
+	client, err := keyvaultClientFn(p.vault, p.credential, &keyvault.ClientOptions{
+		Concurrency: p.concurrency,
+		Timeout:     p.timeout,
 	})
+	if err != nil {
+		return p, err
+	}
+
+	p.client = client
+	return p, nil
 }

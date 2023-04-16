@@ -18,8 +18,7 @@ var (
 	defaultTimeout = time.Millisecond * 1000 * 10
 )
 
-// Options contains options for a package level Parse operation, and
-// options for an instance of Parse created with NewParser.
+// Options contains settings for Parse operations and for instances of Parser created with NewParser.
 type Options struct {
 	// Client is the client used to retrieve secrets. Used to override the default
 	// Client.

@@ -121,19 +121,47 @@ package main
 func main() {
     cfg := config{}
     if err := azcfg.Parse(&cfg, &azcfg.Options{
-        Secrets: &azcfg.SecretOptions{
-            Client: client,
-            Vault: "vault"
-        }
-        AzureCredential: cred,
+        Client: client,
+        Credential: cred,
+        Vault: "vault",
         Concurrency: 20,
         Timeout: time.Millisecond * 1000 * 20
-    })
+    }); err != nil {
+        // Handle error.
+    }
 }
 ```
 
+An independent `Parser` can be created and passed around inside of the application.
 
-**Note**: When using options `Secrets.Client` it will take precedence over `AzureCredential`. Use one of them.
+```go
+package main
+
+func main() {
+    parser := azcfg.NewParser()
+
+    cfg := config{}
+    if err := parser.Parse(&cfg); err != nil {
+        // Handle error.
+    }
+}
+```
+
+Both the `NewParser` and the `Parse` method on the `Parser` supports `Options` as in the examples
+for the package level `Parse` function.
+
+```go
+package main
+
+func main() {
+    parser := azcfg.NewParser(azcfg.Options{})
+
+    cfg := config{}
+    if err := parser.Parse(azcfg.Options{}); err != nil {
+        // Handle error.
+    }
+}
+```
 
 For supported options see `Options` struct.
 
@@ -153,6 +181,22 @@ For supported options see `Options` struct.
 The behaviour of the module can be modified with the help of various options.
 
 ```go
+// Setting options for the package:
+azcfg.SetOptions(&azcfg.Options{
+    Client: client,         // Defaults to nil, the built-in secrets client.
+    Credential: cred,       // Defaults to nil, the built-in Azure credential authentication flow.
+    Vault: "vault-name"     // Defaults to "", which will check environment variables.
+    Concurrency: 20,        // Defaults to 10.
+    Timeout: duration,      // Defaults to time.Millisecond * 1000 * 10 (10 seconds)
+})
+
+
+// Setting a client for Azure Key Vault. Provided client must implement
+// Client. Useful for stubbing dependencies when testing applications
+// using this library.
+azcfg.SetClient(client)
+
+
 // Setting credential. See example for supported credential types and how to set the at:
 // https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity#readme-credential-types.
 // This is useful when the same credentials should be used through the entire application,
@@ -161,32 +205,20 @@ cred, err := azidentity.<FunctionForCredentialType>
 if err != nil {
     // Handle error.
 }
-azcfg.SetAzureCredential(cred)
+azcfg.SetCredential(cred)
+
 
 // Setting secrets vault name:
-azcfg.SetSecretsVault("vault-name")
+azcfg.SetVault("vault-name")
+
 
 // Setting concurrent calls for the client (defaults to 10):
 azcfg.SetConcurrency(20)
 
+
 // Setting timeout for the total amount of requests (default to 10 seconds):
 azcfg.SetTimeout(time.Millsecond * 1000 * 20)
 
-// Setting options for the package:
-azcfg.SetOptions(&azcfg.Options{
-    Secrets: SecretsOptions{
-        Client: SecretsClient // Defaults to nil, the built-in secrets client.
-        Vault: "vault-name",    // Defaults to "", which will check environment variables.
-    }
-    AzureCredential: cred,       // Defaults to nil, the built-in Azure credential auth.
-    Concurrency: 20,        // Defaults to 10.
-    Timeout: duration,      // Defaults to time.Millisecond * 1000 * 10 (10 seconds)
-})
-
-// Setting a client for Azure Key Vault. Provided client must implement
-// SecretsClient. Useful for stubbing dependencies when testing applications
-// using this library.
-azcfg.SetSecretsClient(client)
 
 // The "Set"-functions are chainable (with the exception of SetOptions), and can be called like so:
 azcfg.SetConcurrency(20).SetTimeout(time.Millisecond * 1000 * 10)
@@ -203,4 +235,3 @@ type Example struct {
     FieldB `secret:"field-b,required"`
 }
 ```
-

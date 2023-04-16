@@ -1,6 +1,14 @@
 # Changelog
 
+## v0.5.0
+
+### What's changed
+
+* feat!: Add required option on secret tags
+
 ## v0.4.1
+
+### What's changed
 
 * fix: Update dependencies
 

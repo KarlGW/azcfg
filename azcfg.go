@@ -14,7 +14,7 @@ const (
 )
 
 var (
-	// parser is the package level Parser.
+	// parser is the package level *Parser.
 	parser = &Parser{
 		concurrency: defaultConcurrency,
 		timeout:     defaultTimeout,

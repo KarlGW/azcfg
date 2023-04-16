@@ -89,9 +89,9 @@ func (c Client) GetSecrets(names []string) (map[string]string, error) {
 
 // secretResult contains the results from a GetSecret call.
 type secretResult struct {
+	err   error
 	name  string
 	value string
-	err   error
 }
 
 // getSecrets performs calls to the target Azure Key Vault concurrently. It

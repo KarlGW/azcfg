@@ -185,7 +185,7 @@ The behaviour of the module can be modified with the help of various options.
 azcfg.SetOptions(&azcfg.Options{
     Client: client,         // Defaults to nil, the built-in secrets client.
     Credential: cred,       // Defaults to nil, the built-in Azure credential authentication flow.
-    Vault: "vault-name"     // Defaults to "", which will check environment variables.
+    Vault: "vault"          // Defaults to "", which will check environment variables.
     Concurrency: 20,        // Defaults to 10.
     Timeout: duration,      // Defaults to time.Millisecond * 1000 * 10 (10 seconds)
 })
@@ -209,7 +209,7 @@ azcfg.SetCredential(cred)
 
 
 // Setting secrets vault name:
-azcfg.SetVault("vault-name")
+azcfg.SetVault("vault")
 
 
 // Setting concurrent calls for the client (defaults to 10):

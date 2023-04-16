@@ -82,9 +82,9 @@ var (
 	}
 )
 
-// getVaultFromEnvironment checks the environment if any of the variables AZURE_KEY_VAULT,
+// vaultFromEnvironment checks the environment if any of the variables AZURE_KEY_VAULT,
 // AZURE_KEY_VAULT_NAME, AZURE_KEYVAULT or AZURE_KEYVAULT_NAME is set.
-func getVaultFromEnvironment() (string, error) {
+func vaultFromEnvironment() (string, error) {
 	for _, v := range envKeyVault {
 		if len(os.Getenv(v)) != 0 {
 			return os.Getenv(v), nil
@@ -100,16 +100,19 @@ func evalOptions(p *Parser, o ...Options) *Parser {
 		if o.Client != nil {
 			p.client = o.Client
 		}
-		if len(o.Vault) != 0 {
-			p.vault = o.Vault
-		}
 
 		if o.Credential != nil {
 			p.credential = o.Credential
 		}
+
+		if len(o.Vault) != 0 {
+			p.vault = o.Vault
+		}
+
 		if o.Concurrency != 0 {
 			p.concurrency = o.Concurrency
 		}
+
 		if o.Timeout != 0 {
 			p.timeout = o.Timeout
 		}
@@ -153,7 +156,7 @@ func evalClient(p *Parser, azureCredentialFn azureCredentialFunc, keyvaultClient
 	}
 
 	if len(p.vault) == 0 {
-		p.vault, err = getVaultFromEnvironment()
+		p.vault, err = vaultFromEnvironment()
 		if err != nil {
 			return p, err
 		}

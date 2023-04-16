@@ -117,7 +117,7 @@ func TestSetTimeout(t *testing.T) {
 	resetOptions()
 }
 
-func TestGetVaultFromEnvironment(t *testing.T) {
+func TestVaultFromEnvironment(t *testing.T) {
 	var tests = []struct {
 		name    string
 		input   map[string]string
@@ -159,11 +159,11 @@ func TestGetVaultFromEnvironment(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			setEnv(test.input)
-			got, gotErr := getVaultFromEnvironment()
+			got, gotErr := vaultFromEnvironment()
 			unsetEnv(test.input)
 
 			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("getVaultFromEnvironment() = unexpected result, (-want, +got)\n%s\n", diff)
+				t.Errorf("vaultFromEnvironment() = unexpected result, (-want, +got)\n%s\n", diff)
 			}
 
 			if test.wantErr != nil && gotErr == nil {

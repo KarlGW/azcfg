@@ -353,9 +353,9 @@ func TestEvalClient(t *testing.T) {
 			wantErr: errors.New("error"),
 		},
 		{
-			name:    "secrets client error",
+			name:    "client error",
 			input:   &Parser{},
-			options: evalClientOptions{ClientErr: errors.New("error")},
+			options: evalClientOptions{clientErr: errors.New("error")},
 			env: map[string]string{
 				"AZURE_KEYVAULT_NAME": "vault-name",
 			},
@@ -376,7 +376,7 @@ func TestEvalClient(t *testing.T) {
 					return &mockAzureCredential{}, test.options.credentialErr
 				},
 				func(vault string, cred azcore.TokenCredential, options *keyvault.ClientOptions) (Client, error) {
-					return &mockKeyVaultClient{}, test.options.ClientErr
+					return &mockKeyVaultClient{}, test.options.clientErr
 				},
 			)
 
@@ -395,7 +395,7 @@ func TestEvalClient(t *testing.T) {
 
 type evalClientOptions struct {
 	credentialErr error
-	ClientErr     error
+	clientErr     error
 }
 
 func resetOptions() {

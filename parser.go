@@ -11,7 +11,7 @@ type Client interface {
 	GetSecrets(names []string) (map[string]string, error)
 }
 
-// Parser contains all the necessary values and settings for a Parse call.
+// Parser contains all the necessary values and settings for calls to Parse.
 type Parser struct {
 	client      Client
 	credential  azcore.TokenCredential

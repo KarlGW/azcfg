@@ -6,73 +6,72 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 )
 
-var (
-	// defaultConcurrency contains the default concurrency for the
-	// parser.
-	defaultConcurrency = 10
-	// defaultTimeout contains the default timeout for the parser.
-	defaultTimeout = time.Millisecond * 1000 * 10
-)
-
-var (
-	// parser is the package level parser and the settings.
-	parser = Parser{
-		secrets:     secrets{},
-		concurrency: defaultConcurrency,
-		timeout:     defaultTimeout,
-	}
-)
-
-// secrets contains options for the secrets client.
-type secrets struct {
-	client     SecretsClient
-	credential azcore.TokenCredential
-	vault      string
+// Client is the interface that wraps around method GetSecrets.
+type Client interface {
+	GetSecrets(names []string) (map[string]string, error)
 }
 
-// Parser ...
+// Parser contains all the necessary values and settings for a Parse call.
 type Parser struct {
-	secrets     secrets
+	client      Client
+	credential  azcore.TokenCredential
+	vault       string
 	timeout     time.Duration
 	concurrency int
 }
 
-// Options ...
-type Options struct {
-	SecretsClient SecretsClient
-	Credential    azcore.TokenCredential
-	Vault         string
-	Timeout       time.Duration
-	Concurrency   int
-}
-
-// NewParser creates and returns a *Parser.
+// NewParser creates and returns a *Parser. With no options provided
+// it will have default settings for timeout and concurrency.
 func NewParser(options ...Options) *Parser {
-	parser := &Parser{
+	p := &Parser{
 		timeout:     defaultTimeout,
 		concurrency: defaultConcurrency,
 	}
-	for _, o := range options {
-		if o.SecretsClient != nil {
-			parser.secrets.client = o.SecretsClient
-		}
-		if o.Credential != nil {
-			parser.secrets.credential = o.Credential
-		}
-		if len(o.Vault) != 0 {
-			parser.secrets.vault = o.Vault
-		}
-		if o.Timeout != 0 {
-			parser.timeout = o.Timeout
-		}
-		if o.Concurrency != 0 {
-			parser.concurrency = o.Concurrency
-		}
-	}
-	return parser
+	return evalOptions(p, options...)
 }
 
 // Parse secrets from an Azure Key Vault into a struct.
-func (p Parser) Parse(v any) error {
-	return parse(v, p.secrets.client)
+func (p *Parser) Parse(v any, options ...Options) error {
+	var err error
+	p, err = evalClient(evalOptions(p, options...), newAzureCredential, newKeyvaultClient)
+	if err != nil {
+		return err
+	}
+	return parse(v, p.client)
+}
+
+// SetClient sets an alternative client for Azure Key Vault requests.
+// Must implement Client.
+func (p *Parser) SetClient(client Client) *Parser {
+	p.client = client
+	return p
+}
+
+// SetCredential sets credentials to be used for requests to Azure Key Vault.
+// Use when credential reuse is desirable.
+func (p *Parser) SetCredential(cred azcore.TokenCredential) *Parser {
+	p.credential = cred
+	p.client = nil
+	return p
+}
+
+// SetVault sets the Azure Key Vault to query for secrets.
+func (p *Parser) SetVault(vault string) *Parser {
+	p.vault = vault
+	p.client = nil
+	return p
+}
+
+// SetConcurrency sets amount of concurrent calls for fetching secrets.
+func (p *Parser) SetConcurrency(c int) *Parser {
+	p.concurrency = c
+	p.client = nil
+	return p
+}
+
+// SetTimeout sets the total timeout for the requests for fetching secrets.
+func (p *Parser) SetTimeout(d time.Duration) *Parser {
+	p.timeout = d
+	p.client = nil
+	return p
 }

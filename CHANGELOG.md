@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.6.0
+
+* feat!: Parser type and new names for option functions
+
 ## v0.5.0
 
 ### What's changed

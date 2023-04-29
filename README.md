@@ -2,7 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/KarlGW/azcfg.svg)](https://pkg.go.dev/github.com/KarlGW/azcfg)
 
-> Set Azure Key Vault secrets to a struct
+> Azure Confidential Field Gatherer - Set Azure Key Vault secrets to a struct
 
 * [Getting started](#getting-started)
   * [Install](#install)

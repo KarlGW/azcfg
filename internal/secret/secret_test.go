@@ -29,7 +29,7 @@ func TestClient_Get(t *testing.T) {
 			bodies map[string][]byte
 			err    error
 		}
-		want    map[string]secret
+		want    map[string]Secret
 		wantErr error
 	}{
 		{
@@ -46,7 +46,7 @@ func TestClient_Get(t *testing.T) {
 					"secret-c": []byte(`{"value":"c"}`),
 				},
 			},
-			want: map[string]secret{
+			want: map[string]Secret{
 				"secret-a": {Value: "a"},
 				"secret-b": {Value: "b"},
 				"secret-c": {Value: "c"},
@@ -66,7 +66,7 @@ func TestClient_Get(t *testing.T) {
 					"secret-c": []byte(`{"value":"c"}`),
 				},
 			},
-			want: map[string]secret{
+			want: map[string]Secret{
 				"secret-a": {Value: "a"},
 				"secret-b": {Value: ""},
 				"secret-c": {Value: "c"},

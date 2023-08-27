@@ -16,7 +16,7 @@ import (
 
 const (
 	// baseURL is the base URL for Azure Key Vault in the Azure Public Cloud.
-	baseURL = "https://{vault}.vault.azure.net"
+	baseURL = "https://{vault}.vault.azure.net/secrets"
 )
 
 const (
@@ -24,8 +24,8 @@ const (
 	apiVersion = "7.4"
 )
 
-// secret represents a secret as returned from the Key Vault REST API.
-type secret struct {
+// Secret represents a secret as returned from the Key Vault REST API.
+type Secret struct {
 	Value string `json:"value"`
 }
 
@@ -80,7 +80,7 @@ func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Cli
 }
 
 // Get secrets by names.
-func (c Client) Get(names ...string) (map[string]secret, error) {
+func (c Client) Get(names ...string) (map[string]Secret, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
@@ -88,11 +88,11 @@ func (c Client) Get(names ...string) (map[string]secret, error) {
 }
 
 // get a secret.
-func (c Client) get(ctx context.Context, name string) (secret, error) {
+func (c Client) get(ctx context.Context, name string) (Secret, error) {
 	u := fmt.Sprintf("%s/%s?api-version=%s", c.baseURL, name, apiVersion)
 	token, err := c.cred.Token(ctx)
 	if err != nil {
-		return secret{}, err
+		return Secret{}, err
 	}
 
 	b, err := request(ctx, c.c, addAuthHeader(http.Header{}, token.AccessToken), http.MethodGet, u)
@@ -100,10 +100,10 @@ func (c Client) get(ctx context.Context, name string) (secret, error) {
 		if errors.Is(err, errSecretNotFound) {
 			err = fmt.Errorf("secret %s: %w", name, err)
 		}
-		return secret{}, err
+		return Secret{}, err
 	}
 
-	var secret secret
+	var secret Secret
 	if err := json.Unmarshal(b, &secret); err != nil {
 		return secret, err
 	}
@@ -112,12 +112,12 @@ func (c Client) get(ctx context.Context, name string) (secret, error) {
 }
 
 // retreive secrets by the provided names.
-func (c Client) retreive(ctx context.Context, names []string) (map[string]secret, error) {
+func (c Client) retreive(ctx context.Context, names []string) (map[string]Secret, error) {
 	if names == nil {
 		return nil, nil
 	}
 	sm := secretMap{
-		m: make(map[string]secret, len(names)),
+		m: make(map[string]Secret, len(names)),
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
@@ -142,13 +142,27 @@ func (c Client) retreive(ctx context.Context, names []string) (map[string]secret
 // secretMap provides a concurrency safe way to manipulate
 // the inner map.
 type secretMap struct {
-	m  map[string]secret
+	m  map[string]Secret
 	mu sync.RWMutex
 }
 
 // set a secret to the secretMap.
-func (sm *secretMap) set(key string, secret secret) {
+func (sm *secretMap) set(key string, secret Secret) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 	sm.m[key] = secret
+}
+
+// WithConcurrency sets the concurrency for secret retrieval.
+func WithConcurrency(c int) ClientOption {
+	return func(o *ClientOptions) {
+		o.Concurrency = c
+	}
+}
+
+// WithTimeout sets timeout for secret retreival.
+func WithTimeout(d time.Duration) ClientOption {
+	return func(o *ClientOptions) {
+		o.Timeout = d
+	}
 }

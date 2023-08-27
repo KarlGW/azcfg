@@ -24,10 +24,12 @@ type Credential interface {
 // AdaptorCredential is used when other credentials are provided than
 // the built-in one.
 type AdaptorCredential struct {
+	// TokenFunc should contain the token retreival logic from another
+	// credential/token retreival method.
 	TokenFunc func(ctx context.Context) (Token, error)
 }
 
-// Token retreives access token.
+// Token retrieves access token.
 func (a *AdaptorCredential) Token(ctx context.Context) (Token, error) {
 	return a.TokenFunc(ctx)
 }

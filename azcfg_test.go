@@ -6,28 +6,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/KarlGW/azcfg/internal/secret"
 	"github.com/google/go-cmp/cmp"
-)
-
-var (
-	responseSecrets = map[string]string{
-		"string":           "new string",
-		"string-ptr":       "new string ptr",
-		"empty":            "",
-		"int":              "100",
-		"int64":            "100",
-		"uint":             "100",
-		"uint64":           "100",
-		"float64":          "100",
-		"float64-ptr":      "100",
-		"bool":             "true",
-		"bool-ptr":         "true",
-		"nested-string":    "new nested string",
-		"string-slice":     "a,b,c",
-		"string-slice-ptr": "a,b,c",
-		"int-slice":        "1,2,3",
-		"int-slice-ptr":    "1,2,3",
-	}
 )
 
 func TestParse(t *testing.T) {
@@ -99,7 +79,7 @@ func TestParse(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			client := mockKeyVaultClient{}
+			client := mockClient{}
 
 			err := parse(&test.input, client)
 			if diff := cmp.Diff(test.want, test.input, cmp.AllowUnexported(Struct{})); diff != "" {
@@ -128,7 +108,7 @@ func TestParseRequired(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			client := mockKeyVaultClient{}
+			client := mockClient{}
 
 			err := parse(&test.input, client)
 			if test.wantErr != nil && err == nil {
@@ -283,13 +263,13 @@ type NestedStructWithRequired struct {
 	Float64 float64 `secret:"empty-float64,required"`
 }
 
-type mockKeyVaultClient struct {
+type mockClient struct {
 	err bool
 }
 
-func (c mockKeyVaultClient) GetSecrets(names []string) (map[string]string, error) {
+func (c mockClient) Get(names ...string) (map[string]secret.Secret, error) {
 	if c.err == true {
-		return nil, errors.New("could not get secret")
+		return nil, errors.New("could not get secrets")
 	}
 	return responseSecrets, nil
 }
@@ -297,3 +277,24 @@ func (c mockKeyVaultClient) GetSecrets(names []string) (map[string]string, error
 func toPtr[V any](v V) *V {
 	return &v
 }
+
+var (
+	responseSecrets = map[string]secret.Secret{
+		"string":           {Value: "new string"},
+		"string-ptr":       {Value: "new string ptr"},
+		"empty":            {Value: ""},
+		"int":              {Value: "100"},
+		"int64":            {Value: "100"},
+		"uint":             {Value: "100"},
+		"uint64":           {Value: "100"},
+		"float64":          {Value: "100"},
+		"float64-ptr":      {Value: "100"},
+		"bool":             {Value: "true"},
+		"bool-ptr":         {Value: "true"},
+		"nested-string":    {Value: "new nested string"},
+		"string-slice":     {Value: "a,b,c"},
+		"string-slice-ptr": {Value: "a,b,c"},
+		"int-slice":        {Value: "1,2,3"},
+		"int-slice-ptr":    {Value: "1,2,3"},
+	}
+)

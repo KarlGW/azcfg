@@ -1,6 +1,10 @@
 package azcfg
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/KarlGW/azcfg/internal/secret"
+)
 
 // RequiredError represents an error when a secret is required.
 type RequiredError struct {
@@ -14,14 +18,14 @@ func (e *RequiredError) Error() string {
 }
 
 // setMessage sets the message of *RequiredError.
-func (e *RequiredError) setMessage(secrets map[string]string, required []string) error {
+func (e *RequiredError) setMessage(secrets map[string]secret.Secret, required []string) error {
 	e.message = requiredErrorMessage(secrets, required)
 	return e
 }
 
 // requiredErrorMessage builds a message based on the provided map[string]string (secrets)
 // and []string (required).
-func requiredErrorMessage(secrets map[string]string, required []string) string {
+func requiredErrorMessage(secrets map[string]secret.Secret, required []string) string {
 	if len(required) == 0 {
 		return ""
 	}
@@ -29,7 +33,7 @@ func requiredErrorMessage(secrets map[string]string, required []string) string {
 	req := make([]string, 0)
 	l := 0
 	for _, r := range required {
-		if len(secrets[r]) == 0 {
+		if len(secrets[r].Value) == 0 {
 			req = append(req, r)
 			l++
 		}

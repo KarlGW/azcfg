@@ -104,6 +104,20 @@ func WithVault(vault string) Option {
 	}
 }
 
+// WithConcurrency sets the concurrency of the parser.
+func WithConcurrency(c int) Option {
+	return func(o *Options) {
+		o.Concurrency = c
+	}
+}
+
+// WithTimeout sets the timeout of the parser.
+func WithTimeout(d time.Duration) Option {
+	return func(o *Options) {
+		o.Timeout = d
+	}
+}
+
 var (
 	envKeyVault = [4]string{
 		"AZCFG_AZURE_KEY_VAULT",

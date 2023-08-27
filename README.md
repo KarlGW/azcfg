@@ -10,6 +10,7 @@
   * [Example](#example)
 * [Usage](#usage)
   * [Required](#required)
+  * [Custom credential](#custom-credential)
 
 This library is used to get secrets from an Azure Key Vault and set them into a struct. The idea of parsing
 configuration values into a struct was inspired by [`env`](https://github.com/caarlos0/env).
@@ -78,6 +79,9 @@ Environment variables:
 Environment variables:
 
 * `AZURE_KEY_VAULT`/`AZURE_KEY_VAULT_NAME`/`AZURE_KEYVAULT`/`AZURE_KEYVAULT_NAME` - Name of the Azure Key Vault.
+
+To use a custom credential provided from elsewhere, such as the `azidentity` module see the section about
+[Custom credential](#custom-credential).
 
 ### Example
 
@@ -218,5 +222,67 @@ To enforce secrets to be set the option `required` can be used.
 type Example struct {
     FieldA `secret:"field-a"`
     FieldB `secret:"field-b,required"`
+}
+```
+
+### Custom credential
+
+For scenarios where it is desired to use another credential than the one that is setup
+by the module (such as wanting to use the same identity/credential for an entire application)
+the struct `AdaptorCredential` has been provided as a convienience. But of course, any implementation
+that satisfies the `Credential` interface can be used:
+
+```go
+// Credential is the interface that wraps around method Token.
+type Credential interface {
+	Token(ctx context.Context) (Token, error)
+}
+```
+
+**Example with the `AdaptorCredential`**:
+
+```go
+package main
+
+import (
+    "context"
+    "time"
+
+    "github.com/KarlGW/azcfg/auth"
+    "github.com/KarlGW/azcfg/auth"
+)
+
+// ExampleToken is an example token structure.
+type ExampleToken struct {
+    Token string
+    Expires time.Dureation
+}
+
+// GetToken is an example function for token retrieval.
+func GetToken() {
+    return ExampleToken{
+        Token: "",
+        Expires: time.Now()
+    }
+}
+
+func main() {
+    cred := &auth.AdapterCredential{
+        TokenFunc: func(ctx context.Context) (auth.Token, error) {
+            // Insert the token retreival logic here.
+            token, err := GetToken()
+            if err != nil {
+                return auth.Token{}, err
+            }
+            return auth.Token{
+                AccessToken: token.Token,
+                ExpiresOn: token.Exipres
+            }, nil
+        }
+    }
+
+    if err := azcfg.Parse(&cfg, WithCredential(cred)); err != nil {
+        // Handle error.
+    }
 }
 ```

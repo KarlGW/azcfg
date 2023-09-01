@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/KarlGW/azcfg/internal/auth"
+	"github.com/KarlGW/azcfg/auth"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )

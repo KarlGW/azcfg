@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/KarlGW/azcfg/internal/auth"
+	"github.com/KarlGW/azcfg/auth"
 	"github.com/KarlGW/azcfg/internal/secret"
 )
 
@@ -64,7 +64,7 @@ func NewParser(options ...Option) *parser {
 	}
 	if opts.Credential == nil {
 		// Temp. This should create credentials with the default provider.
-		opts.Credential = &auth.AdaptorCredential{}
+		opts.Credential = nil
 	}
 
 	p := &parser{

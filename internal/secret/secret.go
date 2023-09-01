@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/KarlGW/azcfg/internal/auth"
+	"github.com/KarlGW/azcfg/auth"
 	"golang.org/x/sync/errgroup"
 )
 

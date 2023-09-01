@@ -1,16 +1,22 @@
 package auth
 
-import "github.com/KarlGW/azcfg/internal/auth"
+import (
+	"context"
+	"time"
+)
 
-// Scopes contains the target scopes for getting Key Vault secrets.
-var Scopes = auth.Scopes
+var (
+	// Scopes contains the target scopes for getting Key Vault secrets.
+	Scopes = []string{"https://vault.azure.net/.default"}
+)
 
 // Token contains the access token and when it expires.
-type Token = auth.Token
+type Token struct {
+	AccessToken string
+	ExpiresOn   time.Time
+}
 
 // Credential is the interface that wraps around method Token.
-type Credential = auth.Credential
-
-// AdaptorCredential is used when other credentials are provided than
-// the built-in one.
-type AdaptorCredential = auth.AdaptorCredential
+type Credential interface {
+	Token(ctx context.Context) (Token, error)
+}

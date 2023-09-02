@@ -10,6 +10,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -23,6 +24,7 @@ type Client struct {
 	c                 HTTPClient
 	maxRetries        uint8
 	responseReadLimit int64
+	header            http.Header
 	minRetryTimeout   time.Duration
 	maxRetryTimeout   time.Duration
 	maxDuration       time.Duration
@@ -36,9 +38,8 @@ type Option func(c *Client)
 // NewClient creates and returns a new *Client.
 func NewClient(options ...Option) *Client {
 	c := &Client{
-		c: &http.Client{
-			Timeout: time.Second * 15,
-		},
+		c:               &http.Client{},
+		header:          http.Header{},
 		maxRetries:      3,
 		maxDuration:     time.Second * 15,
 		minRetryTimeout: time.Second * 1,
@@ -62,11 +63,14 @@ func NewClient(options ...Option) *Client {
 // Minimum retry timeout: 1 second
 // Maximum retry timeout: 10 seconds.
 // Backoff with a factor of 2.
-// Timeout: 15 seconds.
 func (c Client) Do(req *http.Request) (*http.Response, error) {
 	if req == nil {
 		return nil, errors.New("a non-nil reuquest must be provided")
 	}
+	for k, v := range c.header {
+		req.Header.Add(k, strings.Join(v, ", "))
+	}
+
 	r, err := newRequest(req)
 	if err != nil {
 		return nil, err
@@ -204,4 +208,11 @@ func defaultBackoff(min, max time.Duration, attempt uint8) time.Duration {
 		sleep = max
 	}
 	return sleep
+}
+
+// WithUserAgent sets the user agent of the client.
+func WithUserAgent(s string) Option {
+	return func(c *Client) {
+		c.header.Add("User-Agent", s)
+	}
 }

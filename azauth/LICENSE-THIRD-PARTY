@@ -1,16 +1,5 @@
 Direct:
 
-* go-cmp (github.com/google/go-cmp) - BSD 3-Clause "New" or "Revised" License
-* sync (golang.org/x/sync) - BSD-3-Clause
-
-Used/Inspired by parts of:
-
-* go-retryablehttp (github.com/hashicorp/go-retryablehttp) - Mozilla Public License 2.0 (internal/httpr/httpr.go)
-
-azauth:
-
-Direct:
-
 * azcore (github.com/Azure/azure-sdk-for-go/sdk/azcore) - MIT License (azauth)
 * go-cmp (github.com/google/go-cmp) - BSD 3-Clause "New" or "Revised" License
 

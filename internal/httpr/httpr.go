@@ -14,14 +14,9 @@ import (
 	"time"
 )
 
-// HTTPClient is the interface that wraps around method Do.
-type HTTPClient interface {
-	Do(req *http.Request) (*http.Response, error)
-}
-
 // Client wraps around an HTTPClient and provides retries with backoff.
 type Client struct {
-	c                 HTTPClient
+	c                 *http.Client
 	maxRetries        uint8
 	responseReadLimit int64
 	header            http.Header
@@ -214,5 +209,12 @@ func defaultBackoff(min, max time.Duration, attempt uint8) time.Duration {
 func WithUserAgent(s string) Option {
 	return func(c *Client) {
 		c.header.Add("User-Agent", s)
+	}
+}
+
+// WithTransport sets the transport for the HTTP client.
+func WithTransport(t *http.Transport) Option {
+	return func(c *Client) {
+		c.c.Transport = t
 	}
 }

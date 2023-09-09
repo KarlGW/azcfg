@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
-	"github.com/KarlGW/azcfg/internal/httpr"
 )
 
 var (
@@ -44,7 +43,7 @@ func tokenFromAuthResult(t authResult) auth.Token {
 }
 
 // request perform a request and return an authResult.
-func request(c httpr.HTTPClient, req *http.Request) (authResult, error) {
+func request(c httpClient, req *http.Request) (authResult, error) {
 	resp, err := c.Do(req)
 	if err != nil {
 		return authResult{}, err

@@ -2,10 +2,8 @@ package auth
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,12 +13,6 @@ import (
 	"github.com/KarlGW/azcfg/internal/httpr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-)
-
-var (
-	_testTenantID     = "56757959-9916-4cd6-8b2f-df038fcc3c85"
-	_testClientID     = "afb5e3e4-0fa1-4a22-aa35-6387dc0bc09d"
-	_testClientSecret = "12345"
 )
 
 func TestNewClientCredential(t *testing.T) {
@@ -164,7 +156,7 @@ func TestClientCredential_Token(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ts := setupClientCredentialHTTPServer(nil, test.wantErr)
+			ts := setupClientCredentialHTTPServer(test.wantErr)
 			defer ts.Close()
 
 			client := setupHTTPClient(ts.Listener.Addr().String(), test.wantErr)
@@ -182,19 +174,7 @@ func TestClientCredential_Token(t *testing.T) {
 	}
 }
 
-func setupHTTPClient(target string, err error) httpClient {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-		Dial: func(network, addr string) (net.Conn, error) {
-			return net.Dial("tcp", target)
-		},
-	}
-	return httpr.NewClient(httpr.WithTransport(tr))
-}
-
-func setupClientCredentialHTTPServer(req *http.Request, err error) *httptest.Server {
+func setupClientCredentialHTTPServer(err error) *httptest.Server {
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			if errors.Is(err, ErrTokenResponse) {

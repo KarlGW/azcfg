@@ -23,10 +23,6 @@ const (
 var (
 	// ErrMissingCredentials is returned when credentials such as a client secret is missing.
 	ErrMissingCredentials = errors.New("missing credentials, needs a shared secret")
-	// ErrInvalidTenantID is returned when an invalid Tenant ID is provided.
-	ErrInvalidTenantID = errors.New("invalid tenant ID")
-	// ErrInvalidClientID is returned when an invalid Client ID is provided.
-	ErrInvalidClientID = errors.New("invalid client ID")
 )
 
 // ClientCredential represents a client credential for authentication to Azure
@@ -51,7 +47,7 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 		return nil, ErrInvalidClientID
 	}
 
-	cred := &ClientCredential{
+	c := &ClientCredential{
 		c:        httpr.NewClient(httpr.WithUserAgent("azcfg/" + azcfg.Version())),
 		endpoint: strings.Replace(authEndpoint, "{tenant}", tenantID, 1),
 		tenantID: tenantID,
@@ -62,17 +58,22 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 	for _, option := range options {
 		option(&opts)
 	}
+
 	if opts.httpClient != nil {
-		cred.c = opts.httpClient
-	}
-	if len(opts.clientSecret) > 0 {
-		cred.clientSecret = opts.clientSecret
-	}
-	if len(opts.scope) > 0 {
-		cred.scope = opts.scope
+		c.c = opts.httpClient
 	}
 
-	return cred, nil
+	if len(opts.clientSecret) > 0 {
+		c.clientSecret = opts.clientSecret
+	}
+
+	if len(opts.scope) > 0 {
+		c.scope = opts.scope
+	} else {
+		c.scope = defaultScope
+	}
+
+	return c, nil
 }
 
 // NewClientSecretCredential creates and return a new *ClientCredential with secret

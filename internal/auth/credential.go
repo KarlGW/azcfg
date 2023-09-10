@@ -88,5 +88,5 @@ func validGUID(s string) bool {
 // validManagedIdentityResourceID checks if the provided string is a valid
 // managed identity resource ID.
 func validManagedIdentityResourceID(s string) bool {
-	return regexp.MustCompile(`^/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resourcegroups/[a-zA-Z0-9]+/providers/microsoft.managedidentity/userassignedidentities/[a-zA-Z0-9]+`).MatchString(strings.ToLower(s))
+	return regexp.MustCompile(`^/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resourcegroups/[a-zA-Z0-9-.]+/providers/microsoft.managedidentity/userassignedidentities/[a-zA-Z0-9]+`).MatchString(strings.ToLower(s))
 }

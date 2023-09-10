@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
@@ -19,11 +20,15 @@ var (
 	ErrTokenResponse = errors.New("token response error")
 )
 
-// authResult represents a token response from the authenticaiton
+// authResult represents a token response from the authentication
 // endpoint for Azure.
 type authResult struct {
 	AccessToken string `json:"access_token"`
-	ExpiresIn   int    `json:"expires_in"`
+	// ExpiresIn is amount of seconds until the token expires.
+	// The reason any is used is that in earler API versions
+	// as used by IMDS backed managed identities a string is
+	// returned, whereas in newer a number is returned.
+	ExpiresIn any `json:"expires_in"`
 }
 
 // authError represents an error response from the
@@ -35,9 +40,20 @@ type authError struct {
 
 // tokenFromAuthResult returns an auth.Token from an authResult.
 func tokenFromAuthResult(t authResult) auth.Token {
+	var expiresIn int
+	switch e := t.ExpiresIn.(type) {
+	case string:
+		expiresIn, _ = strconv.Atoi(e)
+	case float64:
+		expiresIn = int(e)
+	case int:
+		expiresIn = e
+	default:
+		expiresIn = 0
+	}
 	return auth.Token{
 		AccessToken: t.AccessToken,
-		ExpiresOn:   time.Now().Add(time.Duration(t.ExpiresIn) * time.Second),
+		ExpiresOn:   time.Now().Add(time.Duration(expiresIn) * time.Second),
 	}
 }
 

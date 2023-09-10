@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
@@ -72,9 +71,4 @@ func request(c httpClient, req *http.Request) (authResult, error) {
 		return authResult{}, err
 	}
 	return r, nil
-}
-
-// validGUID checks if the provided string is a valid GUID.
-func validGUID(s string) bool {
-	return regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`).MatchString(s)
 }

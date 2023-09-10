@@ -1,7 +1,22 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
+	"regexp"
+	"strings"
+)
+
+var (
+	// ErrInvalidTenantID is returned when an invalid Tenant ID is provided.
+	ErrInvalidTenantID = errors.New("invalid tenant ID")
+	// ErrInvalidClientID is returned when an invalid Client ID is provided.
+	ErrInvalidClientID = errors.New("invalid client ID")
+)
+
+const (
+	defaultResource = "https://management.azure.com"
+	defaultScope    = defaultResource + "/.default"
 )
 
 // httpClient is the interface that wraps around method Do.
@@ -63,4 +78,15 @@ func WithHTTPClient(c httpClient) CredentialOption {
 	return func(o *CredentialOptions) {
 		o.httpClient = c
 	}
+}
+
+// validGUID checks if the provided string is a valid GUID.
+func validGUID(s string) bool {
+	return regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`).MatchString(s)
+}
+
+// validManagedIdentityResourceID checks if the provided string is a valid
+// managed identity resource ID.
+func validManagedIdentityResourceID(s string) bool {
+	return regexp.MustCompile(`^/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resourcegroups/[a-zA-Z0-9]+/providers/microsoft.managedidentity/userassignedidentities/[a-zA-Z0-9]+`).MatchString(strings.ToLower(s))
 }

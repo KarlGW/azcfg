@@ -1,4 +1,4 @@
-package azauth
+package authopts
 
 import (
 	"context"
@@ -50,10 +50,10 @@ func TestCredential_Token(t *testing.T) {
 		{
 			name: "error",
 			input: mockTokenCredential{
-				err: _testErr,
+				err: errTest,
 			},
 			want:    auth.Token{},
-			wantErr: _testErr,
+			wantErr: errTest,
 		},
 	}
 
@@ -88,4 +88,4 @@ func (c mockTokenCredential) GetToken(ctx context.Context, options policy.TokenR
 }
 
 var _testNow = time.Now()
-var _testErr = errors.New("error")
+var errTest = errors.New("error")

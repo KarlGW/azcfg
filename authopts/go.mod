@@ -1,6 +1,6 @@
-module github.com/KarlGW/azcfg/azauth
+module github.com/KarlGW/azcfg/authopts
 
-go 1.21.0
+go 1.18
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.7.1

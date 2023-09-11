@@ -1,4 +1,4 @@
-# azauth
+# authopts
 
 > Extension to `azcfg` with option to use `azcore.TokenCredential`
 
@@ -9,7 +9,7 @@ takes an `azcore.TokenCredential` and sets it to the parser.
 
 ```sh
 go get github.com/KarlGW/azcfg
-go get github.com/KarlGW/azcfg/azauth
+go get github.com/KarlGW/azcfg/authopts
 ```
 
 ```go
@@ -18,7 +18,7 @@ package main
 import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/KarlGW/azcfg"
-	"github.com/KarlGW/azcfg/azauth"
+	"github.com/KarlGW/azcfg/authopts"
 )
 
 func main() {
@@ -30,11 +30,11 @@ func main() {
     }
 
     // When parsing.
-    if err := azcfg.Parse(&cfg, azauth.WithTokenCredential(cred)); err != nil {
+    if err := azcfg.Parse(&cfg, authopts.WithTokenCredential(cred)); err != nil {
         // Handle error.
     }
     // When creating a new parser.
-    parser := azcfg.NewParser(azauth.WithTokenCredential(cred))
+    parser := azcfg.NewParser(authopts.WithTokenCredential(cred))
     if err := parser.Parse(&cfg); err != nil {
         // Handle error.
     }

@@ -36,7 +36,7 @@ func TestNewClientCredential(t *testing.T) {
 				clientID: _testClientID,
 				options: []CredentialOption{
 					WithSecret(_testClientSecret),
-					WithScope(auth.Scopes[0]),
+					WithScope(_testScope),
 				},
 			},
 			want: &ClientCredential{
@@ -45,7 +45,7 @@ func TestNewClientCredential(t *testing.T) {
 				tenantID:     _testTenantID,
 				clientID:     _testClientID,
 				clientSecret: _testClientSecret,
-				scope:        auth.Scopes[0],
+				scope:        _testScope,
 			},
 			wantErr: nil,
 		},
@@ -104,7 +104,7 @@ func TestClientCredential_Token(t *testing.T) {
 		{
 			name: "get token",
 			input: func(client httpClient) *ClientCredential {
-				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(auth.Scopes[0]), WithHTTPClient(client))
+				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(_testScope), WithHTTPClient(client))
 				return cred
 			},
 			want: auth.Token{
@@ -115,7 +115,7 @@ func TestClientCredential_Token(t *testing.T) {
 		{
 			name: "get token from cache",
 			input: func(client httpClient) *ClientCredential {
-				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(auth.Scopes[0]), WithHTTPClient(client))
+				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(_testScope), WithHTTPClient(client))
 				cred.token = &auth.Token{
 					AccessToken: "ey54321",
 					ExpiresOn:   time.Now().Add(time.Hour),
@@ -130,7 +130,7 @@ func TestClientCredential_Token(t *testing.T) {
 		{
 			name: "get token from cache (expired)",
 			input: func(client httpClient) *ClientCredential {
-				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(auth.Scopes[0]), WithHTTPClient(client))
+				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(_testScope), WithHTTPClient(client))
 				cred.token = &auth.Token{
 					AccessToken: "ey54321",
 					ExpiresOn:   time.Now().Add(time.Hour * -3),
@@ -145,7 +145,7 @@ func TestClientCredential_Token(t *testing.T) {
 		{
 			name: "error",
 			input: func(client httpClient) *ClientCredential {
-				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(auth.Scopes[0]), WithHTTPClient(client))
+				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(_testScope), WithHTTPClient(client))
 				return cred
 			},
 			want:    auth.Token{},

@@ -5,11 +5,6 @@ import (
 	"time"
 )
 
-var (
-	// Scopes contains the target scopes for getting Key Vault secrets.
-	Scopes = []string{"https://vault.azure.net/.default"}
-)
-
 // Token contains the access token and when it expires.
 type Token struct {
 	AccessToken string

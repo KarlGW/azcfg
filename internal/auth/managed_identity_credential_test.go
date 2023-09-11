@@ -193,7 +193,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				envs map[string]string
 			}{
 				cred: func(client httpClient) *ManagedIdentityCredential {
-					cred, _ := NewManagedIdentityCredential(WithScope(auth.Scopes[0]), WithHTTPClient(client))
+					cred, _ := NewManagedIdentityCredential(WithScope(_testScope), WithHTTPClient(client))
 					return cred
 				},
 			},
@@ -206,7 +206,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				},
 				v: &url.Values{
 					"api-version": {imdsAPIVersion},
-					"resource":    {strings.TrimSuffix(auth.Scopes[0], "/.default")},
+					"resource":    {strings.TrimSuffix(_testScope, "/.default")},
 				},
 			},
 			wantErr: nil,
@@ -218,7 +218,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				envs map[string]string
 			}{
 				cred: func(client httpClient) *ManagedIdentityCredential {
-					cred, _ := NewManagedIdentityCredential(WithScope(auth.Scopes[0]), WithHTTPClient(client))
+					cred, _ := NewManagedIdentityCredential(WithScope(_testScope), WithHTTPClient(client))
 					cred.token = &auth.Token{
 						AccessToken: "ey54321",
 						ExpiresOn:   time.Now().Add(time.Hour),
@@ -235,7 +235,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				},
 				v: &url.Values{
 					"api-version": {imdsAPIVersion},
-					"resource":    {strings.TrimSuffix(auth.Scopes[0], "/.default")},
+					"resource":    {strings.TrimSuffix(_testScope, "/.default")},
 				},
 			},
 			wantErr: nil,
@@ -247,7 +247,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				envs map[string]string
 			}{
 				cred: func(client httpClient) *ManagedIdentityCredential {
-					cred, _ := NewManagedIdentityCredential(WithScope(auth.Scopes[0]), WithHTTPClient(client))
+					cred, _ := NewManagedIdentityCredential(WithScope(_testScope), WithHTTPClient(client))
 					cred.token = &auth.Token{
 						AccessToken: "ey54321",
 						ExpiresOn:   time.Now().Add(time.Hour * -3),
@@ -264,7 +264,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				},
 				v: &url.Values{
 					"api-version": {imdsAPIVersion},
-					"resource":    {strings.TrimSuffix(auth.Scopes[0], "/.default")},
+					"resource":    {strings.TrimSuffix(_testScope, "/.default")},
 				},
 			},
 			wantErr: nil,
@@ -276,7 +276,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				envs map[string]string
 			}{
 				cred: func(client httpClient) *ManagedIdentityCredential {
-					cred, _ := NewManagedIdentityCredential(WithScope(auth.Scopes[0]), WithHTTPClient(client), WithClientID(_testClientID))
+					cred, _ := NewManagedIdentityCredential(WithScope(_testScope), WithHTTPClient(client), WithClientID(_testClientID))
 					return cred
 				},
 			},
@@ -289,7 +289,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				},
 				v: &url.Values{
 					"api-version": {imdsAPIVersion},
-					"resource":    {strings.TrimSuffix(auth.Scopes[0], "/.default")},
+					"resource":    {strings.TrimSuffix(_testScope, "/.default")},
 					"client_id":   {_testClientID},
 				},
 			},
@@ -302,7 +302,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				envs map[string]string
 			}{
 				cred: func(client httpClient) *ManagedIdentityCredential {
-					cred, _ := NewManagedIdentityCredential(WithScope(auth.Scopes[0]), WithHTTPClient(client), WithResourceID(_testResourceID))
+					cred, _ := NewManagedIdentityCredential(WithScope(_testScope), WithHTTPClient(client), WithResourceID(_testResourceID))
 					return cred
 				},
 			},
@@ -315,7 +315,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				},
 				v: &url.Values{
 					"api-version": {imdsAPIVersion},
-					"resource":    {strings.TrimSuffix(auth.Scopes[0], "/.default")},
+					"resource":    {strings.TrimSuffix(_testScope, "/.default")},
 					"mi_res_id":   {_testResourceID},
 				},
 			},
@@ -328,7 +328,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				envs map[string]string
 			}{
 				cred: func(client httpClient) *ManagedIdentityCredential {
-					cred, _ := NewManagedIdentityCredential(WithScope(auth.Scopes[0]), WithHTTPClient(client))
+					cred, _ := NewManagedIdentityCredential(WithScope(_testScope), WithHTTPClient(client))
 					return cred
 				},
 			},

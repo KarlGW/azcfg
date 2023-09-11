@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
-	"github.com/KarlGW/azcfg/internal/httpr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -41,7 +40,7 @@ func TestNewClientCredential(t *testing.T) {
 				},
 			},
 			want: &ClientCredential{
-				c:            &httpr.Client{},
+				c:            &http.Client{},
 				endpoint:     fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/token", _testTenantID),
 				tenantID:     _testTenantID,
 				clientID:     _testClientID,
@@ -84,7 +83,7 @@ func TestNewClientCredential(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got, gotErr := NewClientCredential(test.input.tenantID, test.input.clientID, test.input.options...)
 
-			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(ClientCredential{}), cmpopts.IgnoreUnexported(httpr.Client{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(ClientCredential{}), cmpopts.IgnoreUnexported(http.Client{})); diff != "" {
 				t.Errorf("NewClientCredential() = unexpected result (-want +got)\n%s\n", diff)
 			}
 
@@ -150,7 +149,7 @@ func TestClientCredential_Token(t *testing.T) {
 				return cred
 			},
 			want:    auth.Token{},
-			wantErr: ErrTokenResponse,
+			wantErr: authError{StatusCode: http.StatusBadRequest},
 		},
 	}
 
@@ -177,7 +176,7 @@ func TestClientCredential_Token(t *testing.T) {
 func setupClientCredentialHTTPServer(err error) *httptest.Server {
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
-			if errors.Is(err, ErrTokenResponse) {
+			if errors.Is(err, authError{StatusCode: http.StatusBadRequest}) {
 				w.WriteHeader(http.StatusBadRequest)
 				w.Write([]byte(`{"error":"","error_description":""}`))
 				return

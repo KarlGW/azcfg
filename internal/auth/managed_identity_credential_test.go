@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
-	"github.com/KarlGW/azcfg/internal/httpr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -37,7 +36,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				envs:    map[string]string{},
 			},
 			want: &ManagedIdentityCredential{
-				c:           &httpr.Client{},
+				c:           &http.Client{},
 				endpoint:    imdsEndpoint,
 				apiVersion:  imdsAPIVersion,
 				headerName:  "Metadata",
@@ -58,7 +57,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				envs: map[string]string{},
 			},
 			want: &ManagedIdentityCredential{
-				c:           &httpr.Client{},
+				c:           &http.Client{},
 				endpoint:    imdsEndpoint,
 				apiVersion:  imdsAPIVersion,
 				headerName:  "Metadata",
@@ -80,7 +79,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				envs: map[string]string{},
 			},
 			want: &ManagedIdentityCredential{
-				c:           &httpr.Client{},
+				c:           &http.Client{},
 				endpoint:    imdsEndpoint,
 				apiVersion:  imdsAPIVersion,
 				headerName:  "Metadata",
@@ -103,7 +102,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				},
 			},
 			want: &ManagedIdentityCredential{
-				c:           &httpr.Client{},
+				c:           &http.Client{},
 				endpoint:    "ENDPOINT",
 				apiVersion:  appServiceAPIVersion,
 				headerName:  "X-IDENTITY-HEADER",
@@ -163,7 +162,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 
 			got, gotErr := NewManagedIdentityCredential(test.input.options...)
 
-			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(ManagedIdentityCredential{}), cmpopts.IgnoreUnexported(httpr.Client{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(ManagedIdentityCredential{}), cmpopts.IgnoreUnexported(http.Client{})); diff != "" {
 				t.Errorf("NewManagedIdentityCredential() = unexpected result (-want +got)\n%s\n", diff)
 			}
 
@@ -340,7 +339,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				token: auth.Token{},
 				v:     &url.Values{},
 			},
-			wantErr: ErrTokenResponse,
+			wantErr: authError{StatusCode: http.StatusBadRequest},
 		},
 	}
 
@@ -370,7 +369,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 func setupManagedIdentityCredentialHTTPServer(v *url.Values, err error) *httptest.Server {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
-			if errors.Is(err, ErrTokenResponse) {
+			if errors.Is(err, authError{StatusCode: http.StatusBadRequest}) {
 				w.WriteHeader(http.StatusBadRequest)
 				w.Write([]byte(`{"error":"","error_description":""}`))
 				return

@@ -9,9 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/KarlGW/azcfg"
 	"github.com/KarlGW/azcfg/auth"
-	"github.com/KarlGW/azcfg/internal/httpr"
+	"github.com/KarlGW/azcfg/internal/retry"
 )
 
 var (
@@ -64,7 +63,7 @@ type ManagedIdentityCredential struct {
 // NewManagedIdentityCredential creates and returns a new *ManagedIdentityCredential.
 func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentityCredential, error) {
 	c := &ManagedIdentityCredential{
-		c: httpr.NewClient(httpr.WithUserAgent("azcfg/" + azcfg.Version())),
+		c: &http.Client{},
 	}
 	opts := CredentialOptions{}
 	for _, option := range options {
@@ -139,15 +138,24 @@ func (c ManagedIdentityCredential) tokenRequest(ctx context.Context) (auth.Token
 	}
 	u.RawQuery = qs.Encode()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-	if err != nil {
-		return auth.Token{}, nil
-	}
-	req.Header.Add(c.headerName, c.headerValue)
+	var r authResult
+	if err := retry.Do(ctx, func() error {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+		if err != nil {
+			return err
+		}
+		req.Header.Add(c.headerName, c.headerValue)
 
-	r, err := request(c.c, req)
-	if err != nil {
+		r, err = request(c.c, req)
+		if err != nil {
+			return err
+		}
+		return nil
+	}, func(o *retry.Policy) {
+		o.Retry = shouldRetry
+	}); err != nil {
 		return auth.Token{}, err
 	}
+
 	return tokenFromAuthResult(r), nil
 }

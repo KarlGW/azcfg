@@ -3,7 +3,6 @@ package auth
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -34,8 +33,14 @@ type authResult struct {
 // authError represents an error response from the
 // authentication endpoint for Azure.
 type authError struct {
-	Error            string `json:"error"`
+	Code             string `json:"error"`
 	ErrorDescription string `json:"error_description"`
+	StatusCode       int
+}
+
+// Error returns the ErrorDescription of authError.
+func (e authError) Error() string {
+	return e.ErrorDescription
 }
 
 // tokenFromAuthResult returns an auth.Token from an authResult.
@@ -79,7 +84,8 @@ func request(c httpClient, req *http.Request) (authResult, error) {
 		if err := json.Unmarshal(b, &e); err != nil {
 			return authResult{}, err
 		}
-		return authResult{}, fmt.Errorf("%w: %s", ErrTokenResponse, e.ErrorDescription)
+		e.StatusCode = resp.StatusCode
+		return authResult{}, e
 	}
 
 	var r authResult
@@ -87,4 +93,19 @@ func request(c httpClient, req *http.Request) (authResult, error) {
 		return authResult{}, err
 	}
 	return r, nil
+}
+
+// shouldRetry contains retry policy for token requests.
+func shouldRetry(err error) bool {
+	if err == nil {
+		return false
+	}
+	var e authError
+	if errors.As(err, &e) {
+		if e.StatusCode == 0 || e.StatusCode >= http.StatusInternalServerError {
+			return true
+		}
+		return false
+	}
+	return false
 }

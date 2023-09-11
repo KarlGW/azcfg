@@ -9,9 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/KarlGW/azcfg"
 	"github.com/KarlGW/azcfg/auth"
-	"github.com/KarlGW/azcfg/internal/httpr"
+	"github.com/KarlGW/azcfg/internal/retry"
 )
 
 const (
@@ -48,7 +47,7 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 	}
 
 	c := &ClientCredential{
-		c:        httpr.NewClient(httpr.WithUserAgent("azcfg/" + azcfg.Version())),
+		c:        &http.Client{},
 		endpoint: strings.Replace(authEndpoint, "{tenant}", tenantID, 1),
 		tenantID: tenantID,
 		clientID: clientID,
@@ -113,15 +112,24 @@ func (c ClientCredential) tokenRequest(ctx context.Context) (auth.Token, error) 
 		return auth.Token{}, ErrMissingCredentials
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewBufferString(data.Encode()))
-	if err != nil {
-		return auth.Token{}, err
-	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	var r authResult
+	if err := retry.Do(ctx, func() error {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewBufferString(data.Encode()))
+		if err != nil {
+			return err
+		}
+		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	r, err := request(c.c, req)
-	if err != nil {
+		r, err = request(c.c, req)
+		if err != nil {
+			return err
+		}
+		return nil
+	}, func(o *retry.Policy) {
+		o.Retry = shouldRetry
+	}); err != nil {
 		return auth.Token{}, err
 	}
+
 	return tokenFromAuthResult(r), nil
 }

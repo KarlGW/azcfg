@@ -4,8 +4,6 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
-
-	"github.com/KarlGW/azcfg/internal/httpr"
 )
 
 var (
@@ -24,5 +22,7 @@ func setupHTTPClient(target string, err error) httpClient {
 			return net.Dial("tcp", target)
 		},
 	}
-	return httpr.NewClient(httpr.WithTransport(tr))
+	return &http.Client{
+		Transport: tr,
+	}
 }

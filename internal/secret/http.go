@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -17,7 +16,7 @@ var (
 
 // request performs a request with the provided method and target url.
 func request(ctx context.Context, client httpClient, headers http.Header, method, url string) ([]byte, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -47,11 +46,12 @@ func request(ctx context.Context, client httpClient, headers http.Header, method
 		case http.StatusNotFound:
 			return nil, errSecretNotFound
 		default:
-			var respErr errorResponse
-			if err := json.Unmarshal(b, &respErr); err != nil {
+			var e errorResponse
+			if err := json.Unmarshal(b, &e); err != nil {
 				return nil, err
 			}
-			return nil, fmt.Errorf("%w: %s", errSecretOther, respErr.Error.Message)
+			e.StatusCode = resp.StatusCode
+			return nil, e
 		}
 	}
 
@@ -69,7 +69,16 @@ func addAuthHeader(headers http.Header, token string) http.Header {
 
 // errorRespone represents an error response from Key Vault actions.
 type errorResponse struct {
-	Error struct {
-		Message string `json:"message"`
-	} `json:"error"`
+	Err        errorResponseError `json:"error"`
+	StatusCode int
+}
+
+// errorResponseError represents the inner error in an error response.
+type errorResponseError struct {
+	Message string `json:"message"`
+}
+
+// Error returns the inner error message or errorResponse.
+func (e errorResponse) Error() string {
+	return e.Err.Message
 }

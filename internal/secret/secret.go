@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/retry"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -95,11 +96,19 @@ func (c Client) get(ctx context.Context, name string) (Secret, error) {
 		return Secret{}, err
 	}
 
-	b, err := request(ctx, c.c, addAuthHeader(http.Header{}, token.AccessToken), http.MethodGet, u)
-	if err != nil {
-		if errors.Is(err, errSecretNotFound) {
-			err = fmt.Errorf("secret %s: %w", name, err)
+	var b []byte
+	if err := retry.Do(ctx, func() error {
+		b, err = request(ctx, c.c, addAuthHeader(http.Header{}, token.AccessToken), http.MethodGet, u)
+		if err != nil {
+			if errors.Is(err, errSecretNotFound) {
+				err = fmt.Errorf("secret %s: %w", name, err)
+			}
+			return err
 		}
+		return nil
+	}, func(o *retry.Policy) {
+		o.Retry = shouldRetry
+	}); err != nil {
 		return Secret{}, err
 	}
 
@@ -165,4 +174,18 @@ func WithTimeout(d time.Duration) ClientOption {
 	return func(o *ClientOptions) {
 		o.Timeout = d
 	}
+}
+
+// shouldRetry contains retry policy for secret requests.
+func shouldRetry(err error) bool {
+	if err == nil {
+		return false
+	}
+	var e errorResponse
+	if errors.As(err, &e) {
+		if e.StatusCode == 0 || e.StatusCode == http.StatusInternalServerError {
+			return true
+		}
+	}
+	return false
 }

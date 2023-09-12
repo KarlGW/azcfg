@@ -83,8 +83,13 @@ func TestClient_Get(t *testing.T) {
 				names: []string{"secret-a"},
 				err:   errServer,
 			},
-			want:    nil,
-			wantErr: errSecretOther,
+			want: nil,
+			wantErr: errorResponse{
+				Err: errorResponseError{
+					Message: "bad request",
+				},
+				StatusCode: http.StatusBadRequest,
+			},
 		},
 		{
 			name: "request error",
@@ -108,7 +113,7 @@ func TestClient_Get(t *testing.T) {
 					bodies: test.input.bodies,
 					err:    test.input.err,
 				}
-				o.Timeout = time.Millisecond * 1
+				o.Timeout = time.Millisecond * 10
 			})
 
 			got, gotErr := client.Get(test.input.names...)
@@ -144,8 +149,8 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 	if c.err != nil {
 		if errors.Is(c.err, errSecretOther) {
 			return &http.Response{
-				StatusCode: http.StatusInternalServerError,
-				Body:       io.NopCloser(bytes.NewBuffer([]byte(`{"error":{"message":"internal server error"}}`))),
+				StatusCode: http.StatusBadRequest,
+				Body:       io.NopCloser(bytes.NewBuffer([]byte(`{"error":{"message":"bad request"}}`))),
 			}, nil
 		}
 		return nil, c.err

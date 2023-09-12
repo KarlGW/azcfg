@@ -24,7 +24,10 @@ var (
 
 // Parse secrets from an Azure Key Vault into a struct.
 func Parse(v any, options ...Option) error {
-	parser := NewParser(options...)
+	parser, err := NewParser(options...)
+	if err != nil {
+		return err
+	}
 	return parser.Parse(v)
 }
 

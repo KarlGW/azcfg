@@ -1,7 +1,6 @@
 package azcfg
 
 import (
-	"errors"
 	"os"
 	"testing"
 
@@ -10,55 +9,40 @@ import (
 
 func TestVaultFromEnvironment(t *testing.T) {
 	var tests = []struct {
-		name    string
-		input   map[string]string
-		want    string
-		wantErr error
+		name  string
+		input map[string]string
+		want  string
 	}{
 		{
-			name:    "AZCFG_AZURE_KEY_VAULT",
-			input:   map[string]string{"AZCFG_AZURE_KEY_VAULT": "vault-name"},
-			want:    "vault-name",
-			wantErr: nil,
+			name:  "AZCFG_KEY_VAULT",
+			input: map[string]string{"AZCFG_KEY_VAULT": "vault-name"},
+			want:  "vault-name",
 		},
 		{
-			name:    "AZCFG_AZURE_KEY_VAULT_NAME",
-			input:   map[string]string{"AZCFG_AZURE_KEY_VAULT_NAME": "vault-name"},
-			want:    "vault-name",
-			wantErr: nil,
+			name:  "AZCFG_KEY_VAULT_NAME",
+			input: map[string]string{"AZCFG_KEY_VAULT_NAME": "vault-name"},
+			want:  "vault-name",
 		},
 		{
-			name:    "AZCFG_AZURE_KEYVAULT",
-			input:   map[string]string{"AZCFG_AZURE_KEYVAULT": "vault-name"},
-			want:    "vault-name",
-			wantErr: nil,
+			name:  "AZCFG_KEYVAULT",
+			input: map[string]string{"AZCFG_KEYVAULT": "vault-name"},
+			want:  "vault-name",
 		},
 		{
-			name:    "AZCFG_AZURE_KEYVAULT_NAME",
-			input:   map[string]string{"AZCFG_AZURE_KEYVAULT_NAME": "vault-name"},
-			want:    "vault-name",
-			wantErr: nil,
-		},
-		{
-			name:    "failure",
-			input:   nil,
-			want:    "",
-			wantErr: errors.New("a Key Vault name must be setaaaa"),
+			name:  "AZCFG_KEYVAULT_NAME",
+			input: map[string]string{"AZCFG_KEYVAULT_NAME": "vault-name"},
+			want:  "vault-name",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			setEnv(test.input)
-			got, gotErr := vaultFromEnvironment()
+			got := vaultFromEnvironment()
 			unsetEnv(test.input)
 
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("vaultFromEnvironment() = unexpected result, (-want, +got)\n%s\n", diff)
-			}
-
-			if test.wantErr != nil && gotErr == nil {
-				t.Errorf("Unexpected result, should return error\n")
 			}
 		})
 	}

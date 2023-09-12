@@ -6,15 +6,8 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/identity"
 	"github.com/KarlGW/azcfg/internal/secret"
-)
-
-var (
-	// defaultConcurrency contains the default concurrency for the
-	// parser.
-	defaultConcurrency = 10
-	// defaultTimeout contains the default timeout for the parser.
-	defaultTimeout = time.Millisecond * 1000 * 10
 )
 
 // client is the interface that wraps around method Get.
@@ -51,27 +44,39 @@ type Option func(o *Options)
 
 // NewParser creates and returns a *Parser. With no options provided
 // it will have default settings for timeout and concurrency.
-func NewParser(options ...Option) *parser {
+func NewParser(options ...Option) (*parser, error) {
+	p := &parser{
+		timeout:     time.Millisecond * 1000 * 10,
+		concurrency: 10,
+		vault:       vaultFromEnvironment(),
+	}
 	opts := Options{}
 	for _, option := range options {
 		option(&opts)
 	}
-	if opts.Concurrency == 0 {
-		opts.Concurrency = defaultConcurrency
-	}
-	if opts.Timeout == 0 {
-		opts.Timeout = defaultTimeout
-	}
-	if opts.Credential == nil {
-		// Temp. This should create credentials with the default provider.
-		opts.Credential = nil
+
+	if opts.Credential != nil {
+		p.cred = opts.Credential
+	} else {
+		var err error
+		p.cred, err = setupCredential()
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	p := &parser{
-		cred:        opts.Credential,
-		timeout:     opts.Timeout,
-		concurrency: opts.Concurrency,
-		vault:       opts.Vault,
+	if opts.Concurrency > 0 {
+		p.concurrency = opts.Concurrency
+	}
+	if opts.Timeout > 0 {
+		p.timeout = opts.Timeout
+	}
+	if len(opts.Vault) > 0 {
+		p.vault = opts.Vault
+	}
+
+	if len(p.vault) == 0 {
+		return nil, errors.New("a vault must be set")
 	}
 
 	cl := secret.NewClient(
@@ -82,7 +87,7 @@ func NewParser(options ...Option) *parser {
 	)
 	p.cl = cl
 
-	return p
+	return p, nil
 }
 
 // Parse secrets from an Azure Key Vault into a struct.
@@ -119,21 +124,40 @@ func WithTimeout(d time.Duration) Option {
 }
 
 var (
+	// Resource for Azure Key Vault requests.
+	resource = "https://vault.azure.net"
+	// Scope for Azure Key Vault requests.
+	scope = resource + "/.default"
+)
+
+// setupCredential checks the environment for
+func setupCredential() (auth.Credential, error) {
+	// First attempt with Service Principal, then proceed to managed identity.
+	tenantID, clientID, clientSecret := os.Getenv("AZCFG_TENANT_ID"), os.Getenv("AZCFG_CLIENT_ID"), os.Getenv("AZCFG_CLIENT_SECRET")
+	if len(tenantID) > 0 && len(clientID) > 0 && len(clientSecret) > 0 {
+		return identity.NewClientSecretCredential(tenantID, clientID, clientSecret, identity.WithScope(scope))
+	} else {
+		return identity.NewManagedIdentityCredential(identity.WithClientID(clientID), identity.WithScope(resource))
+	}
+}
+
+var (
+	// envKeyVault contains environment variable names for Key Vault.
 	envKeyVault = [4]string{
-		"AZCFG_AZURE_KEY_VAULT",
-		"AZCFG_AZURE_KEY_VAULT_NAME",
-		"AZCFG_AZURE_KEYVAULT",
-		"AZCFG_AZURE_KEYVAULT_NAME",
+		"AZCFG_KEY_VAULT",
+		"AZCFG_KEY_VAULT_NAME",
+		"AZCFG_KEYVAULT",
+		"AZCFG_KEYVAULT_NAME",
 	}
 )
 
-// vaultFromEnvironment checks the environment if any of the variables AZURE_KEY_VAULT,
-// AZURE_KEY_VAULT_NAME, AZURE_KEYVAULT or AZURE_KEYVAULT_NAME is set.
-func vaultFromEnvironment() (string, error) {
+// vaultFromEnvironment checks the environment if any of the variables AZCFG_KEY_VAULT,
+// AZCFG_KEY_VAULT_NAME, AZCFG_KEYVAULT or AZCFG_KEYVAULT_NAME is set.
+func vaultFromEnvironment() string {
 	for _, v := range envKeyVault {
 		if len(os.Getenv(v)) != 0 {
-			return os.Getenv(v), nil
+			return os.Getenv(v)
 		}
 	}
-	return "", errors.New("a Key Vault name must be set")
+	return ""
 }

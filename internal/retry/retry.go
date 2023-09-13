@@ -62,7 +62,7 @@ func exponentialBackoff(delay, maxDelay time.Duration, retry int) time.Duration 
 func defaultPolicy() Policy {
 	return Policy{
 		MinDelay:   time.Millisecond * 500,
-		MaxDelay:   time.Second * 10,
+		MaxDelay:   time.Second * 5,
 		MaxRetries: 3,
 		Retry: func(err error) bool {
 			return true

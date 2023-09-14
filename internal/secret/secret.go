@@ -38,10 +38,10 @@ type httpClient interface {
 type Client struct {
 	c           httpClient
 	cred        auth.Credential
+	header      http.Header
+	baseURL     string
 	concurrency int
 	timeout     time.Duration
-	baseURL     string
-	header      http.Header
 }
 
 // ClientOptions contains options for the Client.
@@ -71,14 +71,14 @@ func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Cli
 	}
 
 	return &Client{
-		c:           opts.HTTPClient,
-		cred:        cred,
-		timeout:     opts.Timeout,
-		concurrency: opts.Concurrency,
-		baseURL:     strings.Replace(baseURL, "{vault}", vault, 1),
+		c:    opts.HTTPClient,
+		cred: cred,
 		header: http.Header{
 			"User-Agent": {"azcfg/" + version.Version()},
 		},
+		baseURL:     strings.Replace(baseURL, "{vault}", vault, 1),
+		timeout:     opts.Timeout,
+		concurrency: opts.Concurrency,
 	}
 }
 

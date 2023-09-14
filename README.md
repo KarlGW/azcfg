@@ -10,9 +10,10 @@
   * [Example](#example)
 * [Usage](#usage)
   * [Required](#required)
-  * [Custom credential](#custom-credential)
+  * [Options](#options)
+  * [Credentials](#credentials)
 
-This library is used to get secrets from an Azure Key Vault and set them into a struct. The idea of parsing
+This module is used to get secrets from an Azure Key Vault and set them into a struct. The idea of parsing
 configuration values into a struct was inspired by [`env`](https://github.com/caarlos0/env).
 
 To mark a field in a struct to be populated by a secret set the struct tag `secret` followed by the name
@@ -52,36 +53,61 @@ go get github.com/KarlGW/azcfg
   * Identity with access to secrets in the Key Vault
 
 
+### Authentication
+
+The module supports several ways of authenticating to Azure and get secrets from the target Key Vault.
+
+1. Built-in credentials that supports Service Principal (Client Credentials with secret) and managed identity (system and user assigned)
+2. Credentials from [`azidentity`](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity) with the sub-module [`authopts`](./authopts/)
+3. Custom credential handling by implementing the `auth.Credential` interface.
+
+For more information about option **2** and **3**, see [Credentials](#credentials).
+
+#### Built-in credentials
+
+By default the module will attempt to determine credentials and target Key Vault with
+environment variables.
+
+##### Environment variables
+
 **Service Principal**
 
-Environment variables:
+* `AZCFG_KEYVAULT_NAME` - Name of the Azure Key Vault.
+* `AZCFG_TENANT_ID` - Tenant ID of the service principal/application registration.
+* `AZCFG_CLIENT_ID` - Client ID (also called Application ID) of the service principal/application registration.
+* `AZCFG_CLIENT_SECRET`- Client Secret of the service principal/application registration.
 
-* `AZURE_KEY_VAULT`/`AZURE_KEY_VAULT_NAME`/`AZURE_KEYVAULT`/`AZURE_KEYVAULT_NAME` - Name of the Azure Key Vault.
-* `AZURE_TENANT_ID` - Tenant ID of the service principal/application registration.
-* `AZURE_CLIENT_ID` - Client ID (also called Application ID) of the service principal/application registration.
+**Managed identity**
 
-Using client secret:
-* `AZURE_CLIENT_SECRET` - Client Secret of the service principal/application registration.
-
-Using certificate:
-* `AZURE_CLIENT_CERTIFICATE_PATH` - Path to certificate for the service principal/application registration.
+* `AZCFG_KEYVAULT_NAME` - Name of the Azure Key Vault.
+* `AZCFG_CLIENT_ID` - (Optional) Client ID (also called Application ID) of the Managed Identity. Set if using a user assigned managed identity.
 
 
-**Managed Identity (User assigned)**
+##### Options
 
-Environment variables:
+If more control is needed, such as custom environment variables or other means of getting the necessary values, options can be used.
 
-* `AZURE_KEY_VAULT`/`AZURE_KEY_VAULT_NAME`/`AZURE_KEYVAULT`/`AZURE_KEYVAULT_NAME` - Name of the Azure Key Vault.
-* `AZURE_CLIENT_ID` - Client ID (also called Application ID) of the Managed Identity.
+**Service Principal**
 
-**Managed Identity (System assigned)**
+```go
+azcfg.Parse(
+    &cfg,
+    azcfg.WithClientSecretCredential(tenantID, clientID, clientSecret),
+    WithVault(vault),
+)
+```
 
-Environment variables:
+**Managed identity**
 
-* `AZURE_KEY_VAULT`/`AZURE_KEY_VAULT_NAME`/`AZURE_KEYVAULT`/`AZURE_KEYVAULT_NAME` - Name of the Azure Key Vault.
+```go
+// System assigned identity.
+azcfg.Parse(&cfg, WithManagedIdentity(), azcfg.WithVault(vault))
+// User assigned identity.
+azcfg.Parse(&cfg, WithManagedIdentity(clientID), azcfg.WithVault(vault))
+```
 
-To use a custom credential provided from elsewhere, such as the `azidentity` module see the section about
-[Custom credential](#custom-credential).
+To use a credential provided from elsewhere, such as the `azidentity` module see the section about
+[Credentials](#credentials).
 
 ### Example
 
@@ -120,7 +146,7 @@ func main() {
 {Host: Port:0 Username:username-from-keyvault Password:password-from-keyvault Credential:{Key:12345}}
 ```
 
-It is possible to pass options to `Parse` that will override the package options for that particular call:
+It is possible to pass options to `Parse`:
 
 ```go
 package main
@@ -142,28 +168,6 @@ func main() {
 }
 ```
 
-For the options functions provided by the module can be used:
-
-```go
-package main
-
-import (
-    "github.com/KarlGW/azcfg"
-)
-
-func main() {
-    cfg := config{}
-    if err := azcfg.Parse(
-        &cfg,
-        WithCredential(cred),
-        WithVault("vault"),
-        WithConcurrency(20),
-        WithTimeout(time.Millisecond * 1000 * 20)
-    ); err != nil {
-        // Handle error.
-    }
-}
-```
 
 An independent `parser` can be created and passed around inside of the application.
 
@@ -175,7 +179,10 @@ import (
 )
 
 func main() {
-    parser := azcfg.NewParser()
+    parser, err := azcfg.NewParser()
+    if err != nil {
+        // Handle error.
+    }
 
     cfg := config{}
     if err := parser.Parse(&cfg); err != nil {
@@ -184,23 +191,8 @@ func main() {
 }
 ```
 
-Both the `NewParser` and the `Parse` method on the `Parser` supports `Options` as in the examples
-for the package level `Parse` function.
-
-```go
-package main
-
-func main() {
-    parser := azcfg.NewParser(azcfg.Options{})
-
-    cfg := config{}
-    if err := parser.Parse(azcfg.Options{}); err != nil {
-        // Handle error.
-    }
-}
-```
-
-For supported options see `Options` struct.
+The constructor function `NewParser` supports the same options as the module level `Parse` function.
+For supported options see `Options` struct or list of function [options](#options)
 
 ## Usage
 
@@ -225,12 +217,21 @@ type Example struct {
 }
 ```
 
-### Custom credential
+### Options
 
-For scenarios where it is desired to use another credential than the one that is setup
-by the module (such as wanting to use the same identity/credential for an entire application)
-the struct `AdaptorCredential` has been provided as a convienience. But of course, any implementation
-that satisfies the `Credential` interface can be used:
+Option functions are provided by the module for convenience:
+
+* `WithConcurrency`
+* `WithTimeout`
+* `WithVault`
+* `WithClientSecretCredential`
+* `WithManagedIdentity`
+* `WithCredential`
+
+
+### Credentials
+
+Custom credentials with token retrieval can be used using the option `WithCredential`. They must satisfy the interface `Credential`:
 
 ```go
 // Credential is the interface that wraps around method Token.
@@ -239,50 +240,33 @@ type Credential interface {
 }
 ```
 
-**Example with the `AdaptorCredential`**:
+Since it is reasonable to assume that credentials retrieved with the help of the `azidentity` module might be used, a sub module, [`authopts`](./authopts/) has been provided. This make it easer to reuse credentials from `azidentity`.
+
+**Usage**
+```sh
+go get github.com/KarlGW/azcfg/authopts
+```
 
 ```go
 package main
 
 import (
-    "context"
-    "time"
-
-    "github.com/KarlGW/azcfg/auth"
-    "github.com/KarlGW/azcfg/auth"
+    "github.com/Azure/azure-sdk-for-go/sdk/azcore"
+    "github.com/KarlGW/azcfg"
+    "github.com/KarlGW/azcfg/authopts"
 )
 
-// ExampleToken is an example token structure.
-type ExampleToken struct {
-    Token string
-    Expires time.Dureation
-}
-
-// GetToken is an example function for token retrieval.
-func GetToken() {
-    return ExampleToken{
-        Token: "",
-        Expires: time.Now()
-    }
-}
-
 func main() {
-    cred := &auth.AdapterCredential{
-        TokenFunc: func(ctx context.Context) (auth.Token, error) {
-            // Insert the token retreival logic here.
-            token, err := GetToken()
-            if err != nil {
-                return auth.Token{}, err
-            }
-            return auth.Token{
-                AccessToken: token.Token,
-                ExpiresOn: token.Exipres
-            }, nil
-        }
+    cred, err := azidentity.NewDefaultAzureCredential(nil)
+    if err != nil {
+        // Handle error.
     }
 
-    if err := azcfg.Parse(&cfg, WithCredential(cred)); err != nil {
+    cfg := Config{}
+    if err := azcfg.Parse(&cfg, authopts.WithTokenCredential(cred)); err != nil {
         // Handle error.
     }
 }
 ```
+
+For additional information about how to use `azidentity`, check its [documentation](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity).

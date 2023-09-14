@@ -37,6 +37,15 @@ type Options struct {
 	// Vault is the name of the vault containing secrets. Used to override the
 	// default method of aquiring target vault.
 	Vault string
+	// TenantID of the Service Principal with access to target Key Vault.
+	TenantID string
+	// ClientID of the Service Principal or user assigned managed identity with access to target Key Vault.
+	ClientID string
+	// ClientSecret of the Service Principal with access to target Key Vault.
+	ClientSecret string
+	// UseManagedIdentity set to use a managed identity. To use a user assigned managed identity, use
+	// together with ClientID.
+	UseManagedIdentity bool
 }
 
 // Option is a function that sets Options.
@@ -46,9 +55,8 @@ type Option func(o *Options)
 // it will have default settings for timeout and concurrency.
 func NewParser(options ...Option) (*parser, error) {
 	p := &parser{
-		timeout:     time.Millisecond * 1000 * 10,
+		timeout:     time.Second * 5,
 		concurrency: 10,
-		vault:       vaultFromEnvironment(),
 	}
 	opts := Options{}
 	for _, option := range options {
@@ -59,11 +67,12 @@ func NewParser(options ...Option) (*parser, error) {
 		p.cred = opts.Credential
 	} else {
 		var err error
-		p.cred, err = setupCredential()
+		p.cred, err = setupCredential(opts)
 		if err != nil {
 			return nil, err
 		}
 	}
+	p.vault = setupVault(opts.Vault)
 
 	if opts.Concurrency > 0 {
 		p.concurrency = opts.Concurrency
@@ -123,41 +132,78 @@ func WithTimeout(d time.Duration) Option {
 	}
 }
 
-var (
+// WithClientSecretCredential sets the parser to use client credential with
+// a secret (client secret credential) for the Key Vault.
+func WithClientSecretCredential(tenantID, clientID, clientSecret string) Option {
+	return func(o *Options) {
+		o.TenantID = tenantID
+		o.ClientID = clientID
+		o.ClientSecret = clientSecret
+	}
+}
+
+// WithManagedIdentity sets the parser to use a managed identity
+// for credentials for the Key Vault.
+func WithManagedIdentity(clientID ...string) Option {
+	return func(o *Options) {
+		if len(clientID) > 0 {
+			o.ClientID = clientID[0]
+		}
+		o.UseManagedIdentity = true
+	}
+}
+
+const (
 	// Resource for Azure Key Vault requests.
 	resource = "https://vault.azure.net"
 	// Scope for Azure Key Vault requests.
 	scope = resource + "/.default"
 )
 
-// setupCredential checks the environment for
-func setupCredential() (auth.Credential, error) {
-	// First attempt with Service Principal, then proceed to managed identity.
+// setupCredential configures credential based on the provided
+// options.
+func setupCredential(options Options) (auth.Credential, error) {
+	var cred auth.Credential
+	var err error
+	if len(options.TenantID) == 0 && len(options.ClientID) == 0 && len(options.ClientSecret) == 0 && !options.UseManagedIdentity {
+		cred, err = credentialFromEnvironment()
+	} else if len(options.TenantID) > 0 && len(options.ClientID) > 0 && len(options.ClientSecret) > 0 && !options.UseManagedIdentity {
+		cred, err = newClientCredential(options.TenantID, options.ClientID, options.ClientSecret)
+	} else if options.UseManagedIdentity {
+		cred, err = newManagedIdentityCredential(options.ClientID)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if cred == nil {
+		return nil, errors.New("could not determine credentials and authentication method")
+	}
+	return cred, err
+}
+
+// credentialFromEnvironment gets credential details from environment variables.
+func credentialFromEnvironment() (auth.Credential, error) {
 	tenantID, clientID, clientSecret := os.Getenv("AZCFG_TENANT_ID"), os.Getenv("AZCFG_CLIENT_ID"), os.Getenv("AZCFG_CLIENT_SECRET")
 	if len(tenantID) > 0 && len(clientID) > 0 && len(clientSecret) > 0 {
-		return identity.NewClientSecretCredential(tenantID, clientID, clientSecret, identity.WithScope(scope))
+		return newClientCredential(tenantID, clientID, clientSecret)
 	} else {
-		return identity.NewManagedIdentityCredential(identity.WithClientID(clientID), identity.WithScope(resource))
+		return newManagedIdentityCredential(clientID)
 	}
 }
 
-var (
-	// envKeyVault contains environment variable names for Key Vault.
-	envKeyVault = [4]string{
-		"AZCFG_KEY_VAULT",
-		"AZCFG_KEY_VAULT_NAME",
-		"AZCFG_KEYVAULT",
-		"AZCFG_KEYVAULT_NAME",
+// setupVault configures target Key Vault based on the provided parameters.
+func setupVault(vault string) string {
+	if len(vault) == 0 {
+		return os.Getenv("AZCFG_KEYVAULT_NAME")
+	} else {
+		return vault
 	}
-)
+}
 
-// vaultFromEnvironment checks the environment if any of the variables AZCFG_KEY_VAULT,
-// AZCFG_KEY_VAULT_NAME, AZCFG_KEYVAULT or AZCFG_KEYVAULT_NAME is set.
-func vaultFromEnvironment() string {
-	for _, v := range envKeyVault {
-		if len(os.Getenv(v)) != 0 {
-			return os.Getenv(v)
-		}
-	}
-	return ""
+var newClientCredential = func(tenantID, clientID, clientSecret string) (auth.Credential, error) {
+	return identity.NewClientCredential(tenantID, clientID, identity.WithSecret(clientSecret), identity.WithScope(scope))
+}
+
+var newManagedIdentityCredential = func(clientID string) (auth.Credential, error) {
+	return identity.NewManagedIdentityCredential(identity.WithClientID(clientID), identity.WithScope(resource))
 }

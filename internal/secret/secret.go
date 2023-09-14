@@ -85,7 +85,7 @@ func (c Client) Get(names ...string) (map[string]Secret, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
-	return c.retrieve(ctx, names)
+	return c.getSecrets(ctx, names)
 }
 
 // get a secret.
@@ -120,8 +120,9 @@ func (c Client) get(ctx context.Context, name string) (Secret, error) {
 	return secret, nil
 }
 
-// retrieve secrets by the provided names.
-func (c Client) retrieve(ctx context.Context, names []string) (map[string]Secret, error) {
+// getSecrets gets secrets by the provided names and returns them as a map[string]Secret
+// where the secret name is the key.
+func (c Client) getSecrets(ctx context.Context, names []string) (map[string]Secret, error) {
 	if names == nil {
 		return nil, nil
 	}

@@ -12,15 +12,13 @@ import (
 
 	"github.com/KarlGW/azcfg/auth"
 	"github.com/KarlGW/azcfg/internal/retry"
+	"github.com/KarlGW/azcfg/version"
 	"golang.org/x/sync/errgroup"
 )
 
 const (
 	// baseURL is the base URL for Azure Key Vault in the Azure Public Cloud.
 	baseURL = "https://{vault}.vault.azure.net/secrets"
-)
-
-const (
 	// apiVersion is the API version of the Key Vault REST API endpoint.
 	apiVersion = "7.4"
 )
@@ -43,6 +41,7 @@ type Client struct {
 	concurrency int
 	timeout     time.Duration
 	baseURL     string
+	header      http.Header
 }
 
 // ClientOptions contains options for the Client.
@@ -59,7 +58,7 @@ type ClientOption func(o *ClientOptions)
 func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Client {
 	opts := ClientOptions{
 		Concurrency: 10,
-		Timeout:     time.Millisecond * 1000 * 10,
+		Timeout:     time.Second * 10,
 	}
 	for _, option := range options {
 		option(&opts)
@@ -77,6 +76,9 @@ func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Cli
 		timeout:     opts.Timeout,
 		concurrency: opts.Concurrency,
 		baseURL:     strings.Replace(baseURL, "{vault}", vault, 1),
+		header: http.Header{
+			"User-Agent": {"azcfg/" + version.Version()},
+		},
 	}
 }
 
@@ -98,7 +100,7 @@ func (c Client) get(ctx context.Context, name string) (Secret, error) {
 
 	var b []byte
 	if err := retry.Do(ctx, func() error {
-		b, err = request(ctx, c.c, addAuthHeader(http.Header{}, token.AccessToken), http.MethodGet, u)
+		b, err = request(ctx, c.c, addAuthHeader(c.header, token.AccessToken), http.MethodGet, u)
 		if err != nil {
 			if errors.Is(err, errSecretNotFound) {
 				err = fmt.Errorf("secret %s: %w", name, err)

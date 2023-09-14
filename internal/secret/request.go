@@ -36,9 +36,6 @@ func request(ctx context.Context, client httpClient, headers http.Header, method
 	if err != nil {
 		return nil, err
 	}
-	if err != nil {
-		return nil, err
-	}
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode > http.StatusNoContent {
 		switch resp.StatusCode {

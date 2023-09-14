@@ -1,9 +1,15 @@
 package azcfg
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/KarlGW/azcfg/internal/secret"
+)
+
+var (
+	// ErrVaultNotSet is returned when no vault is set.
+	ErrVaultNotSet = errors.New("a vault must be set")
 )
 
 // RequiredError represents an error when a secret is required.

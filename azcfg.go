@@ -15,13 +15,6 @@ const (
 	required   = "required"
 )
 
-var (
-	// version contains version of azcfg.
-	version = ""
-	// commit contains commit hash of azcfg.
-	commit = ""
-)
-
 // Parse secrets from an Azure Key Vault into a struct.
 func Parse(v any, options ...Option) error {
 	parser, err := NewParser(options...)
@@ -211,14 +204,4 @@ func isRequired(values []string) bool {
 		return false
 	}
 	return values[1] == required
-}
-
-// Version returns the version of azcfg.
-func Version() string {
-	return version
-}
-
-// Commit returns the commit hash of azcfg.
-func Commit() string {
-	return commit
 }

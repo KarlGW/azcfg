@@ -71,7 +71,7 @@ func NewParser(options ...Option) (*parser, error) {
 
 	p.vault = setupVault(opts.Vault)
 	if len(p.vault) == 0 {
-		return nil, errors.New("a vault must be set")
+		return nil, ErrVaultNotSet
 	}
 
 	if opts.Concurrency > 0 {

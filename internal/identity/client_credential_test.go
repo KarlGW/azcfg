@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/version"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -40,7 +41,11 @@ func TestNewClientCredential(t *testing.T) {
 				},
 			},
 			want: &ClientCredential{
-				c:            &http.Client{},
+				c: &http.Client{},
+				header: http.Header{
+					"User-Agent":   {"azcfg/" + version.Version()},
+					"Content-Type": {"application/x-www-form-urlencoded"},
+				},
 				endpoint:     fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/token", _testTenantID),
 				tenantID:     _testTenantID,
 				clientID:     _testClientID,

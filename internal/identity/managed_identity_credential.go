@@ -11,6 +11,7 @@ import (
 
 	"github.com/KarlGW/azcfg/auth"
 	"github.com/KarlGW/azcfg/internal/retry"
+	"github.com/KarlGW/azcfg/version"
 )
 
 var (
@@ -50,20 +51,23 @@ const (
 // to Azure according to the managed identity credential flow. It contains all the necessary
 // settings to perform token requests.
 type ManagedIdentityCredential struct {
-	c                       httpClient
-	token                   *auth.Token
-	endpoint                string
-	apiVersion              string
-	headerName, headerValue string
-	clientID                string
-	resourceID              string
-	scope                   string
+	c          httpClient
+	header     http.Header
+	token      *auth.Token
+	endpoint   string
+	apiVersion string
+	clientID   string
+	resourceID string
+	scope      string
 }
 
 // NewManagedIdentityCredential creates and returns a new *ManagedIdentityCredential.
 func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentityCredential, error) {
 	c := &ManagedIdentityCredential{
 		c: &http.Client{},
+		header: http.Header{
+			"User-Agent": {"azcfg/" + version.Version()},
+		},
 	}
 	opts := CredentialOptions{}
 	for _, option := range options {
@@ -96,12 +100,14 @@ func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentity
 
 	if endpoint, ok := os.LookupEnv(identityEndpoint); ok {
 		if header, ok := os.LookupEnv(identityHeader); ok {
-			c.endpoint, c.apiVersion, c.headerName, c.headerValue = endpoint, appServiceAPIVersion, "X-IDENTITY-HEADER", header
+			c.endpoint, c.apiVersion = endpoint, appServiceAPIVersion
+			c.header.Add("X-Identity-Header", header)
 		} else {
 			return nil, ErrUnsupportedManagedIdentityType
 		}
 	} else {
-		c.endpoint, c.apiVersion, c.headerName, c.headerValue = imdsEndpoint, imdsAPIVersion, "Metadata", "true"
+		c.endpoint, c.apiVersion = imdsEndpoint, imdsAPIVersion
+		c.header.Add("Metadata", "true")
 	}
 
 	return c, nil
@@ -144,7 +150,9 @@ func (c ManagedIdentityCredential) tokenRequest(ctx context.Context) (auth.Token
 		if err != nil {
 			return err
 		}
-		req.Header.Add(c.headerName, c.headerValue)
+		for k, v := range c.header {
+			req.Header.Add(k, strings.Join(v, ", "))
+		}
 
 		r, err = request(c.c, req)
 		if err != nil {

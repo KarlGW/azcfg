@@ -11,6 +11,7 @@ import (
 
 	"github.com/KarlGW/azcfg/auth"
 	"github.com/KarlGW/azcfg/internal/retry"
+	"github.com/KarlGW/azcfg/version"
 )
 
 const (
@@ -29,6 +30,7 @@ var (
 // to perform token requests.
 type ClientCredential struct {
 	c            httpClient
+	header       http.Header
 	token        *auth.Token
 	endpoint     string
 	tenantID     string
@@ -47,7 +49,11 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 	}
 
 	c := &ClientCredential{
-		c:        &http.Client{},
+		c: &http.Client{},
+		header: http.Header{
+			"User-Agent":   {"azcfg/" + version.Version()},
+			"Content-Type": {"application/x-www-form-urlencoded"},
+		},
 		endpoint: strings.Replace(authEndpoint, "{tenant}", tenantID, 1),
 		tenantID: tenantID,
 		clientID: clientID,
@@ -118,7 +124,9 @@ func (c ClientCredential) tokenRequest(ctx context.Context) (auth.Token, error) 
 		if err != nil {
 			return err
 		}
-		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		for k, v := range c.header {
+			req.Header.Add(k, strings.Join(v, ", "))
+		}
 
 		r, err = request(c.c, req)
 		if err != nil {

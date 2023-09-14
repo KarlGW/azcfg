@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/version"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -36,12 +37,14 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				envs:    map[string]string{},
 			},
 			want: &ManagedIdentityCredential{
-				c:           &http.Client{},
-				endpoint:    imdsEndpoint,
-				apiVersion:  imdsAPIVersion,
-				headerName:  "Metadata",
-				headerValue: "true",
-				scope:       defaultResource,
+				c: &http.Client{},
+				header: http.Header{
+					"User-Agent": {"azcfg/" + version.Version()},
+					"Metadata":   {"true"},
+				},
+				endpoint:   imdsEndpoint,
+				apiVersion: imdsAPIVersion,
+				scope:      defaultResource,
 			},
 			wantErr: nil,
 		},
@@ -57,13 +60,15 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				envs: map[string]string{},
 			},
 			want: &ManagedIdentityCredential{
-				c:           &http.Client{},
-				endpoint:    imdsEndpoint,
-				apiVersion:  imdsAPIVersion,
-				headerName:  "Metadata",
-				headerValue: "true",
-				clientID:    _testClientID,
-				scope:       defaultResource,
+				c: &http.Client{},
+				header: http.Header{
+					"User-Agent": {"azcfg/" + version.Version()},
+					"Metadata":   {"true"},
+				},
+				endpoint:   imdsEndpoint,
+				apiVersion: imdsAPIVersion,
+				clientID:   _testClientID,
+				scope:      defaultResource,
 			},
 			wantErr: nil,
 		},
@@ -79,13 +84,15 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				envs: map[string]string{},
 			},
 			want: &ManagedIdentityCredential{
-				c:           &http.Client{},
-				endpoint:    imdsEndpoint,
-				apiVersion:  imdsAPIVersion,
-				headerName:  "Metadata",
-				headerValue: "true",
-				resourceID:  _testResourceID,
-				scope:       defaultResource,
+				c: &http.Client{},
+				header: http.Header{
+					"User-Agent": {"azcfg/" + version.Version()},
+					"Metadata":   {"true"},
+				},
+				endpoint:   imdsEndpoint,
+				apiVersion: imdsAPIVersion,
+				resourceID: _testResourceID,
+				scope:      defaultResource,
 			},
 			wantErr: nil,
 		},
@@ -102,12 +109,14 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				},
 			},
 			want: &ManagedIdentityCredential{
-				c:           &http.Client{},
-				endpoint:    "ENDPOINT",
-				apiVersion:  appServiceAPIVersion,
-				headerName:  "X-IDENTITY-HEADER",
-				headerValue: "12345",
-				scope:       defaultResource,
+				c: &http.Client{},
+				header: http.Header{
+					"User-Agent":        {"azcfg/" + version.Version()},
+					"X-Identity-Header": {"12345"},
+				},
+				endpoint:   "ENDPOINT",
+				apiVersion: appServiceAPIVersion,
+				scope:      defaultResource,
 			},
 			wantErr: nil,
 		},

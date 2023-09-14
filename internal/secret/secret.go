@@ -58,7 +58,7 @@ type ClientOption func(o *ClientOptions)
 func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Client {
 	opts := ClientOptions{
 		Concurrency: 10,
-		Timeout:     time.Second * 10,
+		Timeout:     time.Second * 5,
 	}
 	for _, option := range options {
 		option(&opts)
@@ -77,8 +77,8 @@ func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Cli
 			"User-Agent": {"azcfg/" + version.Version()},
 		},
 		baseURL:     strings.Replace(baseURL, "{vault}", vault, 1),
-		timeout:     opts.Timeout,
 		concurrency: opts.Concurrency,
+		timeout:     opts.Timeout,
 	}
 }
 

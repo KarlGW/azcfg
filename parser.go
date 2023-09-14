@@ -70,16 +70,15 @@ func NewParser(options ...Option) (*parser, error) {
 	}
 
 	p.vault = setupVault(opts.Vault)
+	if len(p.vault) == 0 {
+		return nil, errors.New("a vault must be set")
+	}
 
 	if opts.Concurrency > 0 {
 		p.concurrency = opts.Concurrency
 	}
 	if opts.Timeout > 0 {
 		p.timeout = opts.Timeout
-	}
-
-	if len(p.vault) == 0 {
-		return nil, errors.New("a vault must be set")
 	}
 
 	cl := secret.NewClient(

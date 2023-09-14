@@ -3,6 +3,7 @@ package azcfg
 import (
 	"testing"
 
+	"github.com/KarlGW/azcfg/internal/secret"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -10,7 +11,7 @@ func TestRequiredErrorMessage(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input struct {
-			secrets  map[string]string
+			secrets  map[string]secret.Secret
 			required []string
 		}
 		want string
@@ -18,10 +19,10 @@ func TestRequiredErrorMessage(t *testing.T) {
 		{
 			name: "no required",
 			input: struct {
-				secrets  map[string]string
+				secrets  map[string]secret.Secret
 				required []string
 			}{
-				secrets:  map[string]string{},
+				secrets:  map[string]secret.Secret{},
 				required: []string{},
 			},
 			want: "",
@@ -29,11 +30,11 @@ func TestRequiredErrorMessage(t *testing.T) {
 		{
 			name: "1 required",
 			input: struct {
-				secrets  map[string]string
+				secrets  map[string]secret.Secret
 				required []string
 			}{
-				secrets: map[string]string{
-					"secret1": "",
+				secrets: map[string]secret.Secret{
+					"secret1": {Value: ""},
 				},
 				required: []string{
 					"secret1",
@@ -44,12 +45,12 @@ func TestRequiredErrorMessage(t *testing.T) {
 		{
 			name: "2 required",
 			input: struct {
-				secrets  map[string]string
+				secrets  map[string]secret.Secret
 				required []string
 			}{
-				secrets: map[string]string{
-					"secret1": "",
-					"secret2": "",
+				secrets: map[string]secret.Secret{
+					"secret1": {Value: ""},
+					"secret2": {Value: ""},
 				},
 				required: []string{
 					"secret1",
@@ -61,13 +62,13 @@ func TestRequiredErrorMessage(t *testing.T) {
 		{
 			name: "3 required",
 			input: struct {
-				secrets  map[string]string
+				secrets  map[string]secret.Secret
 				required []string
 			}{
-				secrets: map[string]string{
-					"secret1": "",
-					"secret2": "",
-					"secret3": "",
+				secrets: map[string]secret.Secret{
+					"secret1": {Value: ""},
+					"secret2": {Value: ""},
+					"secret3": {Value: ""},
 				},
 				required: []string{
 					"secret1",

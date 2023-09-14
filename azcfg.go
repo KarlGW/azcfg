@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/KarlGW/azcfg/internal/secret"
 )
 
 const (
@@ -13,21 +15,17 @@ const (
 	required   = "required"
 )
 
-var (
-	// parser is the package level *Parser.
-	parser = &Parser{
-		concurrency: defaultConcurrency,
-		timeout:     defaultTimeout,
-	}
-)
-
 // Parse secrets from an Azure Key Vault into a struct.
-func Parse(v any, options ...Options) error {
-	return parser.Parse(v, options...)
+func Parse(v any, options ...Option) error {
+	parser, err := NewParser(options...)
+	if err != nil {
+		return err
+	}
+	return parser.Parse(v)
 }
 
 // Parse secrets into the configuration.
-func parse(d any, client Client) error {
+func parse(d any, client client) error {
 	v := reflect.ValueOf(d)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("must provide a pointer to a struct")
@@ -38,7 +36,7 @@ func parse(d any, client Client) error {
 	}
 
 	fields, required := getFields(v, defaultTag)
-	secrets, err := client.GetSecrets(fields)
+	secrets, err := client.Get(fields...)
 	if err != nil {
 		return err
 	}
@@ -82,7 +80,7 @@ func getFields(v reflect.Value, tag string) ([]string, []string) {
 
 // setFields takes incoming map of values and sets them with the
 // value with the map key/struct tag match.
-func setFields(v reflect.Value, secrets map[string]string) error {
+func setFields(v reflect.Value, secrets map[string]secret.Secret) error {
 	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		if !v.Field(i).CanSet() {
@@ -103,13 +101,13 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 			}
 			tags := strings.Split(value, ",")
 			if val, ok := secrets[tags[0]]; ok {
-				if len(val) == 0 && isRequired(tags) {
+				if len(val.Value) == 0 && isRequired(tags) {
 					return &RequiredError{secret: tags[0]}
-				} else if len(val) == 0 {
+				} else if len(val.Value) == 0 {
 					continue
 				}
 				if v.Field(i).Kind() == reflect.Slice {
-					vals := splitTrim(val, ",")
+					vals := splitTrim(val.Value, ",")
 					sl := reflect.MakeSlice(v.Field(i).Type(), len(vals), len(vals))
 					for j := 0; j < sl.Cap(); j++ {
 						if err := setValue(sl.Index(j), vals[j]); err != nil {
@@ -118,7 +116,7 @@ func setFields(v reflect.Value, secrets map[string]string) error {
 					}
 					v.Field(i).Set(sl)
 				} else {
-					if err := setValue(v.Field(i), val); err != nil {
+					if err := setValue(v.Field(i), val.Value); err != nil {
 						return err
 					}
 				}

@@ -58,7 +58,7 @@ go get github.com/KarlGW/azcfg
 The module supports several ways of authenticating to Azure and get secrets from the target Key Vault.
 
 1. Built-in credentials that supports Service Principal (Client Credentials with secret) and managed identity (system and user assigned)
-2. Credentials from [`azidentity`](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity) with the sub-module [`authopts`](./authopts/)
+2. Credentials from [`azidentity`](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity) with the submodule [`authopts`](./authopts/)
 3. Custom credential handling by implementing the `auth.Credential` interface.
 
 For more information about option **2** and **3**, see [Credentials](#credentials).
@@ -240,7 +240,7 @@ type Credential interface {
 }
 ```
 
-Since it is reasonable to assume that credentials retrieved with the help of the `azidentity` module might be used, a sub module, [`authopts`](./authopts/) has been provided. This make it easer to reuse credentials from `azidentity`.
+Since it is reasonable to assume that credentials retrieved with the help of the `azidentity` module might be used, a submodule, [`authopts`](./authopts/) has been provided. This make it easer to reuse credentials from `azidentity`.
 
 **Usage**
 ```sh

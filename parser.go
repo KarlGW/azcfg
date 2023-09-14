@@ -29,7 +29,7 @@ type Options struct {
 	// Credential is the credential to be used with the Client. Used to override
 	// the default method of aquiring credentials.
 	Credential auth.Credential
-	// Timeout is the total timeout for retrieval of secrets. Defaults to 10 seconds.
+	// Timeout is the total timeout for retrieval of secrets. Defaults to 5 seconds.
 	Timeout time.Duration
 	// Concurrency is the amount of secrets that will be retrieved concurrently.
 	// Defaults to 10.

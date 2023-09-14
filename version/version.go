@@ -2,17 +2,10 @@ package version
 
 var (
 	// version contains version of azcfg.
-	version = ""
-	// commit contains commit hash of azcfg.
-	commit = ""
+	version = "0.7.0"
 )
 
 // Version returns the version of azcfg.
 func Version() string {
 	return version
-}
-
-// Commit returns the commit hash of azcfg.
-func Commit() string {
-	return commit
 }

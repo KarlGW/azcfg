@@ -11,7 +11,6 @@ import (
 
 var (
 	errSecretNotFound = errors.New("not found")
-	errSecretOther    = errors.New("secret")
 )
 
 // request performs a request with the provided method and target url.

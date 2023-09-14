@@ -18,7 +18,7 @@ import (
 
 var (
 	errRequest = errors.New("request error")
-	errServer  = fmt.Errorf("%w: internal server error", errSecretOther)
+	errServer  = fmt.Errorf("internal server error")
 )
 
 func TestClient_Get(t *testing.T) {
@@ -147,7 +147,7 @@ type mockHttpClient struct {
 
 func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 	if c.err != nil {
-		if errors.Is(c.err, errSecretOther) {
+		if errors.Is(c.err, errServer) {
 			return &http.Response{
 				StatusCode: http.StatusBadRequest,
 				Body:       io.NopCloser(bytes.NewBuffer([]byte(`{"error":{"message":"bad request"}}`))),

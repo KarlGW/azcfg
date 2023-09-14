@@ -168,7 +168,7 @@ func TestClientCredential_Token(t *testing.T) {
 			got, gotErr := cred.Token(context.Background())
 
 			if diff := cmp.Diff(test.want, got, cmpopts.IgnoreFields(auth.Token{}, "ExpiresOn")); diff != "" {
-				t.Errorf("Token() = unexpected result (-want +got)\n%s¶n", diff)
+				t.Errorf("Token() = unexpected result (-want +got)\n%s\n", diff)
 			}
 
 			if diff := cmp.Diff(test.wantErr, gotErr, cmpopts.EquateErrors()); diff != "" {

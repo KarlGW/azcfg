@@ -63,15 +63,12 @@ func NewParser(options ...Option) (*parser, error) {
 		option(&opts)
 	}
 
-	if opts.Credential != nil {
-		p.cred = opts.Credential
-	} else {
-		var err error
-		p.cred, err = setupCredential(opts)
-		if err != nil {
-			return nil, err
-		}
+	var err error
+	p.cred, err = setupCredential(opts)
+	if err != nil {
+		return nil, err
 	}
+
 	p.vault = setupVault(opts.Vault)
 
 	if opts.Concurrency > 0 {
@@ -79,9 +76,6 @@ func NewParser(options ...Option) (*parser, error) {
 	}
 	if opts.Timeout > 0 {
 		p.timeout = opts.Timeout
-	}
-	if len(opts.Vault) > 0 {
-		p.vault = opts.Vault
 	}
 
 	if len(p.vault) == 0 {
@@ -163,6 +157,9 @@ const (
 // setupCredential configures credential based on the provided
 // options.
 func setupCredential(options Options) (auth.Credential, error) {
+	if options.Credential != nil {
+		return options.Credential, nil
+	}
 	var cred auth.Credential
 	var err error
 	if len(options.TenantID) == 0 && len(options.ClientID) == 0 && len(options.ClientSecret) == 0 && !options.UseManagedIdentity {

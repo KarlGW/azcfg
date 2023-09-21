@@ -9,8 +9,10 @@
   * [Prerequisites](#prerequisites)
   * [Example](#example)
 * [Usage](#usage)
-  * [Required](#required)
   * [Options](#options)
+  * [Required](#required)
+  * [Parser](#parser)
+  * [Authentication](#authentication)
   * [Credentials](#credentials)
 
 This module is used to get secrets from an Azure Key Vault and set them into a struct. The idea of parsing
@@ -36,8 +38,6 @@ The error message contains all fields that have been marked as required that did
 
 **Note**: Unexported fields will be ignored.
 
-See [example](#example) for more.
-
 ## Getting started
 
 ### Install
@@ -52,6 +52,131 @@ go get github.com/KarlGW/azcfg
 * Azure Key Vault
   * Identity with access to secrets in the Key Vault
 
+
+### Example
+
+Using a managed identity as credentials on an Azure service. For other authentication and credential methods see the sections [Authentication](#authentication) and [Credentials](#credentials).
+
+```go
+package main
+
+import (
+    "github.com/KarlGW/azcfg"
+)
+
+type config struct {
+    Host string
+    Port int
+
+    Username string `secret:"username"`
+    Password string `secret:"password"`
+
+    Credential credential
+}
+
+type credential struct {
+    Key int `secret:"key"`
+}
+
+func main() {
+    cfg := config{}
+    if err := azcfg.Parse(&cfg); err != nil {
+        // Handle error.
+    }
+
+    fmt.Printf("%+v\n", cfg)
+}
+```
+
+```sh
+{Host: Port:0 Username:username-from-keyvault Password:password-from-keyvault Credential:{Key:12345}}
+```
+
+## Usage
+
+**Supported types**
+
+* `string`
+* `bool`
+* `uint`, `uint8`, `uint16`, `uint32`, `uint64`
+* `int`, `int8`, `int16`, `int32`, `int64`
+* `float32`, `float64`
+
+
+### Options
+
+Options can be provided to `Parse` or `NewParser`:
+
+```go
+package main
+
+import (
+    "github.com/KarlGW/azcfg"
+)
+
+func main() {
+    cfg := config{}
+    if err := azcfg.Parse(&cfg, func(o *Options) {
+        o.Credential = cred
+        o.Vault = "vault"
+        o.Concurrenty = 20
+        o.Timeout = time.Millisecond * 1000 * 20
+    }); err != nil {
+        // Handle error.
+    }
+}
+```
+
+Option functions are provided by the module for convenience:
+
+* `WithConcurrency`
+* `WithTimeout`
+* `WithVault`
+* `WithClientSecretCredential`
+* `WithManagedIdentity`
+* `WithCredential`
+
+
+### Required
+
+The default behaviour of `Parse` is to ignore secrets that does not exist and let the field contain it's original value.
+To enforce secrets to be set the option `required` can be used.
+
+```go
+type Example struct {
+    FieldA `secret:"field-a"`
+    FieldB `secret:"field-b,required"`
+}
+```
+If a `required` secret doesn't exist in the Key Vault an error will be returned. The error message contains all
+fields that have been marked as required that didn't have a secret associated with them.
+
+### Parser
+
+An independent `parser` can be created and passed around inside of the application.
+
+```go
+package main
+
+import (
+    "github.com/KarlGW/azcfg"
+)
+
+func main() {
+    parser, err := azcfg.NewParser()
+    if err != nil {
+        // Handle error.
+    }
+
+    cfg := config{}
+    if err := parser.Parse(&cfg); err != nil {
+        // Handle error.
+    }
+}
+```
+
+The constructor function `NewParser` supports the same options as the module level `Parse` function.
+For supported options see `Options` struct or list of function options in the [Options](#options) section.
 
 ### Authentication
 
@@ -108,126 +233,6 @@ azcfg.Parse(&cfg, WithManagedIdentity(clientID), azcfg.WithVault(vault))
 
 To use a credential provided from elsewhere, such as the `azidentity` module see the section about
 [Credentials](#credentials).
-
-### Example
-
-```go
-package main
-
-import (
-    "github.com/KarlGW/azcfg"
-)
-
-type config struct {
-    Host string
-    Port int
-
-    Username string `secret:"username"`
-    Password string `secret:"password"`
-
-    Credential credential
-}
-
-type credential struct {
-    Key int `secret:"key"`
-}
-
-func main() {
-    cfg := config{}
-    if err := azcfg.Parse(&cfg); err != nil {
-        // Handle error.
-    }
-
-    fmt.Printf("%+v\n", cfg)
-}
-```
-
-```sh
-{Host: Port:0 Username:username-from-keyvault Password:password-from-keyvault Credential:{Key:12345}}
-```
-
-It is possible to pass options to `Parse`:
-
-```go
-package main
-
-import (
-    "github.com/KarlGW/azcfg"
-)
-
-func main() {
-    cfg := config{}
-    if err := azcfg.Parse(&cfg, func(o *Options) {
-        o.Credential = cred
-        o.Vault = "vault"
-        o.Concurrenty = 20
-        o.Timeout = time.Millisecond * 1000 * 20
-    }); err != nil {
-        // Handle error.
-    }
-}
-```
-
-
-An independent `parser` can be created and passed around inside of the application.
-
-```go
-package main
-
-import (
-    "github.com/KarlGW/azcfg"
-)
-
-func main() {
-    parser, err := azcfg.NewParser()
-    if err != nil {
-        // Handle error.
-    }
-
-    cfg := config{}
-    if err := parser.Parse(&cfg); err != nil {
-        // Handle error.
-    }
-}
-```
-
-The constructor function `NewParser` supports the same options as the module level `Parse` function.
-For supported options see `Options` struct or list of function [options](#options)
-
-## Usage
-
-**Supported types**
-
-* `string`
-* `bool`
-* `uint`, `uint8`, `uint16`, `uint32`, `uint64`
-* `int`, `int8`, `int16`, `int32`, `int64`
-* `float32`, `float64`
-
-
-### Required
-
-The default behaviour of `Parse` is to ignore secrets that does not exist and let the field contain it's original value.
-To enforce secrets to be set the option `required` can be used.
-
-```go
-type Example struct {
-    FieldA `secret:"field-a"`
-    FieldB `secret:"field-b,required"`
-}
-```
-
-### Options
-
-Option functions are provided by the module for convenience:
-
-* `WithConcurrency`
-* `WithTimeout`
-* `WithVault`
-* `WithClientSecretCredential`
-* `WithManagedIdentity`
-* `WithCredential`
-
 
 ### Credentials
 

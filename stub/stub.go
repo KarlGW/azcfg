@@ -2,7 +2,7 @@ package stub
 
 import "github.com/KarlGW/azcfg/internal/secret"
 
-// SecretClient satisfies the client interface in package azcfg. Purpose is
+// SecretClient satisfies the secretClient interface in package azcfg. Purpose is
 // to be used as a stub for secret retrieval.
 type SecretClient struct {
 	secrets map[string]secret.Secret

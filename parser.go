@@ -10,14 +10,14 @@ import (
 	"github.com/KarlGW/azcfg/internal/secret"
 )
 
-// client is the interface that wraps around method Get.
-type client interface {
+// secretClient is the interface that wraps around method Get.
+type secretClient interface {
 	Get(names ...string) (map[string]secret.Secret, error)
 }
 
 // parser contains all the necessary values and settings for calls to Parse.
 type parser struct {
-	cl          client
+	cl          secretClient
 	cred        auth.Credential
 	timeout     time.Duration
 	concurrency int
@@ -29,6 +29,8 @@ type Options struct {
 	// Credential is the credential to be used with the Client. Used to override
 	// the default method of aquiring credentials.
 	Credential auth.Credential
+	// SecretClient is a client used to retreive secrets.
+	SecretClient secretClient
 	// Timeout is the total timeout for retrieval of secrets. Defaults to 5 seconds.
 	Timeout time.Duration
 	// Concurrency is the amount of secrets that will be retrieved concurrently.
@@ -62,6 +64,10 @@ func NewParser(options ...Option) (*parser, error) {
 	for _, option := range options {
 		option(&opts)
 	}
+	if opts.SecretClient != nil {
+		p.cl = opts.SecretClient
+		return p, nil
+	}
 
 	var err error
 	p.cred, err = setupCredential(opts)
@@ -81,13 +87,12 @@ func NewParser(options ...Option) (*parser, error) {
 		p.timeout = opts.Timeout
 	}
 
-	cl := secret.NewClient(
+	p.cl = secret.NewClient(
 		p.vault,
 		p.cred,
 		secret.WithTimeout(p.timeout),
 		secret.WithConcurrency(p.concurrency),
 	)
-	p.cl = cl
 
 	return p, nil
 }
@@ -143,6 +148,13 @@ func WithManagedIdentity(clientID ...string) Option {
 			o.ClientID = clientID[0]
 		}
 		o.UseManagedIdentity = true
+	}
+}
+
+// WithSecretClient sets the client for secret retrieval.
+func WithSecretClient(c secretClient) Option {
+	return func(o *Options) {
+		o.SecretClient = c
 	}
 }
 

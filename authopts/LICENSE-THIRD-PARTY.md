@@ -3,8 +3,8 @@
 ## github.com/Azure/azure-sdk-for-go/sdk/azcore
 
 * Name: github.com/Azure/azure-sdk-for-go/sdk/azcore
-* Version: v1.7.1
-* License: [MIT](https://github.com/Azure/azure-sdk-for-go/blob/sdk/azcore/v1.7.1/sdk/azcore/LICENSE.txt)
+* Version: v1.8.0
+* License: [MIT](https://github.com/Azure/azure-sdk-for-go/blob/sdk/azcore/v1.8.0/sdk/azcore/LICENSE.txt)
 
 ```
 MIT License
@@ -65,8 +65,8 @@ SOFTWARE
 ## github.com/google/go-cmp/cmp
 
 * Name: github.com/google/go-cmp/cmp
-* Version: v0.5.9
-* License: [BSD-3-Clause](https://github.com/google/go-cmp/blob/v0.5.9/LICENSE)
+* Version: v0.6.0
+* License: [BSD-3-Clause](https://github.com/google/go-cmp/blob/v0.6.0/LICENSE)
 
 ```
 Copyright (c) 2017 The Go Authors. All rights reserved.
@@ -102,8 +102,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## golang.org/x/net
 
 * Name: golang.org/x/net
-* Version: v0.8.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/net/+/v0.8.0:LICENSE)
+* Version: v0.17.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/net/+/v0.17.0:LICENSE)
 
 ```
 Copyright (c) 2009 The Go Authors. All rights reserved.
@@ -139,8 +139,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## golang.org/x/sync/errgroup
 
 * Name: golang.org/x/sync/errgroup
-* Version: v0.3.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/sync/+/v0.3.0:LICENSE)
+* Version: v0.4.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/sync/+/v0.4.0:LICENSE)
 
 ```
 Copyright (c) 2009 The Go Authors. All rights reserved.
@@ -176,8 +176,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## golang.org/x/text
 
 * Name: golang.org/x/text
-* Version: v0.8.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/text/+/v0.8.0:LICENSE)
+* Version: v0.13.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/text/+/v0.13.0:LICENSE)
 
 ```
 Copyright (c) 2009 The Go Authors. All rights reserved.

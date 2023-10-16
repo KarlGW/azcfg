@@ -25,7 +25,7 @@ func Parse(v any, options ...Option) error {
 }
 
 // Parse secrets into the configuration.
-func parse(d any, client client) error {
+func parse(d any, client secretClient) error {
 	v := reflect.ValueOf(d)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("must provide a pointer to a struct")

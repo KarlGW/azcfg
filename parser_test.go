@@ -9,6 +9,7 @@ import (
 	"github.com/KarlGW/azcfg/auth"
 	"github.com/KarlGW/azcfg/internal/identity"
 	"github.com/KarlGW/azcfg/internal/secret"
+	"github.com/KarlGW/azcfg/stub"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -100,6 +101,24 @@ func TestNewParser(t *testing.T) {
 			want:    nil,
 			wantErr: ErrVaultNotSet,
 		},
+		{
+			name: "secret client provided",
+			input: struct {
+				options []Option
+				envs    map[string]string
+			}{
+				options: []Option{
+					WithSecretClient(stub.NewSecretClient(nil, nil)),
+				},
+			},
+			want: &parser{
+				cl:          stub.SecretClient{},
+				cred:        nil,
+				timeout:     time.Second * 5,
+				concurrency: 10,
+				vault:       "",
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -126,7 +145,7 @@ func TestNewParser(t *testing.T) {
 
 			got, gotErr := NewParser(test.input.options...)
 
-			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(parser{}, mockCredential{}), cmpopts.IgnoreUnexported(secret.Client{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(parser{}, mockCredential{}), cmpopts.IgnoreUnexported(secret.Client{}, stub.SecretClient{})); diff != "" {
 				t.Errorf("NewParser() = unexpected result (-want +got)\n%s\n", diff)
 			}
 

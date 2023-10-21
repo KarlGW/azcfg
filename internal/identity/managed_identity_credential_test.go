@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -45,6 +46,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				endpoint:   imdsEndpoint,
 				apiVersion: imdsAPIVersion,
 				scope:      defaultResource,
+				mu:         &sync.RWMutex{},
 			},
 			wantErr: nil,
 		},
@@ -69,6 +71,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				apiVersion: imdsAPIVersion,
 				clientID:   _testClientID,
 				scope:      defaultResource,
+				mu:         &sync.RWMutex{},
 			},
 			wantErr: nil,
 		},
@@ -93,6 +96,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				apiVersion: imdsAPIVersion,
 				resourceID: _testResourceID,
 				scope:      defaultResource,
+				mu:         &sync.RWMutex{},
 			},
 			wantErr: nil,
 		},
@@ -117,6 +121,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				endpoint:   "ENDPOINT",
 				apiVersion: appServiceAPIVersion,
 				scope:      defaultResource,
+				mu:         &sync.RWMutex{},
 			},
 			wantErr: nil,
 		},
@@ -171,7 +176,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 
 			got, gotErr := NewManagedIdentityCredential(test.input.options...)
 
-			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(ManagedIdentityCredential{}), cmpopts.IgnoreUnexported(http.Client{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(ManagedIdentityCredential{}), cmpopts.IgnoreUnexported(http.Client{}, ManagedIdentityCredential{})); diff != "" {
 				t.Errorf("NewManagedIdentityCredential() = unexpected result (-want +got)\n%s\n", diff)
 			}
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -51,6 +52,7 @@ func TestNewClientCredential(t *testing.T) {
 				clientID:     _testClientID,
 				clientSecret: _testClientSecret,
 				scope:        _testScope,
+				mu:           &sync.RWMutex{},
 			},
 			wantErr: nil,
 		},
@@ -88,7 +90,7 @@ func TestNewClientCredential(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got, gotErr := NewClientCredential(test.input.tenantID, test.input.clientID, test.input.options...)
 
-			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(ClientCredential{}), cmpopts.IgnoreUnexported(http.Client{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(ClientCredential{}), cmpopts.IgnoreUnexported(http.Client{}, ClientCredential{})); diff != "" {
 				t.Errorf("NewClientCredential() = unexpected result (-want +got)\n%s\n", diff)
 			}
 

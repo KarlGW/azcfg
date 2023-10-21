@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"strings"
 )
 
 var (
@@ -20,7 +19,7 @@ func request(ctx context.Context, client httpClient, headers http.Header, method
 		return nil, err
 	}
 	for k, v := range headers {
-		req.Header.Add(k, strings.Join(v, ";"))
+		req.Header.Set(k, v[0])
 	}
 
 	resp, err := client.Do(req)

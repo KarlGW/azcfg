@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
@@ -37,6 +38,7 @@ type ClientCredential struct {
 	clientID     string
 	clientSecret string
 	scope        string
+	mu           *sync.RWMutex
 }
 
 // NewClientCredential creates and returns a new *ClientCredential.
@@ -57,6 +59,7 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 		endpoint: strings.Replace(authEndpoint, "{tenant}", tenantID, 1),
 		tenantID: tenantID,
 		clientID: clientID,
+		mu:       &sync.RWMutex{},
 	}
 
 	opts := CredentialOptions{}
@@ -93,6 +96,9 @@ func NewClientSecretCredential(tenantID, clientID, clientSecret string, options 
 
 // Token returns a new auth.Token for requests to the Azure REST API.
 func (c *ClientCredential) Token(ctx context.Context) (auth.Token, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if c.token != nil && c.token.ExpiresOn.After(time.Now()) {
 		return *c.token, nil
 	}

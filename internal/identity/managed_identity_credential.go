@@ -70,6 +70,7 @@ func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentity
 		header: http.Header{
 			"User-Agent": {"azcfg/" + version.Version()},
 		},
+		mu: &sync.RWMutex{},
 	}
 	opts := CredentialOptions{}
 	for _, option := range options {

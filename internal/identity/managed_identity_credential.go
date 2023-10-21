@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
@@ -59,6 +60,7 @@ type ManagedIdentityCredential struct {
 	clientID   string
 	resourceID string
 	scope      string
+	mu         *sync.RWMutex
 }
 
 // NewManagedIdentityCredential creates and returns a new *ManagedIdentityCredential.
@@ -115,6 +117,9 @@ func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentity
 
 // Token returns a new auth.Token for requests to the Azure REST API.
 func (c *ManagedIdentityCredential) Token(ctx context.Context) (auth.Token, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if c.token != nil && c.token.ExpiresOn.After(time.Now()) {
 		return *c.token, nil
 	}

@@ -18,7 +18,6 @@ func request(ctx context.Context, client httpClient, headers http.Header, method
 	if err != nil {
 		return nil, err
 	}
-
 	for k, v := range headers {
 		req.Header.Set(k, v[0])
 	}

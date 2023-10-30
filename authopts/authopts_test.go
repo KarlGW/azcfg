@@ -3,6 +3,7 @@ package authopts
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,12 +21,12 @@ func TestWithTokenCredential(t *testing.T) {
 		WithTokenCredential(mockTokenCredential{})(&got)
 
 		want := azcfg.Options{
-			Credential: credential{
+			Credential: &credential{
 				TokenCredential: mockTokenCredential{},
 			},
 		}
 
-		if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(mockTokenCredential{})); diff != "" {
+		if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(credential{}, mockTokenCredential{})); diff != "" {
 			t.Errorf("WithTokenCredential() = unexpected result (-want +got)\n%s\n", diff)
 		}
 	})
@@ -59,7 +60,7 @@ func TestCredential_Token(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			cred := credential{TokenCredential: &test.input}
+			cred := credential{TokenCredential: &test.input, mu: &sync.RWMutex{}}
 			got, gotErr := cred.Token(context.Background())
 
 			if diff := cmp.Diff(test.want, got); diff != "" {

@@ -57,7 +57,7 @@ type Option func(o *Options)
 // it will have default settings for timeout and concurrency.
 func NewParser(options ...Option) (*parser, error) {
 	p := &parser{
-		timeout:     time.Second * 5,
+		timeout:     time.Second * 10,
 		concurrency: 10,
 	}
 	opts := Options{}

@@ -42,7 +42,7 @@ func TestNewParser(t *testing.T) {
 				cred: mockCredential{
 					t: "sp",
 				},
-				timeout:     time.Second * 5,
+				timeout:     time.Second * 10,
 				concurrency: 10,
 				vault:       "vault",
 			},
@@ -114,7 +114,7 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				cl:          stub.SecretClient{},
 				cred:        nil,
-				timeout:     time.Second * 5,
+				timeout:     time.Second * 10,
 				concurrency: 10,
 				vault:       "",
 			},

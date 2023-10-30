@@ -13,7 +13,6 @@ import (
 	"github.com/KarlGW/azcfg/auth"
 	"github.com/KarlGW/azcfg/internal/retry"
 	"github.com/KarlGW/azcfg/version"
-	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -58,7 +57,7 @@ type ClientOption func(o *ClientOptions)
 func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Client {
 	opts := ClientOptions{
 		Concurrency: 10,
-		Timeout:     time.Second * 5,
+		Timeout:     time.Second * 10,
 	}
 	for _, option := range options {
 		option(&opts)
@@ -122,47 +121,77 @@ func (c Client) get(ctx context.Context, name string) (Secret, error) {
 	return secret, nil
 }
 
+// secretResults contains results from retreiving secrets. Should
+// be used with a channel for handling results and errors.
+type secretResult struct {
+	name   string
+	secret Secret
+	err    error
+}
+
 // getSecrets gets secrets by the provided names and returns them as a map[string]Secret
 // where the secret name is the key.
 func (c Client) getSecrets(ctx context.Context, names []string) (map[string]Secret, error) {
-	if names == nil {
-		return nil, nil
-	}
-	sm := secretMap{
-		m: make(map[string]Secret, len(names)),
+	namesCh := make(chan string)
+	srCh := make(chan secretResult)
+
+	go func() {
+		for _, name := range names {
+			namesCh <- name
+		}
+		close(namesCh)
+	}()
+
+	concurrency := c.concurrency
+	if len(names) < concurrency {
+		concurrency = len(names)
 	}
 
-	g, ctx := errgroup.WithContext(ctx)
-	g.SetLimit(c.concurrency)
-	for _, name := range names {
-		name := name
-		g.Go(func() error {
-			secret, err := c.get(ctx, name)
-			if err != nil && !errors.Is(err, errSecretNotFound) {
-				return err
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var wg sync.WaitGroup
+	for i := 1; i <= concurrency; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case name, ok := <-namesCh:
+					if !ok {
+						return
+					}
+					sr := secretResult{name: name}
+					secret, err := c.get(ctx, name)
+					if err != nil && !errors.Is(err, errSecretNotFound) {
+						sr.err = err
+						srCh <- sr
+						cancel()
+						return
+					}
+					sr.secret = secret
+					srCh <- sr
+				case <-ctx.Done():
+					return
+				}
 			}
-			sm.set(name, secret)
-			return nil
-		})
+		}()
 	}
-	if err := g.Wait(); err != nil {
-		return nil, err
+
+	go func() {
+		wg.Wait()
+		close(srCh)
+	}()
+
+	secrets := make(map[string]Secret)
+	for sr := range srCh {
+		if sr.err != nil {
+			return nil, sr.err
+		}
+		secrets[sr.name] = sr.secret
 	}
-	return sm.m, nil
-}
 
-// secretMap provides a concurrency safe way to manipulate
-// the inner map.
-type secretMap struct {
-	m  map[string]Secret
-	mu sync.RWMutex
-}
-
-// set a secret to the secretMap.
-func (sm *secretMap) set(key string, secret Secret) {
-	sm.mu.Lock()
-	defer sm.mu.Unlock()
-	sm.m[key] = secret
+	return secrets, nil
 }
 
 // WithConcurrency sets the concurrency for secret retrieval.

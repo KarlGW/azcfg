@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"path/filepath"
+	"path"
 	"testing"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/request"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -84,8 +85,8 @@ func TestClient_Get(t *testing.T) {
 				err:   errServer,
 			},
 			want: nil,
-			wantErr: errorResponse{
-				Err: errorResponseError{
+			wantErr: request.ErrorResponse{
+				Err: request.ErrorResponseError{
 					Message: "bad request",
 				},
 				StatusCode: http.StatusBadRequest,
@@ -108,12 +109,12 @@ func TestClient_Get(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			client := NewClient("vault", mockCredential{}, func(o *ClientOptions) {
-				o.HTTPClient = mockHttpClient{
+			client := NewClient("vault", mockCredential{}, func(cl *Client) {
+				cl.c = mockHttpClient{
 					bodies: test.input.bodies,
 					err:    test.input.err,
 				}
-				o.Timeout = time.Millisecond * 10
+				cl.timeout = time.Millisecond * 10
 			})
 
 			got, gotErr := client.Get(test.input.names...)
@@ -156,7 +157,7 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 		return nil, c.err
 	}
 
-	name := filepath.Base(req.URL.Path)
+	name := path.Base(req.URL.Path)
 	b, ok := c.bodies[name]
 	if !ok {
 		return &http.Response{

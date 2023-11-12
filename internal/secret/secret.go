@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/request"
 	"github.com/KarlGW/azcfg/internal/retry"
 	"github.com/KarlGW/azcfg/version"
 )
@@ -20,6 +21,10 @@ const (
 	baseURL = "https://{vault}.vault.azure.net/secrets"
 	// apiVersion is the API version of the Key Vault REST API endpoint.
 	apiVersion = "7.4"
+	// defaultConcurrency is the default concurrency set on the client.
+	defaultConcurrency = 10
+	// defaultTimeout is the default timeout set on the client.
+	defaultTimeout = time.Second * 10
 )
 
 // Secret represents a secret as returned from the Key Vault REST API.
@@ -27,58 +32,38 @@ type Secret struct {
 	Value string `json:"value"`
 }
 
-// httpClient is an interface that wraps around method Do.
-type httpClient interface {
-	Do(req *http.Request) (*http.Response, error)
-}
-
 // Client contains methods to call the Azure Key Vault REST API and
 // base settings for handling the requests.
 type Client struct {
-	c           httpClient
+	c           request.Client
 	cred        auth.Credential
-	header      http.Header
 	baseURL     string
+	userAgent   string
 	concurrency int
 	timeout     time.Duration
 }
 
-// ClientOptions contains options for the Client.
-type ClientOptions struct {
-	HTTPClient  httpClient
-	Concurrency int
-	Timeout     time.Duration
-}
-
-// ClientOption is a function that sets options to *ClientOptions.
-type ClientOption func(o *ClientOptions)
+// ClientOption is a function that sets options to *Client.
+type ClientOption func(o *Client)
 
 // NewClient creates and returns a new Client.
 func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Client {
-	opts := ClientOptions{
-		Concurrency: 10,
-		Timeout:     time.Second * 10,
+	c := &Client{
+		cred:        cred,
+		baseURL:     strings.Replace(baseURL, "{vault}", vault, 1),
+		userAgent:   "azcfg/" + version.Version(),
+		concurrency: defaultConcurrency,
+		timeout:     defaultTimeout,
 	}
 	for _, option := range options {
-		option(&opts)
+		option(c)
 	}
-
-	if opts.HTTPClient == nil {
-		opts.HTTPClient = &http.Client{
-			Timeout: opts.Timeout,
+	if c.c == nil {
+		c.c = &http.Client{
+			Timeout: c.timeout,
 		}
 	}
-
-	return &Client{
-		c:    opts.HTTPClient,
-		cred: cred,
-		header: http.Header{
-			"User-Agent": {"azcfg/" + version.Version()},
-		},
-		baseURL:     strings.Replace(baseURL, "{vault}", vault, 1),
-		concurrency: opts.Concurrency,
-		timeout:     opts.Timeout,
-	}
+	return c
 }
 
 // Get secrets by names.
@@ -97,11 +82,16 @@ func (c Client) get(ctx context.Context, name string) (Secret, error) {
 		return Secret{}, err
 	}
 
+	header := http.Header{
+		"User-Agent":    []string{c.userAgent},
+		"Authorization": []string{"Bearer " + token.AccessToken},
+	}
+
 	var b []byte
 	if err := retry.Do(ctx, func() error {
-		b, err = request(ctx, c.c, addAuthHeader(c.header, token.AccessToken), http.MethodGet, u)
+		b, err = request.Do(ctx, c.c, header, http.MethodGet, u)
 		if err != nil {
-			if errors.Is(err, errSecretNotFound) {
+			if errors.Is(err, request.ErrNotFound) {
 				err = fmt.Errorf("secret %s: %w", name, err)
 			}
 			return err
@@ -163,7 +153,7 @@ func (c Client) getSecrets(ctx context.Context, names []string) (map[string]Secr
 					}
 					sr := secretResult{name: name}
 					secret, err := c.get(ctx, name)
-					if err != nil && !errors.Is(err, errSecretNotFound) {
+					if err != nil && !errors.Is(err, request.ErrNotFound) {
 						sr.err = err
 						srCh <- sr
 						cancel()
@@ -196,15 +186,15 @@ func (c Client) getSecrets(ctx context.Context, names []string) (map[string]Secr
 
 // WithConcurrency sets the concurrency for secret retrieval.
 func WithConcurrency(c int) ClientOption {
-	return func(o *ClientOptions) {
-		o.Concurrency = c
+	return func(cl *Client) {
+		cl.concurrency = c
 	}
 }
 
 // WithTimeout sets timeout for secret retreival.
 func WithTimeout(d time.Duration) ClientOption {
-	return func(o *ClientOptions) {
-		o.Timeout = d
+	return func(cl *Client) {
+		cl.timeout = d
 	}
 }
 
@@ -213,7 +203,7 @@ func shouldRetry(err error) bool {
 	if err == nil {
 		return false
 	}
-	var e errorResponse
+	var e request.ErrorResponse
 	if errors.As(err, &e) {
 		if e.StatusCode == 0 || e.StatusCode == http.StatusInternalServerError {
 			return true

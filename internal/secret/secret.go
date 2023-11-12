@@ -180,7 +180,6 @@ func (c Client) getSecrets(ctx context.Context, names []string) (map[string]Secr
 		}
 		secrets[sr.name] = sr.secret
 	}
-
 	return secrets, nil
 }
 

@@ -22,7 +22,7 @@ var (
 	errServer  = fmt.Errorf("internal server error")
 )
 
-func TestClient_Get(t *testing.T) {
+func TestClient_GetSecrets(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input struct {
@@ -117,14 +117,14 @@ func TestClient_Get(t *testing.T) {
 				cl.timeout = time.Millisecond * 10
 			})
 
-			got, gotErr := client.Get(test.input.names...)
+			got, gotErr := client.GetSecrets(test.input.names)
 
 			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("Get() = unexpected result (-want +got)\n%s\n", diff)
+				t.Errorf("GetSecrets() = unexpected result (-want +got)\n%s\n", diff)
 			}
 
 			if diff := cmp.Diff(test.wantErr, gotErr, cmpopts.EquateErrors()); diff != "" {
-				t.Errorf("Get() = unexpected error (-want +got)\n%s\n", diff)
+				t.Errorf("GetSecrets() = unexpected error (-want +got)\n%s\n", diff)
 			}
 		})
 	}
@@ -140,6 +140,12 @@ func (c mockCredential) Token(ctx context.Context) (auth.Token, error) {
 	}
 	return auth.Token{AccessToken: "ey1235"}, nil
 }
+
+func (c mockCredential) Scope() string {
+	return ""
+}
+
+func (c mockCredential) SetScope(scope string) {}
 
 type mockHttpClient struct {
 	err    error

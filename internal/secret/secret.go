@@ -66,16 +66,27 @@ func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Cli
 	return c
 }
 
+// Options for client operations.
+type Options struct{}
+
+// Option is a function that sets options for client operations.
+type Option func(o *Options)
+
 // Get secrets by names.
-func (c Client) Get(names ...string) (map[string]Secret, error) {
+func (c Client) GetSecrets(names []string, options ...Option) (map[string]Secret, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
-	return c.getSecrets(ctx, names)
+	return c.getSecrets(ctx, names, options...)
 }
 
 // get a secret.
-func (c Client) get(ctx context.Context, name string) (Secret, error) {
+func (c Client) Get(ctx context.Context, name string, options ...Option) (Secret, error) {
+	opts := Options{}
+	for _, option := range options {
+		option(&opts)
+	}
+
 	u := fmt.Sprintf("%s/%s?api-version=%s", c.baseURL, name, apiVersion)
 	token, err := c.cred.Token(ctx)
 	if err != nil {
@@ -121,7 +132,7 @@ type secretResult struct {
 
 // getSecrets gets secrets by the provided names and returns them as a map[string]Secret
 // where the secret name is the key.
-func (c Client) getSecrets(ctx context.Context, names []string) (map[string]Secret, error) {
+func (c Client) getSecrets(ctx context.Context, names []string, options ...Option) (map[string]Secret, error) {
 	namesCh := make(chan string)
 	srCh := make(chan secretResult)
 
@@ -152,7 +163,7 @@ func (c Client) getSecrets(ctx context.Context, names []string) (map[string]Secr
 						return
 					}
 					sr := secretResult{name: name}
-					secret, err := c.get(ctx, name)
+					secret, err := c.Get(ctx, name)
 					if err != nil && !errors.Is(err, request.ErrNotFound) {
 						sr.err = err
 						srCh <- sr

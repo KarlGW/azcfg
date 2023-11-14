@@ -12,7 +12,7 @@ import (
 
 // secretClient is the interface that wraps around method Get.
 type secretClient interface {
-	Get(names ...string) (map[string]secret.Secret, error)
+	GetSecrets(names []string, options ...secret.Option) (map[string]secret.Secret, error)
 }
 
 // parser contains all the necessary values and settings for calls to Parse.

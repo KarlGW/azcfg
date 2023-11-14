@@ -400,3 +400,9 @@ type mockCredential struct {
 func (c mockCredential) Token(ctx context.Context) (auth.Token, error) {
 	return auth.Token{}, nil
 }
+
+func (c mockCredential) Scope() auth.Scope {
+	return ""
+}
+
+func (c mockCredential) SetScope(scope auth.Scope) {}

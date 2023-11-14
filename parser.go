@@ -159,10 +159,8 @@ func WithSecretClient(c secretClient) Option {
 }
 
 const (
-	// Resource for Azure Key Vault requests.
-	resource = "https://vault.azure.net"
 	// Scope for Azure Key Vault requests.
-	scope = resource + "/.default"
+	scope = "https://vault.azure.net/.default"
 )
 
 // setupCredential configures credential based on the provided
@@ -213,5 +211,5 @@ var newClientCredential = func(tenantID, clientID, clientSecret string) (auth.Cr
 }
 
 var newManagedIdentityCredential = func(clientID string) (auth.Credential, error) {
-	return identity.NewManagedIdentityCredential(identity.WithClientID(clientID), identity.WithScope(resource))
+	return identity.NewManagedIdentityCredential(identity.WithClientID(clientID), identity.WithScope(scope))
 }

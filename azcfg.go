@@ -36,7 +36,7 @@ func parse(d any, client secretClient) error {
 	}
 
 	fields, required := getFields(v, defaultTag)
-	secrets, err := client.Get(fields...)
+	secrets, err := client.GetSecrets(fields)
 	if err != nil {
 		return err
 	}

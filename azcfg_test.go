@@ -267,7 +267,7 @@ type mockClient struct {
 	err bool
 }
 
-func (c mockClient) Get(names ...string) (map[string]secret.Secret, error) {
+func (c mockClient) GetSecrets(names []string, options ...secret.Option) (map[string]secret.Secret, error) {
 	if c.err == true {
 		return nil, errors.New("could not get secrets")
 	}

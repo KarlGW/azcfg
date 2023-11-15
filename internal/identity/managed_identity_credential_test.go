@@ -220,7 +220,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				},
 				v: &url.Values{
 					"api-version": {imdsAPIVersion},
-					"resource":    {strings.TrimSuffix(_testScope, "/.default")},
+					"resource":    {strings.TrimSuffix(string(_testScope), "/.default")},
 				},
 			},
 			wantErr: nil,
@@ -233,7 +233,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 			}{
 				cred: func(client httpClient) *ManagedIdentityCredential {
 					cred, _ := NewManagedIdentityCredential(WithScope(_testScope), WithHTTPClient(client))
-					cred.token = &auth.Token{
+					cred.tokens[_testScope] = &auth.Token{
 						AccessToken: "ey54321",
 						ExpiresOn:   time.Now().Add(time.Hour),
 					}
@@ -249,7 +249,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				},
 				v: &url.Values{
 					"api-version": {imdsAPIVersion},
-					"resource":    {strings.TrimSuffix(_testScope, "/.default")},
+					"resource":    {strings.TrimSuffix(string(_testScope), "/.default")},
 				},
 			},
 			wantErr: nil,
@@ -262,7 +262,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 			}{
 				cred: func(client httpClient) *ManagedIdentityCredential {
 					cred, _ := NewManagedIdentityCredential(WithScope(_testScope), WithHTTPClient(client))
-					cred.token = &auth.Token{
+					cred.tokens[_testScope] = &auth.Token{
 						AccessToken: "ey54321",
 						ExpiresOn:   time.Now().Add(time.Hour * -3),
 					}
@@ -278,7 +278,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				},
 				v: &url.Values{
 					"api-version": {imdsAPIVersion},
-					"resource":    {strings.TrimSuffix(_testScope, "/.default")},
+					"resource":    {strings.TrimSuffix(string(_testScope), "/.default")},
 				},
 			},
 			wantErr: nil,
@@ -303,7 +303,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				},
 				v: &url.Values{
 					"api-version": {imdsAPIVersion},
-					"resource":    {strings.TrimSuffix(_testScope, "/.default")},
+					"resource":    {strings.TrimSuffix(string(_testScope), "/.default")},
 					"client_id":   {_testClientID},
 				},
 			},
@@ -329,7 +329,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				},
 				v: &url.Values{
 					"api-version": {imdsAPIVersion},
-					"resource":    {strings.TrimSuffix(_testScope, "/.default")},
+					"resource":    {strings.TrimSuffix(string(_testScope), "/.default")},
 					"mi_res_id":   {_testResourceID},
 				},
 			},

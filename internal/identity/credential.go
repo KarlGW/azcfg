@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+
+	"github.com/KarlGW/azcfg/auth"
 )
 
 var (
@@ -39,7 +41,7 @@ type CredentialOptions struct {
 	// to target a specific user assigned identity.
 	resourceID string
 	// scope is the current scope of the credential.
-	scope string
+	scope auth.Scope
 }
 
 // CredentialOption is a function to set *CredentialOptions.
@@ -67,7 +69,7 @@ func WithSecret(secret string) CredentialOption {
 }
 
 // WithScope sets the scope.
-func WithScope(scope string) CredentialOption {
+func WithScope(scope auth.Scope) CredentialOption {
 	return func(o *CredentialOptions) {
 		o.scope = scope
 	}

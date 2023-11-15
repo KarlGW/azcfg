@@ -42,12 +42,9 @@ func TestNewClientCredential(t *testing.T) {
 				},
 			},
 			want: &ClientCredential{
-				c: &http.Client{},
-				header: http.Header{
-					"User-Agent":   {"azcfg/" + version.Version()},
-					"Content-Type": {"application/x-www-form-urlencoded"},
-				},
+				c:            &http.Client{},
 				endpoint:     fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/token", _testTenantID),
+				userAgent:    "azcfg/" + version.Version(),
 				tenantID:     _testTenantID,
 				clientID:     _testClientID,
 				clientSecret: _testClientSecret,
@@ -123,7 +120,7 @@ func TestClientCredential_Token(t *testing.T) {
 			name: "get token from cache",
 			input: func(client httpClient) *ClientCredential {
 				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(_testScope), WithHTTPClient(client))
-				cred.token = &auth.Token{
+				cred.tokens[_testScope] = &auth.Token{
 					AccessToken: "ey54321",
 					ExpiresOn:   time.Now().Add(time.Hour),
 				}
@@ -138,7 +135,7 @@ func TestClientCredential_Token(t *testing.T) {
 			name: "get token from cache (expired)",
 			input: func(client httpClient) *ClientCredential {
 				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(_testScope), WithHTTPClient(client))
-				cred.token = &auth.Token{
+				cred.tokens[_testScope] = &auth.Token{
 					AccessToken: "ey54321",
 					ExpiresOn:   time.Now().Add(time.Hour * -3),
 				}

@@ -4,6 +4,8 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+
+	"github.com/KarlGW/azcfg/auth"
 )
 
 var (
@@ -11,7 +13,7 @@ var (
 	_testClientID     = "afb5e3e4-0fa1-4a22-aa35-6387dc0bc09d"
 	_testClientSecret = "12345"
 	_testResourceID   = "/subscriptions/93af3dd4-71ff-498e-ab46-7137dc2575e4/resourcegroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity"
-	_testScope        = "https://vault.azure.net/.default"
+	_testScope        = auth.ScopeKeyVault
 )
 
 func setupHTTPClient(target string, err error) httpClient {

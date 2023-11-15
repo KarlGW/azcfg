@@ -31,13 +31,13 @@ var (
 // to perform token requests.
 type ClientCredential struct {
 	c            httpClient
-	header       http.Header
-	token        *auth.Token
+	tokens       map[auth.Scope]*auth.Token
+	scope        auth.Scope
 	endpoint     string
+	userAgent    string
 	tenantID     string
 	clientID     string
 	clientSecret string
-	scope        string
 	mu           *sync.RWMutex
 }
 
@@ -51,15 +51,13 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 	}
 
 	c := &ClientCredential{
-		c: &http.Client{},
-		header: http.Header{
-			"User-Agent":   {"azcfg/" + version.Version()},
-			"Content-Type": {"application/x-www-form-urlencoded"},
-		},
-		endpoint: strings.Replace(authEndpoint, "{tenant}", tenantID, 1),
-		tenantID: tenantID,
-		clientID: clientID,
-		mu:       &sync.RWMutex{},
+		c:         &http.Client{},
+		tokens:    make(map[auth.Scope]*auth.Token),
+		userAgent: "azcfg/" + version.Version(),
+		endpoint:  strings.Replace(authEndpoint, "{tenant}", tenantID, 1),
+		tenantID:  tenantID,
+		clientID:  clientID,
+		mu:        &sync.RWMutex{},
 	}
 
 	opts := CredentialOptions{}
@@ -99,22 +97,22 @@ func (c *ClientCredential) Token(ctx context.Context) (auth.Token, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.token != nil && c.token.ExpiresOn.After(time.Now()) {
-		return *c.token, nil
+	if c.tokens[c.scope] != nil && c.tokens[c.scope].ExpiresOn.After(time.Now()) {
+		return *c.tokens[c.scope], nil
 	}
 	token, err := c.tokenRequest(ctx)
 	if err != nil {
 		return auth.Token{}, err
 	}
-	c.token = &token
-	return *c.token, nil
+	c.tokens[c.scope] = &token
+	return *c.tokens[c.scope], nil
 }
 
 // tokenRequest requests a token after creating the request body
 // based on the settings of the ClientCredential.
 func (c ClientCredential) tokenRequest(ctx context.Context) (auth.Token, error) {
 	data := url.Values{
-		"scope":      {c.scope},
+		"scope":      {string(c.scope)},
 		"grant_type": {"client_credentials"},
 		"client_id":  {c.clientID},
 	}
@@ -130,9 +128,8 @@ func (c ClientCredential) tokenRequest(ctx context.Context) (auth.Token, error) 
 		if err != nil {
 			return err
 		}
-		for k, v := range c.header {
-			req.Header.Add(k, strings.Join(v, ", "))
-		}
+		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Add("User-Agent", c.userAgent)
 
 		r, err = request(c.c, req)
 		if err != nil {
@@ -146,4 +143,14 @@ func (c ClientCredential) tokenRequest(ctx context.Context) (auth.Token, error) 
 	}
 
 	return tokenFromAuthResult(r), nil
+}
+
+// Scope returns the currnet scope set on the ClientCredential.
+func (c ClientCredential) Scope() auth.Scope {
+	return c.scope
+}
+
+// SetScope sets the scope on the ClientCredential.
+func (c *ClientCredential) SetScope(scope auth.Scope) {
+	c.scope = scope
 }

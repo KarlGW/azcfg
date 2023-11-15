@@ -54,23 +54,24 @@ const (
 type ManagedIdentityCredential struct {
 	c          httpClient
 	header     http.Header
-	token      *auth.Token
+	tokens     map[auth.Scope]*auth.Token
+	scope      auth.Scope
 	endpoint   string
+	userAgent  string
 	apiVersion string
 	clientID   string
 	resourceID string
-	scope      string
 	mu         *sync.RWMutex
 }
 
 // NewManagedIdentityCredential creates and returns a new *ManagedIdentityCredential.
 func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentityCredential, error) {
 	c := &ManagedIdentityCredential{
-		c: &http.Client{},
-		header: http.Header{
-			"User-Agent": {"azcfg/" + version.Version()},
-		},
-		mu: &sync.RWMutex{},
+		c:         &http.Client{},
+		header:    http.Header{},
+		tokens:    make(map[auth.Scope]*auth.Token),
+		userAgent: "azcfg/" + version.Version(),
+		mu:        &sync.RWMutex{},
 	}
 	opts := CredentialOptions{}
 	for _, option := range options {
@@ -96,9 +97,9 @@ func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentity
 	}
 
 	if len(opts.scope) > 0 {
-		c.scope = strings.TrimSuffix(opts.scope, "/.default")
+		c.scope = opts.scope
 	} else {
-		c.scope = defaultResource
+		c.scope = defaultScope
 	}
 
 	if endpoint, ok := os.LookupEnv(identityEndpoint); ok {
@@ -121,15 +122,15 @@ func (c *ManagedIdentityCredential) Token(ctx context.Context) (auth.Token, erro
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.token != nil && c.token.ExpiresOn.After(time.Now()) {
-		return *c.token, nil
+	if c.tokens[c.scope] != nil && c.tokens[c.scope].ExpiresOn.After(time.Now()) {
+		return *c.tokens[c.scope], nil
 	}
 	token, err := c.tokenRequest(ctx)
 	if err != nil {
 		return auth.Token{}, err
 	}
-	c.token = &token
-	return *c.token, nil
+	c.tokens[c.scope] = &token
+	return *c.tokens[c.scope], nil
 }
 
 // tokenRequest requests a token after creating the request body
@@ -140,7 +141,7 @@ func (c ManagedIdentityCredential) tokenRequest(ctx context.Context) (auth.Token
 		return auth.Token{}, err
 	}
 	qs := url.Values{
-		"resource":    {c.scope},
+		"resource":    {strings.TrimSuffix(string(c.scope), "/.default")},
 		"api-version": {c.apiVersion},
 	}
 	if len(c.clientID) > 0 {
@@ -156,6 +157,7 @@ func (c ManagedIdentityCredential) tokenRequest(ctx context.Context) (auth.Token
 		if err != nil {
 			return err
 		}
+		req.Header.Add("User-Agent", c.userAgent)
 		for k, v := range c.header {
 			req.Header.Add(k, strings.Join(v, ", "))
 		}
@@ -172,4 +174,14 @@ func (c ManagedIdentityCredential) tokenRequest(ctx context.Context) (auth.Token
 	}
 
 	return tokenFromAuthResult(r), nil
+}
+
+// Scope returns the currnet scope set on the ManagedIdentityCredential.
+func (c ManagedIdentityCredential) Scope() auth.Scope {
+	return c.scope
+}
+
+// SetScope sets the scope on the ManagedIdentityCredential.
+func (c *ManagedIdentityCredential) SetScope(scope auth.Scope) {
+	c.scope = scope
 }

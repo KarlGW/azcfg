@@ -145,11 +145,11 @@ func (c mockCredential) Token(ctx context.Context) (auth.Token, error) {
 	return auth.Token{AccessToken: "ey1235"}, nil
 }
 
-func (c mockCredential) Scope() string {
+func (c mockCredential) Scope() auth.Scope {
 	return ""
 }
 
-func (c mockCredential) SetScope(scope string) {}
+func (c mockCredential) SetScope(scope auth.Scope) {}
 
 type mockHttpClient struct {
 	err    error

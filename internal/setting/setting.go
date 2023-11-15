@@ -101,6 +101,9 @@ func (c Client) Get(ctx context.Context, key string, options ...Option) (Setting
 
 	var authHeader string
 	if c.cred != nil {
+		if c.cred.Scope() != auth.ScopeAppConfig {
+			c.cred.SetScope(auth.ScopeAppConfig)
+		}
 		token, err := c.cred.Token(ctx)
 		if err != nil {
 			return Setting{}, err

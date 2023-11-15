@@ -239,9 +239,12 @@ To use a credential provided from elsewhere, such as the `azidentity` module see
 Custom credentials with token retrieval can be used using the option `WithCredential`. They must satisfy the interface `Credential`:
 
 ```go
-// Credential is the interface that wraps around method Token.
+// Credential is the interface that wraps around method Token, Scope
+// and SetScope.
 type Credential interface {
 	Token(ctx context.Context) (Token, error)
+    Scope() string
+    SetScope(scope string)
 }
 ```
 

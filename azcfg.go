@@ -6,13 +6,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/KarlGW/azcfg/internal/secret"
 )
 
 const (
-	defaultTag = "secret"
-	required   = "required"
+	defaultSecretTag  = "secret"
+	defaultSettingTag = "setting"
+	required          = "required"
 )
 
 // Parse secrets from an Azure Key Vault into a struct.
@@ -25,7 +24,7 @@ func Parse(v any, options ...Option) error {
 }
 
 // Parse secrets into the configuration.
-func parse(d any, client secretClient) error {
+func parse(d any, secretClient secretClient, settingClient settingClient) error {
 	v := reflect.ValueOf(d)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("must provide a pointer to a struct")
@@ -35,19 +34,35 @@ func parse(d any, client secretClient) error {
 		return errors.New("provided value is not a struct")
 	}
 
-	fields, required := getFields(v, defaultTag)
-	secrets, err := client.GetSecrets(fields)
-	if err != nil {
-		return err
+	secretFields, requiredSecrets := getFields(v, defaultSecretTag)
+	if len(secretFields) > 0 {
+		secrets, err := secretClient.GetSecrets(secretFields)
+		if err != nil {
+			return err
+		}
+
+		if err := setFields(v, secrets, defaultSecretTag); err != nil {
+			var requiredErr *RequiredError
+			if errors.As(err, &requiredErr) && len(required) > 0 {
+				return requiredErr.setSecretMessage(secrets, requiredSecrets)
+			}
+		}
 	}
 
-	if err := setFields(v, secrets); err != nil {
-		var requiredErr *RequiredError
-		if errors.As(err, &requiredErr) && len(required) > 0 {
-			return requiredErr.setMessage(secrets, required)
+	settingFields, requiredSettings := getFields(v, defaultSettingTag)
+	if len(settingFields) > 0 {
+		settings, err := settingClient.GetSettings(settingFields)
+		if err != nil {
+			return err
 		}
-		return err
+		if err := setFields(v, settings, defaultSettingTag); err != nil {
+			var requiredErr *RequiredError
+			if errors.As(err, &requiredErr) && len(required) > 0 {
+				return requiredErr.setSettingMessage(settings, requiredSettings)
+			}
+		}
 	}
+
 	return nil
 }
 
@@ -78,36 +93,39 @@ func getFields(v reflect.Value, tag string) ([]string, []string) {
 	return fields, required
 }
 
-// setFields takes incoming map of values and sets them with the
-// value with the map key/struct tag match.
-func setFields(v reflect.Value, secrets map[string]secret.Secret) error {
+// HasValue wraps around method GetValue,
+type HasValue interface {
+	GetValue() string
+}
+
+func setFields[V HasValue](v reflect.Value, values map[string]V, tag string) error {
 	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		if !v.Field(i).CanSet() {
 			continue
 		}
 		if v.Field(i).Kind() == reflect.Pointer && v.Field(i).Elem().Kind() == reflect.Struct {
-			if err := setFields(v.Field(i).Elem(), secrets); err != nil {
+			if err := setFields(v.Field(i).Elem(), values, tag); err != nil {
 				return err
 			}
 		} else if v.Field(i).Kind() == reflect.Struct {
-			if err := setFields(v.Field(i), secrets); err != nil {
+			if err := setFields(v.Field(i), values, tag); err != nil {
 				return err
 			}
 		} else {
-			value, ok := t.Field(i).Tag.Lookup(defaultTag)
+			value, ok := t.Field(i).Tag.Lookup(tag)
 			if !ok {
 				continue
 			}
 			tags := strings.Split(value, ",")
-			if val, ok := secrets[tags[0]]; ok {
-				if len(val.Value) == 0 && isRequired(tags) {
-					return &RequiredError{secret: tags[0]}
-				} else if len(val.Value) == 0 {
+			if val, ok := values[tags[0]]; ok {
+				if len(val.GetValue()) == 0 && isRequired(tags) {
+					return &RequiredError{value: tags[0]}
+				} else if len(val.GetValue()) == 0 {
 					continue
 				}
 				if v.Field(i).Kind() == reflect.Slice {
-					vals := splitTrim(val.Value, ",")
+					vals := splitTrim(val.GetValue(), ",")
 					sl := reflect.MakeSlice(v.Field(i).Type(), len(vals), len(vals))
 					for j := 0; j < sl.Cap(); j++ {
 						if err := setValue(sl.Index(j), vals[j]); err != nil {
@@ -116,7 +134,7 @@ func setFields(v reflect.Value, secrets map[string]secret.Secret) error {
 					}
 					v.Field(i).Set(sl)
 				} else {
-					if err := setValue(v.Field(i), val.Value); err != nil {
+					if err := setValue(v.Field(i), val.GetValue()); err != nil {
 						return err
 					}
 				}

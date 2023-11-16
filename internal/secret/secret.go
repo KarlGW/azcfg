@@ -32,11 +32,17 @@ type Secret struct {
 	Value string `json:"value"`
 }
 
+// GetValue returns the Value of the Secret.
+func (s Secret) GetValue() string {
+	return s.Value
+}
+
 // Client contains methods to call the Azure Key Vault REST API and
 // base settings for handling the requests.
 type Client struct {
 	c           request.Client
 	cred        auth.Credential
+	keyVault    string
 	baseURL     string
 	userAgent   string
 	concurrency int
@@ -47,10 +53,11 @@ type Client struct {
 type ClientOption func(o *Client)
 
 // NewClient creates and returns a new Client.
-func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Client {
+func NewClient(keyVault string, cred auth.Credential, options ...ClientOption) *Client {
 	c := &Client{
 		cred:        cred,
-		baseURL:     strings.Replace(baseURL, "{vault}", vault, 1),
+		keyVault:    keyVault,
+		baseURL:     strings.Replace(baseURL, "{vault}", keyVault, 1),
 		userAgent:   "azcfg/" + version.Version(),
 		concurrency: defaultConcurrency,
 		timeout:     defaultTimeout,
@@ -64,6 +71,11 @@ func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Cli
 		}
 	}
 	return c
+}
+
+// KeyVault returns the target Key Vault set on the Client.
+func (c Client) KeyVault() string {
+	return c.keyVault
 }
 
 // Options for client operations.

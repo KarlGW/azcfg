@@ -5,16 +5,17 @@ import (
 	"strings"
 
 	"github.com/KarlGW/azcfg/internal/secret"
+	"github.com/KarlGW/azcfg/internal/setting"
 )
 
 var (
-	// ErrVaultNotSet is returned when no vault is set.
-	ErrVaultNotSet = errors.New("a vault must be set")
+	// ErrKeyVaultNotSet is returned when no vault is set.
+	ErrKeyVaultNotSet = errors.New("a vault must be set")
 )
 
 // RequiredError represents an error when a secret is required.
 type RequiredError struct {
-	secret  string
+	value   string
 	message string
 }
 
@@ -23,15 +24,26 @@ func (e *RequiredError) Error() string {
 	return e.message
 }
 
-// setMessage sets the message of *RequiredError.
-func (e *RequiredError) setMessage(secrets map[string]secret.Secret, required []string) error {
-	e.message = requiredErrorMessage(secrets, required)
+// setSecretMessage sets the message of *RequiredError.
+func (e *RequiredError) setSecretMessage(secrets map[string]secret.Secret, required []string) error {
+	if len(e.message) != 0 {
+		e.message += ". "
+	}
+	e.message = requiredErrorMessage(secrets, required, "secret")
 	return e
 }
 
-// requiredErrorMessage builds a message based on the provided map[string]string (secrets)
+func (e *RequiredError) setSettingMessage(settings map[string]setting.Setting, required []string) error {
+	if len(e.message) != 0 {
+		e.message += ". "
+	}
+	e.message = requiredErrorMessage(settings, required, "setting")
+	return e
+}
+
+// requiredErrorMessage builds a message based on the provided map[string]V (HasValue)
 // and []string (required).
-func requiredErrorMessage(secrets map[string]secret.Secret, required []string) string {
+func requiredErrorMessage[V HasValue](values map[string]V, required []string, t string) string {
 	if len(required) == 0 {
 		return ""
 	}
@@ -39,7 +51,7 @@ func requiredErrorMessage(secrets map[string]secret.Secret, required []string) s
 	req := make([]string, 0)
 	l := 0
 	for _, r := range required {
-		if len(secrets[r].Value) == 0 {
+		if len(values[r].GetValue()) == 0 {
 			req = append(req, r)
 			l++
 		}
@@ -47,10 +59,10 @@ func requiredErrorMessage(secrets map[string]secret.Secret, required []string) s
 
 	var message strings.Builder
 	if l == 1 {
-		message.WriteString("secret: " + req[0] + " is required")
+		message.WriteString(t + ": " + req[0] + " is required")
 		return message.String()
 	}
-	message.WriteString("secrets: ")
+	message.WriteString(t + "s: ")
 	for i, r := range req {
 		message.WriteString(r)
 		if i < l-1 && l > 2 && i != l-2 {

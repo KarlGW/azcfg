@@ -4,10 +4,11 @@ import (
 	"testing"
 
 	"github.com/KarlGW/azcfg/internal/secret"
+	"github.com/KarlGW/azcfg/internal/setting"
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestRequiredErrorMessage(t *testing.T) {
+func TestRequiredErrorMessage_Secret(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input struct {
@@ -82,10 +83,94 @@ func TestRequiredErrorMessage(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := requiredErrorMessage(test.input.secrets, test.input.required)
+			got := requiredErrorMessage(test.input.secrets, test.input.required, "secret")
 
 			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("requiredErrorMessage(%+v, %+v) = unexpected result, (-want, +got)\n%s\n", test.input.secrets, test.input.secrets, diff)
+				t.Errorf("requiredErrorMessage() = unexpected result, (-want, +got)\n%s\n", diff)
+			}
+		})
+	}
+}
+
+func TestRequiredErrorMessage_Setting(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input struct {
+			settings map[string]setting.Setting
+			required []string
+		}
+		want string
+	}{
+		{
+			name: "no required",
+			input: struct {
+				settings map[string]setting.Setting
+				required []string
+			}{
+				settings: map[string]setting.Setting{},
+				required: []string{},
+			},
+			want: "",
+		},
+		{
+			name: "1 required",
+			input: struct {
+				settings map[string]setting.Setting
+				required []string
+			}{
+				settings: map[string]setting.Setting{
+					"setting1": {Value: ""},
+				},
+				required: []string{
+					"setting1",
+				},
+			},
+			want: "setting: setting1 is required",
+		},
+		{
+			name: "2 required",
+			input: struct {
+				settings map[string]setting.Setting
+				required []string
+			}{
+				settings: map[string]setting.Setting{
+					"setting1": {Value: ""},
+					"setting2": {Value: ""},
+				},
+				required: []string{
+					"setting1",
+					"setting2",
+				},
+			},
+			want: "settings: setting1 and setting2 are required",
+		},
+		{
+			name: "3 required",
+			input: struct {
+				settings map[string]setting.Setting
+				required []string
+			}{
+				settings: map[string]setting.Setting{
+					"setting1": {Value: ""},
+					"setting2": {Value: ""},
+					"setting3": {Value: ""},
+				},
+				required: []string{
+					"setting1",
+					"setting2",
+					"setting3",
+				},
+			},
+			want: "settings: setting1, setting2 and setting3 are required",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := requiredErrorMessage(test.input.settings, test.input.required, "setting")
+
+			if diff := cmp.Diff(test.want, got); diff != "" {
+				t.Errorf("requiredErrorMessage() = unexpected result, (-want, +got)\n%s\n", diff)
 			}
 		})
 	}

@@ -33,28 +33,35 @@ type Setting struct {
 	Label string `json:"label"`
 }
 
+// GetValue returns the Value of the Setting.
+func (s Setting) GetValue() string {
+	return s.Value
+}
+
 // Client contains methods to call the Azure App Config REST API and
 // base settings for handling the requests.
 type Client struct {
-	c           request.Client
-	cred        auth.Credential
-	baseURL     string
-	userAgent   string
-	concurrency int
-	timeout     time.Duration
+	c                request.Client
+	cred             auth.Credential
+	appConfiguration string
+	baseURL          string
+	userAgent        string
+	concurrency      int
+	timeout          time.Duration
 }
 
 // ClientOption is a function that sets options to *Client.
 type ClientOption func(o *Client)
 
 // NewClient creates and returns a new Client.
-func NewClient(config string, cred auth.Credential, options ...ClientOption) *Client {
+func NewClient(appConfiguration string, cred auth.Credential, options ...ClientOption) *Client {
 	c := &Client{
-		cred:        cred,
-		baseURL:     strings.Replace(baseURL, "{config}", config, 1),
-		userAgent:   "azcfg/" + version.Version(),
-		concurrency: defaultConcurrency,
-		timeout:     defaultTimeout,
+		cred:             cred,
+		appConfiguration: appConfiguration,
+		baseURL:          strings.Replace(baseURL, "{config}", appConfiguration, 1),
+		userAgent:        "azcfg/" + version.Version(),
+		concurrency:      defaultConcurrency,
+		timeout:          defaultTimeout,
 	}
 	for _, option := range options {
 		option(c)
@@ -65,6 +72,12 @@ func NewClient(config string, cred auth.Credential, options ...ClientOption) *Cl
 		}
 	}
 	return c
+}
+
+// AppConfiguration returns the target Aoo Configuration set on
+// the Client.
+func (c Client) AppConfiguration() string {
+	return c.appConfiguration
 }
 
 // Options for client operations.

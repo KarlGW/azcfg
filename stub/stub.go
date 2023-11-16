@@ -36,6 +36,10 @@ func (c SecretClient) GetSecrets(names []string, options ...secret.Option) (map[
 	return c.secrets, nil
 }
 
+func (c SecretClient) KeyVault() string {
+	return "keyvault"
+}
+
 // SettingClient satisfies the settingClient interface in package azcfg. Purpose is
 // to be used as a stub for setting retrieval.
 type SettingClient struct {
@@ -65,4 +69,8 @@ func (c SettingClient) GetSettings(keys []string, options ...setting.Option) (ma
 		return nil, c.err
 	}
 	return c.settings, nil
+}
+
+func (c SettingClient) AppConfiguration() string {
+	return "appconfiguration"
 }

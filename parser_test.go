@@ -38,13 +38,13 @@ func TestNewParser(t *testing.T) {
 				},
 			},
 			want: &parser{
-				cl: &secret.Client{},
+				secretClient: &secret.Client{},
 				cred: mockCredential{
 					t: "sp",
 				},
 				timeout:     time.Second * 10,
 				concurrency: 10,
-				vault:       "vault",
+				keyVault:    "vault",
 			},
 		},
 		{
@@ -57,17 +57,17 @@ func TestNewParser(t *testing.T) {
 					WithConcurrency(20),
 					WithTimeout(time.Second * 10),
 					WithClientSecretCredential("1111", "2222", "3333"),
-					WithVault("vault1"),
+					WithKeyVault("vault1"),
 				},
 			},
 			want: &parser{
-				cl: &secret.Client{},
+				secretClient: &secret.Client{},
 				cred: mockCredential{
 					t: "sp",
 				},
 				timeout:     time.Second * 10,
 				concurrency: 20,
-				vault:       "vault1",
+				keyVault:    "vault1",
 			},
 		},
 		{
@@ -99,7 +99,7 @@ func TestNewParser(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: ErrVaultNotSet,
+			wantErr: ErrKeyVaultNotSet,
 		},
 		{
 			name: "secret client provided",
@@ -112,11 +112,11 @@ func TestNewParser(t *testing.T) {
 				},
 			},
 			want: &parser{
-				cl:          stub.SecretClient{},
-				cred:        nil,
-				timeout:     time.Second * 10,
-				concurrency: 10,
-				vault:       "",
+				secretClient: stub.SecretClient{},
+				cred:         nil,
+				timeout:      time.Second * 10,
+				concurrency:  10,
+				keyVault:     "",
 			},
 		},
 	}
@@ -171,9 +171,9 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:  "WithVault()",
-			input: WithVault("vault"),
+			input: WithKeyVault("vault"),
 			want: Options{
-				Vault: "vault",
+				KeyVault: "vault",
 			},
 		},
 		{
@@ -320,7 +320,7 @@ func TestSetupCredential(t *testing.T) {
 	}
 }
 
-func TestSetupVault(t *testing.T) {
+func TestSetupKeyVault(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input struct {
@@ -371,10 +371,117 @@ func TestSetupVault(t *testing.T) {
 			setEnvVars(test.input.envs)
 			defer unsetEnvVars(test.input.envs)
 
-			got := setupVault(test.input.vault)
+			got := setupKeyVault(test.input.vault)
 
 			if test.want != got {
-				t.Errorf("setupVault() = unexpected result, want: %s, got: %s\n", test.want, got)
+				t.Errorf("setupKeyVault() = unexpected result, want: %s, got: %s\n", test.want, got)
+			}
+		})
+	}
+}
+
+func TestSetupAppConfiguration(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input struct {
+			appConfig string
+			label     string
+			envs      map[string]string
+		}
+		wantAppConfig string
+		wantLabel     string
+	}{
+		{
+			name: "App Configuration from environment",
+			input: struct {
+				appConfig string
+				label     string
+				envs      map[string]string
+			}{
+				envs: map[string]string{
+					"AZCFG_APP_CONFIGURATION_NAME": "appconfig",
+				},
+			},
+			wantAppConfig: "appconfig",
+		},
+		{
+			name: "App Confiruation from options",
+			input: struct {
+				appConfig string
+				label     string
+				envs      map[string]string
+			}{
+				appConfig: "appconfig",
+			},
+			wantAppConfig: "appconfig",
+		},
+		{
+			name: "App Configuration from option, override environment",
+			input: struct {
+				appConfig string
+				label     string
+				envs      map[string]string
+			}{
+				appConfig: "appconfig1",
+				envs: map[string]string{
+					"AZCFG_APP_CONFIGURATION_NAME": "appconfig2",
+				},
+			},
+			wantAppConfig: "appconfig1",
+		},
+		{
+			name: "App Configuration label from environment",
+			input: struct {
+				appConfig string
+				label     string
+				envs      map[string]string
+			}{
+				envs: map[string]string{
+					"AZCFG_APP_CONFIGURATION_LABEL": "label",
+				},
+			},
+			wantLabel: "label",
+		},
+		{
+			name: "App Configuration label from options",
+			input: struct {
+				appConfig string
+				label     string
+				envs      map[string]string
+			}{
+				label: "label",
+			},
+			wantLabel: "label",
+		},
+		{
+			name: "App Configuration label from options, override environment",
+			input: struct {
+				appConfig string
+				label     string
+				envs      map[string]string
+			}{
+				label: "label1",
+				envs: map[string]string{
+					"AZCFG_APP_CONFIGURATION_LABEL": "label2",
+				},
+			},
+			wantLabel: "label1",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			setEnvVars(test.input.envs)
+			defer unsetEnvVars(test.input.envs)
+
+			gotAppConfig, gotLabel := setupAppConfiguration(test.input.appConfig, test.input.label)
+
+			if test.wantAppConfig != gotAppConfig {
+				t.Errorf("setupAppConfiguration() = unexpected result, want: %s, got: %s\n", test.wantAppConfig, gotAppConfig)
+			}
+
+			if test.wantLabel != gotLabel {
+				t.Errorf("setupAppConfiguration() = unexpected result, want: %s, got: %s\n", test.wantLabel, gotLabel)
 			}
 		})
 	}

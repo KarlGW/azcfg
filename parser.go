@@ -8,20 +8,32 @@ import (
 	"github.com/KarlGW/azcfg/auth"
 	"github.com/KarlGW/azcfg/internal/identity"
 	"github.com/KarlGW/azcfg/internal/secret"
+	"github.com/KarlGW/azcfg/internal/setting"
 )
 
-// secretClient is the interface that wraps around method Get.
+// secretClient is the interface that wraps around method GetSecrets
+// and KeyVault.
 type secretClient interface {
 	GetSecrets(names []string, options ...secret.Option) (map[string]secret.Secret, error)
+	KeyVault() string
+}
+
+// settingClient is the interface that wraps around method GetSettings
+// and AppConfiguration.
+type settingClient interface {
+	GetSettings(keys []string, options ...setting.Option) (map[string]setting.Setting, error)
+	AppConfiguration() string
 }
 
 // parser contains all the necessary values and settings for calls to Parse.
 type parser struct {
-	cl          secretClient
-	cred        auth.Credential
-	timeout     time.Duration
-	concurrency int
-	vault       string
+	secretClient     secretClient
+	settingClient    settingClient
+	cred             auth.Credential
+	timeout          time.Duration
+	concurrency      int
+	keyVault         string
+	appConfiguration string
 }
 
 // Options contains options for the Parser.
@@ -31,14 +43,19 @@ type Options struct {
 	Credential auth.Credential
 	// SecretClient is a client used to retreive secrets.
 	SecretClient secretClient
+	// SettingClient is a client used to retreive settings.
+	SettingClient settingClient
 	// Timeout is the total timeout for retrieval of secrets. Defaults to 5 seconds.
 	Timeout time.Duration
 	// Concurrency is the amount of secrets that will be retrieved concurrently.
 	// Defaults to 10.
 	Concurrency int
-	// Vault is the name of the vault containing secrets. Used to override the
-	// default method of aquiring target vault.
-	Vault string
+	// KeyVault is the name of the Key Vault containing secrets. Used to override the
+	// default method of aquiring target Key Vault.
+	KeyVault string
+	// AppConfiguration is the name of the App Configuration containing settigs. Used to override the
+	// default method of aquiring target App Configuration.
+	AppConfiguration string
 	// TenantID of the Service Principal with access to target Key Vault.
 	TenantID string
 	// ClientID of the Service Principal or user assigned managed identity with access to target Key Vault.
@@ -65,7 +82,7 @@ func NewParser(options ...Option) (*parser, error) {
 		option(&opts)
 	}
 	if opts.SecretClient != nil {
-		p.cl = opts.SecretClient
+		p.secretClient = opts.SecretClient
 		return p, nil
 	}
 
@@ -75,9 +92,9 @@ func NewParser(options ...Option) (*parser, error) {
 		return nil, err
 	}
 
-	p.vault = setupVault(opts.Vault)
-	if len(p.vault) == 0 {
-		return nil, ErrVaultNotSet
+	p.keyVault = setupKeyVault(opts.KeyVault)
+	if len(p.keyVault) == 0 {
+		return nil, ErrKeyVaultNotSet
 	}
 
 	if opts.Concurrency > 0 {
@@ -87,8 +104,8 @@ func NewParser(options ...Option) (*parser, error) {
 		p.timeout = opts.Timeout
 	}
 
-	p.cl = secret.NewClient(
-		p.vault,
+	p.secretClient = secret.NewClient(
+		p.keyVault,
 		p.cred,
 		secret.WithTimeout(p.timeout),
 		secret.WithConcurrency(p.concurrency),
@@ -99,7 +116,7 @@ func NewParser(options ...Option) (*parser, error) {
 
 // Parse secrets from an Azure Key Vault into a struct.
 func (p *parser) Parse(v any) error {
-	return parse(v, p.cl)
+	return parse(v, p.secretClient, p.settingClient)
 }
 
 // WithCredential sets the provided credential to the parser.
@@ -109,10 +126,17 @@ func WithCredential(cred auth.Credential) Option {
 	}
 }
 
-// WithVault sets the vault for the parser.
-func WithVault(vault string) Option {
+// WithKeyVault sets the Key Vault for the parser.
+func WithKeyVault(keyVault string) Option {
 	return func(o *Options) {
-		o.Vault = vault
+		o.KeyVault = keyVault
+	}
+}
+
+// WithAppConfiguration sets the App Configuration for the parser.
+func WithAppConfiguration(appConfiguration string) Option {
+	return func(o *Options) {
+		o.AppConfiguration = appConfiguration
 	}
 }
 
@@ -197,13 +221,25 @@ func credentialFromEnvironment() (auth.Credential, error) {
 	}
 }
 
-// setupVault configures target Key Vault based on the provided parameters.
-func setupVault(vault string) string {
+// setupKeyVault configures target Key Vault based on the provided parameters.
+func setupKeyVault(vault string) string {
 	if len(vault) == 0 {
 		return os.Getenv("AZCFG_KEYVAULT_NAME")
 	} else {
 		return vault
 	}
+}
+
+// setupAppConfiguration configures target App Configuration based on the provided
+// parameters.
+func setupAppConfiguration(appConfiguration, label string) (string, string) {
+	if len(appConfiguration) == 0 {
+		appConfiguration = os.Getenv("AZCFG_APP_CONFIGURATION_NAME")
+	}
+	if len(label) == 0 {
+		label = os.Getenv("AZCFG_APP_CONFIGURATION_LABEL")
+	}
+	return appConfiguration, label
 }
 
 var newClientCredential = func(tenantID, clientID, clientSecret string) (auth.Credential, error) {

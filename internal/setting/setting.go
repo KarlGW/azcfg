@@ -105,8 +105,8 @@ func (c Client) Get(ctx context.Context, key string, options ...Option) (Setting
 	}
 
 	u := fmt.Sprintf("%s/kv/%s?api-version=%s", c.baseURL, key, apiVersion)
-	if len(opts.Label) > 0 {
-		u += "&label=" + opts.Label
+	if len(c.label) > 0 {
+		u += "&label=" + c.label
 	}
 
 	header := http.Header{
@@ -227,10 +227,10 @@ func (c Client) getSettings(ctx context.Context, keys []string, options ...Optio
 	return settings, nil
 }
 
-// WithLabel sets label to target the client against.
+// WithLabel sets label on the client.
 func WithLabel(label string) ClientOption {
-	return func(o *Client) {
-		o.label = label
+	return func(cl *Client) {
+		cl.label = label
 	}
 }
 

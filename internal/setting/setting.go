@@ -46,6 +46,7 @@ type Client struct {
 	appConfiguration string
 	baseURL          string
 	userAgent        string
+	label            string
 	concurrency      int
 	timeout          time.Duration
 }
@@ -224,6 +225,27 @@ func (c Client) getSettings(ctx context.Context, keys []string, options ...Optio
 		settings[sr.key] = sr.setting
 	}
 	return settings, nil
+}
+
+// WithLabel sets label to target the client against.
+func WithLabel(label string) ClientOption {
+	return func(o *Client) {
+		o.label = label
+	}
+}
+
+// WithConcurrency sets the concurrency for secret retrieval.
+func WithConcurrency(c int) ClientOption {
+	return func(cl *Client) {
+		cl.concurrency = c
+	}
+}
+
+// WithTimeout sets timeout for secret retreival.
+func WithTimeout(d time.Duration) ClientOption {
+	return func(cl *Client) {
+		cl.timeout = d
+	}
 }
 
 // shouldRetry contains retry policy for setting requests.

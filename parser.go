@@ -11,6 +11,15 @@ import (
 	"github.com/KarlGW/azcfg/internal/setting"
 )
 
+const (
+	// defaultTimeout is the default timeout for the clients
+	// of the parser.
+	defaultTimeout = time.Second * 10
+	// defaultConcurrency is the default concurrency for the
+	// clients of the parser.
+	defaultConcurrency = 10
+)
+
 // secretClient is the interface that wraps around method GetSecrets
 // and KeyVault.
 type secretClient interface {
@@ -27,76 +36,24 @@ type settingClient interface {
 
 // parser contains all the necessary values and settings for calls to Parse.
 type parser struct {
-	secretClient     secretClient
-	settingClient    settingClient
-	cred             auth.Credential
-	timeout          time.Duration
-	concurrency      int
-	keyVault         string
-	appConfiguration string
+	secretClient  secretClient
+	settingClient settingClient
+	cred          auth.Credential
+	timeout       time.Duration
+	concurrency   int
 }
-
-// Options contains options for the Parser.
-type Options struct {
-	// Credential is the credential to be used with the Client. Used to override
-	// the default method of aquiring credentials.
-	Credential auth.Credential
-	// SecretClient is a client used to retreive secrets.
-	SecretClient secretClient
-	// SettingClient is a client used to retreive settings.
-	SettingClient settingClient
-	// Timeout is the total timeout for retrieval of secrets. Defaults to 5 seconds.
-	Timeout time.Duration
-	// Concurrency is the amount of secrets that will be retrieved concurrently.
-	// Defaults to 10.
-	Concurrency int
-	// KeyVault is the name of the Key Vault containing secrets. Used to override the
-	// default method of aquiring target Key Vault.
-	KeyVault string
-	// AppConfiguration is the name of the App Configuration containing settigs. Used to override the
-	// default method of aquiring target App Configuration.
-	AppConfiguration string
-	// TenantID of the Service Principal with access to target Key Vault.
-	TenantID string
-	// ClientID of the Service Principal or user assigned managed identity with access to target Key Vault.
-	ClientID string
-	// ClientSecret of the Service Principal with access to target Key Vault.
-	ClientSecret string
-	// UseManagedIdentity set to use a managed identity. To use a user assigned managed identity, use
-	// together with ClientID.
-	UseManagedIdentity bool
-}
-
-// Option is a function that sets Options.
-type Option func(o *Options)
 
 // NewParser creates and returns a *Parser. With no options provided
 // it will have default settings for timeout and concurrency.
 func NewParser(options ...Option) (*parser, error) {
 	p := &parser{
-		timeout:     time.Second * 10,
-		concurrency: 10,
+		timeout:     defaultTimeout,
+		concurrency: defaultConcurrency,
 	}
 	opts := Options{}
 	for _, option := range options {
 		option(&opts)
 	}
-	if opts.SecretClient != nil {
-		p.secretClient = opts.SecretClient
-		return p, nil
-	}
-
-	var err error
-	p.cred, err = setupCredential(opts)
-	if err != nil {
-		return nil, err
-	}
-
-	p.keyVault = setupKeyVault(opts.KeyVault)
-	if len(p.keyVault) == 0 {
-		return nil, ErrKeyVaultNotSet
-	}
-
 	if opts.Concurrency > 0 {
 		p.concurrency = opts.Concurrency
 	}
@@ -104,12 +61,43 @@ func NewParser(options ...Option) (*parser, error) {
 		p.timeout = opts.Timeout
 	}
 
-	p.secretClient = secret.NewClient(
-		p.keyVault,
-		p.cred,
-		secret.WithTimeout(p.timeout),
-		secret.WithConcurrency(p.concurrency),
-	)
+	if opts.SecretClient == nil {
+		if p.cred == nil {
+			var err error
+			p.cred, err = setupCredential(opts)
+			if err != nil {
+				return nil, err
+			}
+		}
+		p.secretClient = secret.NewClient(
+			setupKeyVault(opts.KeyVault),
+			p.cred,
+			secret.WithTimeout(p.timeout),
+			secret.WithConcurrency(p.concurrency),
+		)
+	} else {
+		p.secretClient = opts.SecretClient
+	}
+	if opts.SettingClient == nil {
+		if p.cred == nil {
+			var err error
+			p.cred, err = setupCredential(opts)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		appConfiguration, label := setupAppConfiguration(opts.AppConfiguration, opts.Label)
+		p.settingClient = setting.NewClient(
+			appConfiguration,
+			p.cred,
+			setting.WithLabel(label),
+			setting.WithTimeout(p.timeout),
+			setting.WithConcurrency(p.concurrency),
+		)
+	} else {
+		p.settingClient = opts.SettingClient
+	}
 
 	return p, nil
 }
@@ -118,74 +106,6 @@ func NewParser(options ...Option) (*parser, error) {
 func (p *parser) Parse(v any) error {
 	return parse(v, p.secretClient, p.settingClient)
 }
-
-// WithCredential sets the provided credential to the parser.
-func WithCredential(cred auth.Credential) Option {
-	return func(o *Options) {
-		o.Credential = cred
-	}
-}
-
-// WithKeyVault sets the Key Vault for the parser.
-func WithKeyVault(keyVault string) Option {
-	return func(o *Options) {
-		o.KeyVault = keyVault
-	}
-}
-
-// WithAppConfiguration sets the App Configuration for the parser.
-func WithAppConfiguration(appConfiguration string) Option {
-	return func(o *Options) {
-		o.AppConfiguration = appConfiguration
-	}
-}
-
-// WithConcurrency sets the concurrency of the parser.
-func WithConcurrency(c int) Option {
-	return func(o *Options) {
-		o.Concurrency = c
-	}
-}
-
-// WithTimeout sets the timeout of the parser.
-func WithTimeout(d time.Duration) Option {
-	return func(o *Options) {
-		o.Timeout = d
-	}
-}
-
-// WithClientSecretCredential sets the parser to use client credential with
-// a secret (client secret credential) for the Key Vault.
-func WithClientSecretCredential(tenantID, clientID, clientSecret string) Option {
-	return func(o *Options) {
-		o.TenantID = tenantID
-		o.ClientID = clientID
-		o.ClientSecret = clientSecret
-	}
-}
-
-// WithManagedIdentity sets the parser to use a managed identity
-// for credentials for the Key Vault.
-func WithManagedIdentity(clientID ...string) Option {
-	return func(o *Options) {
-		if len(clientID) > 0 {
-			o.ClientID = clientID[0]
-		}
-		o.UseManagedIdentity = true
-	}
-}
-
-// WithSecretClient sets the client for secret retrieval.
-func WithSecretClient(c secretClient) Option {
-	return func(o *Options) {
-		o.SecretClient = c
-	}
-}
-
-const (
-	// Scope for Azure Key Vault requests.
-	scope = "https://vault.azure.net/.default"
-)
 
 // setupCredential configures credential based on the provided
 // options.
@@ -243,9 +163,9 @@ func setupAppConfiguration(appConfiguration, label string) (string, string) {
 }
 
 var newClientCredential = func(tenantID, clientID, clientSecret string) (auth.Credential, error) {
-	return identity.NewClientCredential(tenantID, clientID, identity.WithSecret(clientSecret), identity.WithScope(scope))
+	return identity.NewClientCredential(tenantID, clientID, identity.WithSecret(clientSecret))
 }
 
 var newManagedIdentityCredential = func(clientID string) (auth.Credential, error) {
-	return identity.NewManagedIdentityCredential(identity.WithClientID(clientID), identity.WithScope(scope))
+	return identity.NewManagedIdentityCredential(identity.WithClientID(clientID))
 }

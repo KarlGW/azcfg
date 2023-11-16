@@ -9,6 +9,7 @@ import (
 	"github.com/KarlGW/azcfg/auth"
 	"github.com/KarlGW/azcfg/internal/identity"
 	"github.com/KarlGW/azcfg/internal/secret"
+	"github.com/KarlGW/azcfg/internal/setting"
 	"github.com/KarlGW/azcfg/stub"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -38,13 +39,13 @@ func TestNewParser(t *testing.T) {
 				},
 			},
 			want: &parser{
-				secretClient: &secret.Client{},
+				secretClient:  &secret.Client{},
+				settingClient: &setting.Client{},
 				cred: mockCredential{
 					t: "sp",
 				},
 				timeout:     time.Second * 10,
 				concurrency: 10,
-				keyVault:    "vault",
 			},
 		},
 		{
@@ -61,13 +62,13 @@ func TestNewParser(t *testing.T) {
 				},
 			},
 			want: &parser{
-				secretClient: &secret.Client{},
+				secretClient:  &secret.Client{},
+				settingClient: &setting.Client{},
 				cred: mockCredential{
 					t: "sp",
 				},
 				timeout:     time.Second * 10,
 				concurrency: 20,
-				keyVault:    "vault1",
 			},
 		},
 		{
@@ -87,21 +88,6 @@ func TestNewParser(t *testing.T) {
 			wantErr: identity.ErrInvalidClientID,
 		},
 		{
-			name: "error vault not set",
-			input: struct {
-				options []Option
-				envs    map[string]string
-			}{
-				envs: map[string]string{
-					"AZCFG_TENANT_ID":     "1111",
-					"AZCFG_CLIENT_ID":     "2222",
-					"AZCFG_CLIENT_SECRET": "3333",
-				},
-			},
-			want:    nil,
-			wantErr: ErrKeyVaultNotSet,
-		},
-		{
 			name: "secret client provided",
 			input: struct {
 				options []Option
@@ -112,11 +98,52 @@ func TestNewParser(t *testing.T) {
 				},
 			},
 			want: &parser{
-				secretClient: stub.SecretClient{},
-				cred:         nil,
-				timeout:      time.Second * 10,
-				concurrency:  10,
-				keyVault:     "",
+				secretClient:  stub.SecretClient{},
+				settingClient: &setting.Client{},
+				cred: mockCredential{
+					t: "mi",
+				},
+				timeout:     time.Second * 10,
+				concurrency: 10,
+			},
+		},
+		{
+			name: "setting client provided",
+			input: struct {
+				options []Option
+				envs    map[string]string
+			}{
+				options: []Option{
+					WithSettingClient(stub.NewSettingClient(nil, nil)),
+				},
+			},
+			want: &parser{
+				secretClient:  &secret.Client{},
+				settingClient: stub.SettingClient{},
+				cred: mockCredential{
+					t: "mi",
+				},
+				timeout:     time.Second * 10,
+				concurrency: 10,
+			},
+		},
+		{
+			name: "secret and setting client provided",
+			input: struct {
+				options []Option
+				envs    map[string]string
+			}{
+				options: []Option{
+					WithSecretClient(stub.NewSecretClient(nil, nil)),
+					WithSettingClient(stub.NewSettingClient(nil, nil)),
+				},
+			},
+			want: &parser{
+				secretClient:  stub.SecretClient{},
+				settingClient: stub.SettingClient{},
+				cred:          nil,
+				timeout:       time.Second * 10,
+				concurrency:   10,
 			},
 		},
 	}
@@ -145,7 +172,7 @@ func TestNewParser(t *testing.T) {
 
 			got, gotErr := NewParser(test.input.options...)
 
-			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(parser{}, mockCredential{}), cmpopts.IgnoreUnexported(secret.Client{}, stub.SecretClient{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(parser{}, mockCredential{}), cmpopts.IgnoreUnexported(secret.Client{}, stub.SecretClient{}, setting.Client{}, stub.SettingClient{})); diff != "" {
 				t.Errorf("NewParser() = unexpected result (-want +got)\n%s\n", diff)
 			}
 
@@ -153,69 +180,6 @@ func TestNewParser(t *testing.T) {
 				t.Errorf("NewParser() = unexpected error (-want +got)\n%s\n", diff)
 			}
 		})
-	}
-}
-
-func TestOptions(t *testing.T) {
-	var tests = []struct {
-		name  string
-		input Option
-		want  Options
-	}{
-		{
-			name:  "WithCredential()",
-			input: WithCredential(mockCredential{}),
-			want: Options{
-				Credential: mockCredential{},
-			},
-		},
-		{
-			name:  "WithVault()",
-			input: WithKeyVault("vault"),
-			want: Options{
-				KeyVault: "vault",
-			},
-		},
-		{
-			name:  "WithConcurrency()",
-			input: WithConcurrency(5),
-			want: Options{
-				Concurrency: 5,
-			},
-		},
-		{
-			name:  "WithTimeout()",
-			input: WithTimeout(time.Second * 5),
-			want: Options{
-				Timeout: time.Second * 5,
-			},
-		},
-		{
-			name:  "WithClientSecretCredential()",
-			input: WithClientSecretCredential("1111", "2222", "3333"),
-			want: Options{
-				TenantID:     "1111",
-				ClientID:     "2222",
-				ClientSecret: "3333",
-			},
-		},
-		{
-			name:  "WithManagedIdentity()",
-			input: WithManagedIdentity("2222"),
-			want: Options{
-				ClientID:           "2222",
-				UseManagedIdentity: true,
-			},
-		},
-	}
-
-	for _, test := range tests {
-		got := Options{}
-		test.input(&got)
-
-		if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(mockCredential{})); diff != "" {
-			t.Errorf("%s = unexpected result (-want +got)\n%s\n", test.name, diff)
-		}
 	}
 }
 

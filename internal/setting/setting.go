@@ -46,7 +46,6 @@ type Client struct {
 	appConfiguration string
 	baseURL          string
 	userAgent        string
-	label            string
 	concurrency      int
 	timeout          time.Duration
 }
@@ -105,8 +104,8 @@ func (c Client) Get(ctx context.Context, key string, options ...Option) (Setting
 	}
 
 	u := fmt.Sprintf("%s/kv/%s?api-version=%s", c.baseURL, key, apiVersion)
-	if len(c.label) > 0 {
-		u += "&label=" + c.label
+	if len(opts.Label) > 0 {
+		u += "&label=" + opts.Label
 	}
 
 	header := http.Header{
@@ -224,13 +223,6 @@ func (c Client) getSettings(ctx context.Context, keys []string, options ...Optio
 	return settings, nil
 }
 
-// WithLabel sets label on the client.
-func WithLabel(label string) ClientOption {
-	return func(cl *Client) {
-		cl.label = label
-	}
-}
-
 // WithConcurrency sets the concurrency for secret retrieval.
 func WithConcurrency(c int) ClientOption {
 	return func(cl *Client) {
@@ -242,6 +234,13 @@ func WithConcurrency(c int) ClientOption {
 func WithTimeout(d time.Duration) ClientOption {
 	return func(cl *Client) {
 		cl.timeout = d
+	}
+}
+
+// WithLabel sets label on the on a setting request.
+func WithLabel(label string) Option {
+	return func(o *Options) {
+		o.Label = label
 	}
 }
 

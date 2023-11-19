@@ -41,6 +41,7 @@ type parser struct {
 	cred          auth.Credential
 	timeout       time.Duration
 	concurrency   int
+	label         string
 }
 
 // NewParser creates and returns a *Parser. With no options provided
@@ -88,10 +89,10 @@ func NewParser(options ...Option) (*parser, error) {
 		}
 
 		appConfiguration, label := setupAppConfiguration(opts.AppConfiguration, opts.Label)
+		p.label = label
 		p.settingClient = setting.NewClient(
 			appConfiguration,
 			p.cred,
-			setting.WithLabel(label),
 			setting.WithTimeout(p.timeout),
 			setting.WithConcurrency(p.concurrency),
 		)
@@ -104,7 +105,7 @@ func NewParser(options ...Option) (*parser, error) {
 
 // Parse secrets from an Azure Key Vault into a struct.
 func (p *parser) Parse(v any) error {
-	return parse(v, p.secretClient, p.settingClient)
+	return parse(v, p.secretClient, p.settingClient, p.label)
 }
 
 // setupCredential configures credential based on the provided

@@ -468,12 +468,6 @@ type mockCredential struct {
 	t string
 }
 
-func (c mockCredential) Token(ctx context.Context) (auth.Token, error) {
+func (c mockCredential) Token(ctx context.Context, options ...auth.TokenOption) (auth.Token, error) {
 	return auth.Token{}, nil
 }
-
-func (c mockCredential) Scope() auth.Scope {
-	return ""
-}
-
-func (c mockCredential) SetScope(scope auth.Scope) {}

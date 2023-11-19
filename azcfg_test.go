@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/KarlGW/azcfg/internal/secret"
 	"github.com/KarlGW/azcfg/internal/setting"
@@ -108,7 +109,7 @@ func TestParse(t *testing.T) {
 			secretClient := mockSecretClient{}
 			settingClient := mockSettingClient{}
 
-			err := parse(&test.input, secretClient, settingClient)
+			err := parse(&test.input, secretClient, settingClient, "")
 			if diff := cmp.Diff(test.want, test.input, cmp.AllowUnexported(Struct{})); diff != "" {
 				t.Errorf("parse() = unexpected result, (-want, +got)\n%s\n", diff)
 			}
@@ -127,9 +128,14 @@ func TestParseRequired(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name:    "required",
-			input:   StructWithRequired{},
-			wantErr: &RequiredError{message: "secrets: empty and empty-float64 are required"},
+			name:  "required",
+			input: StructWithRequired{},
+			wantErr: &RequiredFieldsError{
+				errors: []error{
+					requiredSecretsError{message: requiredErrorMessage(map[string]secret.Secret{"empty": {}, "empty-float64": {}}, []string{"empty", "empty-float64"}, "secret")},
+					requiredSettingsError{message: requiredErrorMessage(map[string]setting.Setting{"empty-setting": {}}, []string{"empty-setting"}, "setting")},
+				},
+			},
 		},
 	}
 
@@ -138,7 +144,7 @@ func TestParseRequired(t *testing.T) {
 			secretClient := mockSecretClient{}
 			settingClient := mockSettingClient{}
 
-			err := parse(&test.input, secretClient, settingClient)
+			err := parse(&test.input, secretClient, settingClient, "")
 			if test.wantErr != nil && err == nil {
 				t.Errorf("Unexpected result, should return error\n")
 			}
@@ -349,6 +355,7 @@ type mockSettingClient struct {
 }
 
 func (c mockSettingClient) GetSettings(keys []string, options ...setting.Option) (map[string]setting.Setting, error) {
+	time.Sleep(time.Millisecond * 10)
 	if c.err {
 		return nil, errors.New("could not get settings")
 	}

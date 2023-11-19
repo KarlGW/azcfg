@@ -2,16 +2,20 @@ package azcfg
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+
+	"github.com/KarlGW/azcfg/internal/setting"
 )
 
 const (
-	defaultSecretTag  = "secret"
-	defaultSettingTag = "setting"
-	required          = "required"
+	secretTag   = "secret"
+	settingTag  = "setting"
+	requiredTag = "required"
 )
 
 // Parse secrets from an Azure Key Vault into a struct.
@@ -24,7 +28,7 @@ func Parse(v any, options ...Option) error {
 }
 
 // Parse secrets into the configuration.
-func parse(d any, secretClient secretClient, settingClient settingClient) error {
+func parse(d any, secretClient secretClient, settingClient settingClient, label string) error {
 	v := reflect.ValueOf(d)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("must provide a pointer to a struct")
@@ -34,35 +38,66 @@ func parse(d any, secretClient secretClient, settingClient settingClient) error 
 		return errors.New("provided value is not a struct")
 	}
 
-	secretFields, requiredSecrets := getFields(v, defaultSecretTag)
+	errCh := make(chan error, 2)
+	var wg sync.WaitGroup
+
+	secretFields, requiredSecrets := getFields(v, secretTag)
 	if len(secretFields) > 0 {
-		secrets, err := secretClient.GetSecrets(secretFields)
-		if err != nil {
-			return err
-		}
-
-		if err := setFields(v, secrets, defaultSecretTag); err != nil {
-			var requiredErr *RequiredError
-			if errors.As(err, &requiredErr) && len(required) > 0 {
-				return requiredErr.setSecretMessage(secrets, requiredSecrets)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			secrets, err := secretClient.GetSecrets(secretFields)
+			if err != nil {
+				errCh <- err
+				return
 			}
-		}
+
+			if err := setFields(v, secrets, secretTag); err != nil {
+				if errors.Is(err, errRequired) {
+					errCh <- requiredSecretsError{message: requiredErrorMessage(secrets, requiredSecrets, "secret")}
+					return
+				}
+				errCh <- err
+				return
+			}
+		}()
 	}
 
-	settingFields, requiredSettings := getFields(v, defaultSettingTag)
+	settingFields, requiredSettings := getFields(v, settingTag)
 	if len(settingFields) > 0 {
-		settings, err := settingClient.GetSettings(settingFields)
-		if err != nil {
-			return err
-		}
-		if err := setFields(v, settings, defaultSettingTag); err != nil {
-			var requiredErr *RequiredError
-			if errors.As(err, &requiredErr) && len(required) > 0 {
-				return requiredErr.setSettingMessage(settings, requiredSettings)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			settings, err := settingClient.GetSettings(settingFields, setting.WithLabel(label))
+			if err != nil {
+				errCh <- err
+				return
 			}
-		}
+			if err := setFields(v, settings, settingTag); err != nil {
+				if errors.Is(err, errRequired) {
+					errCh <- requiredSettingsError{message: requiredErrorMessage(settings, requiredSettings, "setting")}
+					return
+				}
+				errCh <- err
+				return
+			}
+		}()
 	}
 
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+
+	var errs []error
+	for err := range errCh {
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) > 0 {
+		return buildErr(errs...)
+	}
 	return nil
 }
 
@@ -120,7 +155,7 @@ func setFields[V HasValue](v reflect.Value, values map[string]V, tag string) err
 			tags := strings.Split(value, ",")
 			if val, ok := values[tags[0]]; ok {
 				if len(val.GetValue()) == 0 && isRequired(tags) {
-					return &RequiredError{value: tags[0]}
+					return fmt.Errorf("%w: %s", errRequired, tags[0])
 				} else if len(val.GetValue()) == 0 {
 					continue
 				}
@@ -221,5 +256,5 @@ func isRequired(values []string) bool {
 	if len(values) == 1 {
 		return false
 	}
-	return values[1] == required
+	return values[1] == requiredTag
 }

@@ -42,7 +42,7 @@ func (c *credential) Token(ctx context.Context, options ...auth.TokenOption) (au
 		option(&opts)
 	}
 
-	if c.tokens[opts.Scope] != nil && c.tokens[opts.Scope].ExpiresOn.After(time.Now()) {
+	if c.tokens[opts.Scope] != nil && c.tokens[opts.Scope].ExpiresOn.UTC().After(time.Now().UTC()) {
 		return *c.tokens[opts.Scope], nil
 	}
 

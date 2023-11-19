@@ -122,7 +122,7 @@ func (c *ManagedIdentityCredential) Token(ctx context.Context, options ...auth.T
 		option(&opts)
 	}
 
-	if c.tokens[opts.Scope] != nil && c.tokens[opts.Scope].ExpiresOn.After(time.Now()) {
+	if c.tokens[opts.Scope] != nil && c.tokens[opts.Scope].ExpiresOn.UTC().After(time.Now().UTC()) {
 		return *c.tokens[opts.Scope], nil
 	}
 

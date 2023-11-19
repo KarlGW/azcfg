@@ -55,7 +55,6 @@ type ManagedIdentityCredential struct {
 	c          httpClient
 	header     http.Header
 	tokens     map[auth.Scope]*auth.Token
-	scope      auth.Scope
 	endpoint   string
 	userAgent  string
 	apiVersion string
@@ -96,12 +95,6 @@ func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentity
 		c.resourceID = opts.resourceID
 	}
 
-	if len(opts.scope) > 0 {
-		c.scope = opts.scope
-	} else {
-		c.scope = defaultScope
-	}
-
 	if endpoint, ok := os.LookupEnv(identityEndpoint); ok {
 		if header, ok := os.LookupEnv(identityHeader); ok {
 			c.endpoint, c.apiVersion = endpoint, appServiceAPIVersion
@@ -118,30 +111,38 @@ func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentity
 }
 
 // Token returns a new auth.Token for requests to the Azure REST API.
-func (c *ManagedIdentityCredential) Token(ctx context.Context) (auth.Token, error) {
+func (c *ManagedIdentityCredential) Token(ctx context.Context, options ...auth.TokenOption) (auth.Token, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.tokens[c.scope] != nil && c.tokens[c.scope].ExpiresOn.After(time.Now()) {
-		return *c.tokens[c.scope], nil
+	opts := auth.TokenOptions{
+		Scope: auth.ScopeResourceManager,
 	}
-	token, err := c.tokenRequest(ctx)
+	for _, option := range options {
+		option(&opts)
+	}
+
+	if c.tokens[opts.Scope] != nil && c.tokens[opts.Scope].ExpiresOn.After(time.Now()) {
+		return *c.tokens[opts.Scope], nil
+	}
+
+	token, err := c.tokenRequest(ctx, string(opts.Scope))
 	if err != nil {
 		return auth.Token{}, err
 	}
-	c.tokens[c.scope] = &token
-	return *c.tokens[c.scope], nil
+	c.tokens[opts.Scope] = &token
+	return *c.tokens[opts.Scope], nil
 }
 
 // tokenRequest requests a token after creating the request body
 // based on the settings of the ManagedIdentityCredential.
-func (c ManagedIdentityCredential) tokenRequest(ctx context.Context) (auth.Token, error) {
+func (c ManagedIdentityCredential) tokenRequest(ctx context.Context, scope string) (auth.Token, error) {
 	u, err := url.Parse(c.endpoint)
 	if err != nil {
 		return auth.Token{}, err
 	}
 	qs := url.Values{
-		"resource":    {strings.TrimSuffix(string(c.scope), "/.default")},
+		"resource":    {strings.TrimSuffix(string(scope), "/.default")},
 		"api-version": {c.apiVersion},
 	}
 	if len(c.clientID) > 0 {
@@ -174,14 +175,4 @@ func (c ManagedIdentityCredential) tokenRequest(ctx context.Context) (auth.Token
 	}
 
 	return tokenFromAuthResult(r), nil
-}
-
-// Scope returns the currnet scope set on the ManagedIdentityCredential.
-func (c ManagedIdentityCredential) Scope() auth.Scope {
-	return c.scope
-}
-
-// SetScope sets the scope on the ManagedIdentityCredential.
-func (c *ManagedIdentityCredential) SetScope(scope auth.Scope) {
-	c.scope = scope
 }

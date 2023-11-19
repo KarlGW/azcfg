@@ -45,7 +45,6 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				},
 				endpoint:   imdsEndpoint,
 				apiVersion: imdsAPIVersion,
-				scope:      defaultResource,
 				mu:         &sync.RWMutex{},
 			},
 			wantErr: nil,
@@ -70,7 +69,6 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				endpoint:   imdsEndpoint,
 				apiVersion: imdsAPIVersion,
 				clientID:   _testClientID,
-				scope:      defaultResource,
 				mu:         &sync.RWMutex{},
 			},
 			wantErr: nil,
@@ -95,7 +93,6 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				endpoint:   imdsEndpoint,
 				apiVersion: imdsAPIVersion,
 				resourceID: _testResourceID,
-				scope:      defaultResource,
 				mu:         &sync.RWMutex{},
 			},
 			wantErr: nil,
@@ -120,7 +117,6 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				},
 				endpoint:   "ENDPOINT",
 				apiVersion: appServiceAPIVersion,
-				scope:      defaultResource,
 				mu:         &sync.RWMutex{},
 			},
 			wantErr: nil,
@@ -207,7 +203,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				envs map[string]string
 			}{
 				cred: func(client httpClient) *ManagedIdentityCredential {
-					cred, _ := NewManagedIdentityCredential(WithScope(_testScope), WithHTTPClient(client))
+					cred, _ := NewManagedIdentityCredential(WithHTTPClient(client))
 					return cred
 				},
 			},
@@ -232,7 +228,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				envs map[string]string
 			}{
 				cred: func(client httpClient) *ManagedIdentityCredential {
-					cred, _ := NewManagedIdentityCredential(WithScope(_testScope), WithHTTPClient(client))
+					cred, _ := NewManagedIdentityCredential(WithHTTPClient(client))
 					cred.tokens[_testScope] = &auth.Token{
 						AccessToken: "ey54321",
 						ExpiresOn:   time.Now().Add(time.Hour),
@@ -261,7 +257,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				envs map[string]string
 			}{
 				cred: func(client httpClient) *ManagedIdentityCredential {
-					cred, _ := NewManagedIdentityCredential(WithScope(_testScope), WithHTTPClient(client))
+					cred, _ := NewManagedIdentityCredential(WithHTTPClient(client))
 					cred.tokens[_testScope] = &auth.Token{
 						AccessToken: "ey54321",
 						ExpiresOn:   time.Now().Add(time.Hour * -3),
@@ -290,7 +286,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				envs map[string]string
 			}{
 				cred: func(client httpClient) *ManagedIdentityCredential {
-					cred, _ := NewManagedIdentityCredential(WithScope(_testScope), WithHTTPClient(client), WithClientID(_testClientID))
+					cred, _ := NewManagedIdentityCredential(WithHTTPClient(client), WithClientID(_testClientID))
 					return cred
 				},
 			},
@@ -316,7 +312,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				envs map[string]string
 			}{
 				cred: func(client httpClient) *ManagedIdentityCredential {
-					cred, _ := NewManagedIdentityCredential(WithScope(_testScope), WithHTTPClient(client), WithResourceID(_testResourceID))
+					cred, _ := NewManagedIdentityCredential(WithHTTPClient(client), WithResourceID(_testResourceID))
 					return cred
 				},
 			},
@@ -342,7 +338,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 				envs map[string]string
 			}{
 				cred: func(client httpClient) *ManagedIdentityCredential {
-					cred, _ := NewManagedIdentityCredential(WithScope(_testScope), WithHTTPClient(client))
+					cred, _ := NewManagedIdentityCredential(WithHTTPClient(client))
 					return cred
 				},
 			},
@@ -367,7 +363,9 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 
 			client := setupHTTPClient(ts.Listener.Addr().String(), test.wantErr)
 			cred := test.input.cred(client)
-			got, gotErr := cred.Token(context.Background())
+			got, gotErr := cred.Token(context.Background(), func(o *auth.TokenOptions) {
+				o.Scope = _testScope
+			})
 
 			if diff := cmp.Diff(test.want.token, got, cmpopts.IgnoreFields(auth.Token{}, "ExpiresOn")); diff != "" {
 				t.Errorf("Token() = unexpected result (-want +got)\n%s\n", diff)

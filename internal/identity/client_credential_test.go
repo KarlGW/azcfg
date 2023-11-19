@@ -38,7 +38,6 @@ func TestNewClientCredential(t *testing.T) {
 				clientID: _testClientID,
 				options: []CredentialOption{
 					WithSecret(_testClientSecret),
-					WithScope(_testScope),
 				},
 			},
 			want: &ClientCredential{
@@ -48,7 +47,6 @@ func TestNewClientCredential(t *testing.T) {
 				tenantID:     _testTenantID,
 				clientID:     _testClientID,
 				clientSecret: _testClientSecret,
-				scope:        _testScope,
 				mu:           &sync.RWMutex{},
 			},
 			wantErr: nil,
@@ -108,7 +106,7 @@ func TestClientCredential_Token(t *testing.T) {
 		{
 			name: "get token",
 			input: func(client httpClient) *ClientCredential {
-				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(_testScope), WithHTTPClient(client))
+				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithHTTPClient(client))
 				return cred
 			},
 			want: auth.Token{
@@ -119,7 +117,7 @@ func TestClientCredential_Token(t *testing.T) {
 		{
 			name: "get token from cache",
 			input: func(client httpClient) *ClientCredential {
-				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(_testScope), WithHTTPClient(client))
+				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithHTTPClient(client))
 				cred.tokens[_testScope] = &auth.Token{
 					AccessToken: "ey54321",
 					ExpiresOn:   time.Now().Add(time.Hour),
@@ -134,7 +132,7 @@ func TestClientCredential_Token(t *testing.T) {
 		{
 			name: "get token from cache (expired)",
 			input: func(client httpClient) *ClientCredential {
-				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(_testScope), WithHTTPClient(client))
+				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithHTTPClient(client))
 				cred.tokens[_testScope] = &auth.Token{
 					AccessToken: "ey54321",
 					ExpiresOn:   time.Now().Add(time.Hour * -3),
@@ -149,7 +147,7 @@ func TestClientCredential_Token(t *testing.T) {
 		{
 			name: "error",
 			input: func(client httpClient) *ClientCredential {
-				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(_testScope), WithHTTPClient(client))
+				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithHTTPClient(client))
 				return cred
 			},
 			want:    auth.Token{},
@@ -164,7 +162,9 @@ func TestClientCredential_Token(t *testing.T) {
 
 			client := setupHTTPClient(ts.Listener.Addr().String(), test.wantErr)
 			cred := test.input(client)
-			got, gotErr := cred.Token(context.Background())
+			got, gotErr := cred.Token(context.Background(), func(o *auth.TokenOptions) {
+				o.Scope = _testScope
+			})
 
 			if diff := cmp.Diff(test.want, got, cmpopts.IgnoreFields(auth.Token{}, "ExpiresOn")); diff != "" {
 				t.Errorf("Token() = unexpected result (-want +got)\n%s\n", diff)

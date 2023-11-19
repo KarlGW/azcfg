@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-
-	"github.com/KarlGW/azcfg/auth"
 )
 
 var (
@@ -14,11 +12,6 @@ var (
 	ErrInvalidTenantID = errors.New("invalid tenant ID")
 	// ErrInvalidClientID is returned when an invalid Client ID is provided.
 	ErrInvalidClientID = errors.New("invalid client ID")
-)
-
-const (
-	defaultResource = "https://management.azure.com"
-	defaultScope    = defaultResource + "/.default"
 )
 
 // httpClient is the interface that wraps around method Do.
@@ -40,8 +33,6 @@ type CredentialOptions struct {
 	// resourceID of the user assigned identity, use this or clientID
 	// to target a specific user assigned identity.
 	resourceID string
-	// scope is the current scope of the credential.
-	scope auth.Scope
 }
 
 // CredentialOption is a function to set *CredentialOptions.
@@ -65,13 +56,6 @@ func WithResourceID(id string) CredentialOption {
 func WithSecret(secret string) CredentialOption {
 	return func(o *CredentialOptions) {
 		o.clientSecret = secret
-	}
-}
-
-// WithScope sets the scope.
-func WithScope(scope auth.Scope) CredentialOption {
-	return func(o *CredentialOptions) {
-		o.scope = scope
 	}
 }
 

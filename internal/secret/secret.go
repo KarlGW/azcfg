@@ -100,10 +100,7 @@ func (c Client) Get(ctx context.Context, name string, options ...Option) (Secret
 	}
 
 	u := fmt.Sprintf("%s/%s?api-version=%s", c.baseURL, name, apiVersion)
-	if c.cred.Scope() != auth.ScopeKeyVault {
-		c.cred.SetScope(auth.ScopeKeyVault)
-	}
-	token, err := c.cred.Token(ctx)
+	token, err := c.cred.Token(ctx, auth.WithScope(auth.ScopeKeyVault))
 	if err != nil {
 		return Secret{}, err
 	}

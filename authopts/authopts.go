@@ -28,20 +28,26 @@ type credential struct {
 	azcore.TokenCredential
 	tokens map[auth.Scope]*auth.Token
 	mu     *sync.RWMutex
-	scope  auth.Scope
 }
 
 // Token wraps around the TokenCredential method to satisfy the azcfg.Credential interface.
-func (c *credential) Token(ctx context.Context) (auth.Token, error) {
+func (c *credential) Token(ctx context.Context, options ...auth.TokenOption) (auth.Token, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.tokens[c.scope] != nil && c.tokens[c.scope].ExpiresOn.After(time.Now()) {
-		return *c.tokens[c.scope], nil
+	opts := auth.TokenOptions{
+		Scope: auth.ScopeResourceManager,
+	}
+	for _, option := range options {
+		option(&opts)
+	}
+
+	if c.tokens[opts.Scope] != nil && c.tokens[opts.Scope].ExpiresOn.After(time.Now()) {
+		return *c.tokens[opts.Scope], nil
 	}
 
 	token, err := c.TokenCredential.GetToken(ctx, policy.TokenRequestOptions{
-		Scopes: []string{string(c.scope)},
+		Scopes: []string{string(opts.Scope)},
 	})
 	if err != nil {
 		return auth.Token{}, err
@@ -50,16 +56,6 @@ func (c *credential) Token(ctx context.Context) (auth.Token, error) {
 		AccessToken: token.Token,
 		ExpiresOn:   token.ExpiresOn,
 	}
-	c.tokens[c.scope] = &t
-	return *c.tokens[c.scope], nil
-}
-
-// Scope returns the currnet scope set on the credential.
-func (c credential) Scope() auth.Scope {
-	return c.scope
-}
-
-// SetScope sets the scope on the credential.
-func (c *credential) SetScope(scope auth.Scope) {
-	c.scope = scope
+	c.tokens[opts.Scope] = &t
+	return *c.tokens[opts.Scope], nil
 }

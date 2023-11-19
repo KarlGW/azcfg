@@ -47,11 +47,12 @@ func Do(ctx context.Context, client Client, headers http.Header, method, url str
 		case http.StatusNotFound:
 			return nil, ErrNotFound
 		default:
-			var e ErrorResponse
-			if err := json.Unmarshal(b, &e); err != nil {
-				return nil, err
+			e := ErrorResponse{StatusCode: resp.StatusCode}
+			if len(b) > 0 {
+				if err := json.Unmarshal(b, &e); err != nil {
+					return nil, err
+				}
 			}
-			e.StatusCode = resp.StatusCode
 			return nil, e
 		}
 	}

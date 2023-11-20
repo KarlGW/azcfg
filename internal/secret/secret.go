@@ -42,7 +42,6 @@ func (s Secret) GetValue() string {
 type Client struct {
 	c           request.Client
 	cred        auth.Credential
-	keyVault    string
 	baseURL     string
 	userAgent   string
 	concurrency int
@@ -56,7 +55,6 @@ type ClientOption func(o *Client)
 func NewClient(keyVault string, cred auth.Credential, options ...ClientOption) *Client {
 	c := &Client{
 		cred:        cred,
-		keyVault:    keyVault,
 		baseURL:     strings.Replace(baseURL, "{vault}", keyVault, 1),
 		userAgent:   "azcfg/" + version.Version(),
 		concurrency: defaultConcurrency,

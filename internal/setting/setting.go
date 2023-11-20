@@ -41,13 +41,12 @@ func (s Setting) GetValue() string {
 // Client contains methods to call the Azure App Config REST API and
 // base settings for handling the requests.
 type Client struct {
-	c                request.Client
-	cred             auth.Credential
-	appConfiguration string
-	baseURL          string
-	userAgent        string
-	concurrency      int
-	timeout          time.Duration
+	c           request.Client
+	cred        auth.Credential
+	baseURL     string
+	userAgent   string
+	concurrency int
+	timeout     time.Duration
 }
 
 // ClientOption is a function that sets options to *Client.
@@ -56,12 +55,11 @@ type ClientOption func(o *Client)
 // NewClient creates and returns a new Client.
 func NewClient(appConfiguration string, cred auth.Credential, options ...ClientOption) *Client {
 	c := &Client{
-		cred:             cred,
-		appConfiguration: appConfiguration,
-		baseURL:          strings.Replace(baseURL, "{config}", appConfiguration, 1),
-		userAgent:        "azcfg/" + version.Version(),
-		concurrency:      defaultConcurrency,
-		timeout:          defaultTimeout,
+		cred:        cred,
+		baseURL:     strings.Replace(baseURL, "{config}", appConfiguration, 1),
+		userAgent:   "azcfg/" + version.Version(),
+		concurrency: defaultConcurrency,
+		timeout:     defaultTimeout,
 	}
 	for _, option := range options {
 		option(c)

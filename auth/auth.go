@@ -19,8 +19,7 @@ type TokenOptions struct {
 // TokenOption is a function that sets options for a token request.
 type TokenOption func(o *TokenOptions)
 
-// Credential is the interface that wraps around method Token, Scope
-// and SetScope.
+// Credential is the interface that wraps around method Token.
 type Credential interface {
 	Token(ctx context.Context, options ...TokenOption) (Token, error)
 }

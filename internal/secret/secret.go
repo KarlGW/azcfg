@@ -168,7 +168,7 @@ func (c Client) getSecrets(ctx context.Context, names []string, options ...Optio
 						return
 					}
 					sr := secretResult{name: name}
-					secret, err := c.Get(ctx, name)
+					secret, err := c.Get(ctx, name, options...)
 					if err != nil && !errors.Is(err, request.ErrNotFound) {
 						sr.err = err
 						srCh <- sr

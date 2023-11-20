@@ -102,19 +102,95 @@ func TestParse(t *testing.T) {
 				unexportedSettingField: "initial string",
 			},
 		},
+		{
+			name: "parse - error getting secrets and settings",
+			input: Struct{
+				String:           "initial string",
+				StringPtr:        toPtr("initial string ptr"),
+				StringSetting:    "initial string setting",
+				StringSettingPtr: toPtr("initial string setting ptr"),
+				Bool:             false,
+				BoolPtr:          toPtr(false),
+				BoolSetting:      false,
+				BoolSettingPtr:   toPtr(false),
+				Empty:            "",
+				EmptySetting:     "",
+				NestedStructA: NestedStructA{
+					Int:           1,
+					Int64:         1,
+					IntSetting:    1,
+					Int64Setting:  1,
+					Uint:          1,
+					Uint64:        1,
+					UintSetting:   1,
+					Uint64Setting: 1,
+					IntNotParse:   1,
+					NestedNestedStruct: NestedNestedStruct{
+						NestedString: "initial nested string",
+					},
+				},
+				NestedStructB: &NestedStructB{
+					Float64:    1,
+					Float64Ptr: toPtr[float64](1),
+				},
+				unexportedNestedStructA: NestedStructA{
+					Int:         2,
+					IntNotParse: 2,
+				},
+				unexportedField:        "initial string",
+				unexportedSettingField: "initial string",
+			},
+			want: Struct{
+				String:           "initial string",
+				StringPtr:        toPtr("initial string ptr"),
+				StringSetting:    "initial string setting",
+				StringSettingPtr: toPtr("initial string setting ptr"),
+				Bool:             false,
+				BoolPtr:          toPtr(false),
+				BoolSetting:      false,
+				BoolSettingPtr:   toPtr(false),
+				Empty:            "",
+				EmptySetting:     "",
+				NestedStructA: NestedStructA{
+					Int:           1,
+					Int64:         1,
+					IntSetting:    1,
+					Int64Setting:  1,
+					Uint:          1,
+					Uint64:        1,
+					UintSetting:   1,
+					Uint64Setting: 1,
+					IntNotParse:   1,
+					NestedNestedStruct: NestedNestedStruct{
+						NestedString: "initial nested string",
+					},
+				},
+				NestedStructB: &NestedStructB{
+					Float64:    1,
+					Float64Ptr: toPtr[float64](1),
+				},
+				unexportedNestedStructA: NestedStructA{
+					Int:         2,
+					IntNotParse: 2,
+				},
+				unexportedField:        "initial string",
+				unexportedSettingField: "initial string",
+			},
+			wantErr: errors.New("error"),
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			secretClient := mockSecretClient{}
-			settingClient := mockSettingClient{}
+			secretClient := mockSecretClient{err: test.wantErr}
+			settingClient := mockSettingClient{err: test.wantErr}
 
-			err := parse(&test.input, secretClient, settingClient, "")
+			gotErr := parse(&test.input, secretClient, settingClient, "")
 			if diff := cmp.Diff(test.want, test.input, cmp.AllowUnexported(Struct{})); diff != "" {
 				t.Errorf("parse() = unexpected result, (-want, +got)\n%s\n", diff)
 			}
 
-			if test.wantErr != nil && err == nil {
+			if test.wantErr != nil && gotErr == nil {
 				t.Errorf("Unexpected result, should return error\n")
 			}
 		})
@@ -144,14 +220,14 @@ func TestParseRequired(t *testing.T) {
 			secretClient := mockSecretClient{}
 			settingClient := mockSettingClient{}
 
-			err := parse(&test.input, secretClient, settingClient, "")
-			if test.wantErr != nil && err == nil {
+			gotErr := parse(&test.input, secretClient, settingClient, "")
+			if test.wantErr != nil && gotErr == nil {
 				t.Errorf("Unexpected result, should return error\n")
 			}
 
-			if test.wantErr != nil && err != nil {
-				if diff := cmp.Diff(test.wantErr.Error(), err.Error()); diff != "" {
-					t.Errorf("parse(%+v, %+v) = unexpected result, (-want, +got)\n%s\n", test.wantErr.Error(), err.Error(), diff)
+			if test.wantErr != nil && gotErr != nil {
+				if diff := cmp.Diff(test.wantErr.Error(), gotErr.Error()); diff != "" {
+					t.Errorf("parse(%+v, %+v) = unexpected result, (-want, +got)\n%s\n", test.wantErr.Error(), gotErr.Error(), diff)
 				}
 			}
 		})
@@ -315,11 +391,11 @@ type NestedStructWithRequired struct {
 }
 
 type mockSecretClient struct {
-	err bool
+	err error
 }
 
 func (c mockSecretClient) GetSecrets(names []string, options ...secret.Option) (map[string]secret.Secret, error) {
-	if c.err {
+	if c.err != nil {
 		return nil, errors.New("could not get secrets")
 	}
 	return responseSecrets, nil
@@ -351,12 +427,12 @@ var (
 )
 
 type mockSettingClient struct {
-	err bool
+	err error
 }
 
 func (c mockSettingClient) GetSettings(keys []string, options ...setting.Option) (map[string]setting.Setting, error) {
 	time.Sleep(time.Millisecond * 10)
-	if c.err {
+	if c.err != nil {
 		return nil, errors.New("could not get settings")
 	}
 	return responseSettings, nil

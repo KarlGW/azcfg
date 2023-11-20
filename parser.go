@@ -155,10 +155,10 @@ func setupKeyVault(vault string) string {
 // parameters.
 func setupAppConfiguration(appConfiguration, label string) (string, string) {
 	if len(appConfiguration) == 0 {
-		appConfiguration = os.Getenv("AZCFG_APP_CONFIGURATION_NAME")
+		appConfiguration = os.Getenv("AZCFG_APPCONFIGURATION_NAME")
 	}
 	if len(label) == 0 {
-		label = os.Getenv("AZCFG_APP_CONFIGURATION_LABEL")
+		label = os.Getenv("AZCFG_APPCONFIGURATION_LABEL")
 	}
 	return appConfiguration, label
 }

@@ -363,7 +363,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 				envs      map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_APP_CONFIGURATION_NAME": "appconfig",
+					"AZCFG_APPCONFIGURATION_NAME": "appconfig",
 				},
 			},
 			wantAppConfig: "appconfig",
@@ -388,7 +388,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 			}{
 				appConfig: "appconfig1",
 				envs: map[string]string{
-					"AZCFG_APP_CONFIGURATION_NAME": "appconfig2",
+					"AZCFG_APPCONFIGURATION_NAME": "appconfig2",
 				},
 			},
 			wantAppConfig: "appconfig1",
@@ -401,7 +401,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 				envs      map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_APP_CONFIGURATION_LABEL": "label",
+					"AZCFG_APPCONFIGURATION_LABEL": "label",
 				},
 			},
 			wantLabel: "label",
@@ -426,7 +426,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 			}{
 				label: "label1",
 				envs: map[string]string{
-					"AZCFG_APP_CONFIGURATION_LABEL": "label2",
+					"AZCFG_APPCONFIGURATION_LABEL": "label2",
 				},
 			},
 			wantLabel: "label1",

@@ -177,7 +177,7 @@ func main() {
 ```
 
 ```sh
-{Host: Port:0 Username:username-from-keyvault Password:password-from-keyvault Credential:{Key:12345}}
+{Host: Port:0 Username:username-from-appconfig Password:password-from-appconfig Credential:{Key:12345}}
 ```
 
 ## Usage
@@ -296,7 +296,7 @@ environment variables.
 **Managed identity**
 
 * `AZCFG_KEYVAULT_NAME` - Name of the Azure Key Vault.
-* `AZVFG_APPCONFIGURATION_NAME` - Name of the Azure App Configuration.
+* `AZCFG_APPCONFIGURATION_NAME` - Name of the Azure App Configuration.
 * `AZCFG_CLIENT_ID` - (Optional) Client ID (also called Application ID) of the Managed Identity. Set if using a user assigned managed identity.
 
 

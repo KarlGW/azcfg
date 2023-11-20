@@ -26,7 +26,7 @@ func (e *RequiredFieldsError) Error() string {
 	return strings.Join(msgs, "\n")
 }
 
-// requiredSecretsError represents an error when a secret is required
+// requiredSecretsError represents an error when secrets are required
 // but not set.
 type requiredSecretsError struct {
 	message string
@@ -37,7 +37,7 @@ func (e requiredSecretsError) Error() string {
 	return e.message
 }
 
-// requiredSettingsError represents an error when a secret is required
+// requiredSettingsError represents an error when settings are required
 // but not set.
 type requiredSettingsError struct {
 	message string

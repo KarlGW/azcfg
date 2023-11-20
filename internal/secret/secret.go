@@ -73,11 +73,6 @@ func NewClient(keyVault string, cred auth.Credential, options ...ClientOption) *
 	return c
 }
 
-// KeyVault returns the target Key Vault set on the Client.
-func (c Client) KeyVault() string {
-	return c.keyVault
-}
-
 // Options for client operations.
 type Options struct{}
 

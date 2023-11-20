@@ -74,12 +74,6 @@ func NewClient(appConfiguration string, cred auth.Credential, options ...ClientO
 	return c
 }
 
-// AppConfiguration returns the target Aoo Configuration set on
-// the Client.
-func (c Client) AppConfiguration() string {
-	return c.appConfiguration
-}
-
 // Options for client operations.
 type Options struct {
 	Label string

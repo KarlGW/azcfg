@@ -60,7 +60,7 @@ type ManagedIdentityCredential struct {
 	apiVersion string
 	clientID   string
 	resourceID string
-	mu         *sync.RWMutex
+	mu         sync.RWMutex
 }
 
 // NewManagedIdentityCredential creates and returns a new *ManagedIdentityCredential.
@@ -70,7 +70,6 @@ func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentity
 		header:    http.Header{},
 		tokens:    make(map[auth.Scope]*auth.Token),
 		userAgent: "azcfg/" + version.Version(),
-		mu:        &sync.RWMutex{},
 	}
 	opts := CredentialOptions{}
 	for _, option := range options {
@@ -136,7 +135,7 @@ func (c *ManagedIdentityCredential) Token(ctx context.Context, options ...auth.T
 
 // tokenRequest requests a token after creating the request body
 // based on the settings of the ManagedIdentityCredential.
-func (c ManagedIdentityCredential) tokenRequest(ctx context.Context, scope string) (auth.Token, error) {
+func (c *ManagedIdentityCredential) tokenRequest(ctx context.Context, scope string) (auth.Token, error) {
 	u, err := url.Parse(c.endpoint)
 	if err != nil {
 		return auth.Token{}, err

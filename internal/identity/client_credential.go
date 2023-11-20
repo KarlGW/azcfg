@@ -37,7 +37,7 @@ type ClientCredential struct {
 	tenantID     string
 	clientID     string
 	clientSecret string
-	mu           *sync.RWMutex
+	mu           sync.RWMutex
 }
 
 // NewClientCredential creates and returns a new *ClientCredential.
@@ -56,7 +56,6 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 		endpoint:  strings.Replace(authEndpoint, "{tenant}", tenantID, 1),
 		tenantID:  tenantID,
 		clientID:  clientID,
-		mu:        &sync.RWMutex{},
 	}
 
 	opts := CredentialOptions{}
@@ -111,7 +110,7 @@ func (c *ClientCredential) Token(ctx context.Context, options ...auth.TokenOptio
 
 // tokenRequest requests a token after creating the request body
 // based on the settings of the ClientCredential.
-func (c ClientCredential) tokenRequest(ctx context.Context, scope string) (auth.Token, error) {
+func (c *ClientCredential) tokenRequest(ctx context.Context, scope string) (auth.Token, error) {
 	data := url.Values{
 		"scope":      {string(scope)},
 		"grant_type": {"client_credentials"},

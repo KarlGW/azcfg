@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 	"time"
 
@@ -47,7 +46,6 @@ func TestNewClientCredential(t *testing.T) {
 				tenantID:     _testTenantID,
 				clientID:     _testClientID,
 				clientSecret: _testClientSecret,
-				mu:           &sync.RWMutex{},
 			},
 			wantErr: nil,
 		},

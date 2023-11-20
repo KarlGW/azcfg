@@ -17,7 +17,6 @@ func WithTokenCredential(c azcore.TokenCredential) azcfg.Option {
 	return func(o *azcfg.Options) {
 		o.Credential = &credential{
 			TokenCredential: c,
-			mu:              &sync.RWMutex{},
 			tokens:          make(map[auth.Scope]*auth.Token),
 		}
 	}
@@ -27,7 +26,7 @@ func WithTokenCredential(c azcore.TokenCredential) azcfg.Option {
 type credential struct {
 	azcore.TokenCredential
 	tokens map[auth.Scope]*auth.Token
-	mu     *sync.RWMutex
+	mu     sync.RWMutex
 }
 
 // Token wraps around the TokenCredential method to satisfy the azcfg.Credential interface.

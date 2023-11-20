@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -45,7 +44,6 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				},
 				endpoint:   imdsEndpoint,
 				apiVersion: imdsAPIVersion,
-				mu:         &sync.RWMutex{},
 			},
 			wantErr: nil,
 		},
@@ -69,7 +67,6 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				endpoint:   imdsEndpoint,
 				apiVersion: imdsAPIVersion,
 				clientID:   _testClientID,
-				mu:         &sync.RWMutex{},
 			},
 			wantErr: nil,
 		},
@@ -93,7 +90,6 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				endpoint:   imdsEndpoint,
 				apiVersion: imdsAPIVersion,
 				resourceID: _testResourceID,
-				mu:         &sync.RWMutex{},
 			},
 			wantErr: nil,
 		},
@@ -117,7 +113,6 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				},
 				endpoint:   "ENDPOINT",
 				apiVersion: appServiceAPIVersion,
-				mu:         &sync.RWMutex{},
 			},
 			wantErr: nil,
 		},

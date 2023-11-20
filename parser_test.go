@@ -32,10 +32,11 @@ func TestNewParser(t *testing.T) {
 				envs    map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_KEYVAULT_NAME": "vault",
-					"AZCFG_TENANT_ID":     "1111",
-					"AZCFG_CLIENT_ID":     "2222",
-					"AZCFG_CLIENT_SECRET": "3333",
+					"AZCFG_KEYVAULT_NAME":         "vault",
+					"AZCFG_APPCONFIGURATION_NAME": "appconfig",
+					"AZCFG_TENANT_ID":             "1111",
+					"AZCFG_CLIENT_ID":             "2222",
+					"AZCFG_CLIENT_SECRET":         "3333",
 				},
 			},
 			want: &parser{
@@ -59,6 +60,7 @@ func TestNewParser(t *testing.T) {
 					WithTimeout(time.Second * 10),
 					WithClientSecretCredential("1111", "2222", "3333"),
 					WithKeyVault("vault1"),
+					WithAppConfiguration("appconfig"),
 				},
 			},
 			want: &parser{
@@ -78,10 +80,11 @@ func TestNewParser(t *testing.T) {
 				envs    map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_KEYVAULT_NAME": "vault",
-					"AZCFG_TENANT_ID":     "1111",
-					"AZCFG_CLIENT_ID":     "2222",
-					"AZCFG_CLIENT_SECRET": "3333",
+					"AZCFG_KEYVAULT_NAME":         "vault",
+					"AZCFG_APPCONFIGURATION_NAME": "appconfig",
+					"AZCFG_TENANT_ID":             "1111",
+					"AZCFG_CLIENT_ID":             "2222",
+					"AZCFG_CLIENT_SECRET":         "3333",
 				},
 			},
 			want:    nil,
@@ -99,12 +102,10 @@ func TestNewParser(t *testing.T) {
 			},
 			want: &parser{
 				secretClient:  stub.SecretClient{},
-				settingClient: &setting.Client{},
-				cred: mockCredential{
-					t: "mi",
-				},
-				timeout:     time.Second * 10,
-				concurrency: 10,
+				settingClient: nil,
+				cred:          nil,
+				timeout:       time.Second * 10,
+				concurrency:   10,
 			},
 		},
 		{
@@ -118,13 +119,11 @@ func TestNewParser(t *testing.T) {
 				},
 			},
 			want: &parser{
-				secretClient:  &secret.Client{},
+				secretClient:  nil,
 				settingClient: stub.SettingClient{},
-				cred: mockCredential{
-					t: "mi",
-				},
-				timeout:     time.Second * 10,
-				concurrency: 10,
+				cred:          nil,
+				timeout:       time.Second * 10,
+				concurrency:   10,
 			},
 		},
 		{

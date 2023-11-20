@@ -62,7 +62,9 @@ func NewParser(options ...Option) (*parser, error) {
 		p.timeout = opts.Timeout
 	}
 
-	if opts.SecretClient == nil {
+	vault := setupKeyVault(opts.KeyVault)
+	appConfiguration, label := setupAppConfiguration(opts.AppConfiguration, opts.Label)
+	if opts.SecretClient == nil && len(vault) > 0 {
 		if p.cred == nil {
 			var err error
 			p.cred, err = setupCredential(opts)
@@ -71,7 +73,7 @@ func NewParser(options ...Option) (*parser, error) {
 			}
 		}
 		p.secretClient = secret.NewClient(
-			setupKeyVault(opts.KeyVault),
+			vault,
 			p.cred,
 			secret.WithTimeout(p.timeout),
 			secret.WithConcurrency(p.concurrency),
@@ -79,7 +81,7 @@ func NewParser(options ...Option) (*parser, error) {
 	} else {
 		p.secretClient = opts.SecretClient
 	}
-	if opts.SettingClient == nil {
+	if opts.SettingClient == nil && len(appConfiguration) > 0 {
 		if p.cred == nil {
 			var err error
 			p.cred, err = setupCredential(opts)
@@ -88,7 +90,6 @@ func NewParser(options ...Option) (*parser, error) {
 			}
 		}
 
-		appConfiguration, label := setupAppConfiguration(opts.AppConfiguration, opts.Label)
 		p.label = label
 		p.settingClient = setting.NewClient(
 			appConfiguration,

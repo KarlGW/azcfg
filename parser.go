@@ -24,14 +24,12 @@ const (
 // and KeyVault.
 type secretClient interface {
 	GetSecrets(names []string, options ...secret.Option) (map[string]secret.Secret, error)
-	KeyVault() string
 }
 
 // settingClient is the interface that wraps around method GetSettings
 // and AppConfiguration.
 type settingClient interface {
 	GetSettings(keys []string, options ...setting.Option) (map[string]setting.Setting, error)
-	AppConfiguration() string
 }
 
 // parser contains all the necessary values and settings for calls to Parse.

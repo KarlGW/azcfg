@@ -401,10 +401,6 @@ func (c mockSecretClient) GetSecrets(names []string, options ...secret.Option) (
 	return responseSecrets, nil
 }
 
-func (c mockSecretClient) KeyVault() string {
-	return ""
-}
-
 var (
 	responseSecrets = map[string]secret.Secret{
 		"string":           {Value: "new string"},
@@ -436,10 +432,6 @@ func (c mockSettingClient) GetSettings(keys []string, options ...setting.Option)
 		return nil, errors.New("could not get settings")
 	}
 	return responseSettings, nil
-}
-
-func (c mockSettingClient) AppConfiguration() string {
-	return ""
 }
 
 func toPtr[V any](v V) *V {

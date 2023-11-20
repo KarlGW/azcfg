@@ -98,6 +98,13 @@ func WithManagedIdentity(clientID ...string) Option {
 	}
 }
 
+// WithLabel sets the label for settings in App Configuration.
+func WithLabel(label string) Option {
+	return func(o *Options) {
+		o.Label = label
+	}
+}
+
 // WithSecretClient sets the client for secret retrieval.
 func WithSecretClient(c secretClient) Option {
 	return func(o *Options) {
@@ -109,12 +116,5 @@ func WithSecretClient(c secretClient) Option {
 func WithSettingClient(c settingClient) Option {
 	return func(o *Options) {
 		o.SettingClient = c
-	}
-}
-
-// WithLabel sets the label for settings in App Configuration.
-func WithLabel(label string) Option {
-	return func(o *Options) {
-		o.Label = label
 	}
 }

@@ -123,7 +123,7 @@ func (c Client) Get(ctx context.Context, key string, options ...Option) (Setting
 	var b []byte
 	if err := retry.Do(ctx, func() error {
 		var err error
-		b, err = request.Do(ctx, c.c, header, http.MethodGet, u)
+		b, err = request.Do(ctx, c.c, header, http.MethodGet, u, nil)
 		if err != nil {
 			if errors.Is(err, request.ErrNotFound) {
 				err = fmt.Errorf("setting %s: %w", key, err)

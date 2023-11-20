@@ -19,8 +19,8 @@ type Client interface {
 }
 
 // Do performs a request with the provided method and target url.
-func Do(ctx context.Context, client Client, headers http.Header, method, url string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+func Do(ctx context.Context, client Client, headers http.Header, method, url string, body io.Reader) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, err
 	}

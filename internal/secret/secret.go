@@ -98,17 +98,20 @@ func (c Client) Get(ctx context.Context, name string, options ...Option) (Secret
 		return Secret{}, err
 	}
 
-	header := http.Header{
+	headers := http.Header{
 		"User-Agent":    []string{c.userAgent},
 		"Authorization": []string{"Bearer " + token.AccessToken},
 	}
 
 	var b []byte
 	if err := retry.Do(ctx, func() error {
-		b, err = request.Do(ctx, c.c, header, http.MethodGet, u, nil)
+		b, err = request.Do(ctx, c.c, headers, http.MethodGet, u, nil)
 		if err != nil {
-			if errors.Is(err, request.ErrNotFound) {
-				err = fmt.Errorf("secret %s: %w", name, err)
+			var requestErr request.Error
+			if errors.As(err, &requestErr) {
+				if requestErr.StatusCode == http.StatusNotFound {
+					err = fmt.Errorf("secret: %s: %w", name, ErrNotFound)
+				}
 			}
 			return err
 		}
@@ -116,6 +119,15 @@ func (c Client) Get(ctx context.Context, name string, options ...Option) (Secret
 	}, func(o *retry.Policy) {
 		o.Retry = shouldRetry
 	}); err != nil {
+		var requestErr request.Error
+		if errors.As(err, &requestErr) {
+			var secretErr secretError
+			if err := json.Unmarshal(requestErr.Body, &secretErr); err != nil {
+				return Secret{}, err
+			}
+			secretErr.StatusCode = requestErr.StatusCode
+			return Secret{}, secretErr
+		}
 		return Secret{}, err
 	}
 
@@ -169,7 +181,7 @@ func (c Client) getSecrets(ctx context.Context, names []string, options ...Optio
 					}
 					sr := secretResult{name: name}
 					secret, err := c.Get(ctx, name, options...)
-					if err != nil && !errors.Is(err, request.ErrNotFound) {
+					if err != nil && !errors.Is(err, ErrNotFound) {
 						sr.err = err
 						srCh <- sr
 						cancel()
@@ -218,7 +230,7 @@ func shouldRetry(err error) bool {
 	if err == nil {
 		return false
 	}
-	var e request.ErrorResponse
+	var e request.Error
 	if errors.As(err, &e) {
 		if e.StatusCode == 0 || e.StatusCode == http.StatusInternalServerError {
 			return true
@@ -226,3 +238,22 @@ func shouldRetry(err error) bool {
 	}
 	return false
 }
+
+// secretError represents an error returned from the Key Vault REST API.
+type secretError struct {
+	Err struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"error"`
+	StatusCode int
+}
+
+// Error returns the message from the SecretError.
+func (e secretError) Error() string {
+	return e.Err.Message
+}
+
+var (
+	// ErrNotFound is returned when a secret is not found.
+	ErrNotFound = errors.New("not found")
+)

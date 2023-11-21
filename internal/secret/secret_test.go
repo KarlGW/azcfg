@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
-	"github.com/KarlGW/azcfg/internal/request"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -85,8 +84,11 @@ func TestClient_GetSecrets(t *testing.T) {
 				err:   errServer,
 			},
 			want: nil,
-			wantErr: request.ErrorResponse{
-				Err: request.ErrorResponseError{
+			wantErr: secretError{
+				Err: struct {
+					Code    string `json:"code"`
+					Message string `json:"message"`
+				}{
 					Message: "bad request",
 				},
 				StatusCode: http.StatusBadRequest,

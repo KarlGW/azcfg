@@ -2,6 +2,7 @@ package identity
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/request"
 	"github.com/KarlGW/azcfg/internal/retry"
 	"github.com/KarlGW/azcfg/version"
 )
@@ -52,7 +54,7 @@ const (
 // to Azure according to the managed identity credential flow. It contains all the necessary
 // settings to perform token requests.
 type ManagedIdentityCredential struct {
-	c          httpClient
+	c          request.Client
 	header     http.Header
 	tokens     map[auth.Scope]*auth.Token
 	endpoint   string
@@ -151,25 +153,38 @@ func (c *ManagedIdentityCredential) tokenRequest(ctx context.Context, scope stri
 	}
 	u.RawQuery = qs.Encode()
 
-	var r authResult
-	if err := retry.Do(ctx, func() error {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-		if err != nil {
-			return err
-		}
-		req.Header.Add("User-Agent", c.userAgent)
-		for k, v := range c.header {
-			req.Header.Add(k, strings.Join(v, ", "))
-		}
+	headers := http.Header{
+		"User-Agent": []string{c.userAgent},
+	}
+	for k, v := range c.header {
+		headers.Add(k, v[0])
+	}
 
-		r, err = request(c.c, req)
+	var b []byte
+	if err := retry.Do(ctx, func() error {
+		var err error
+		b, err = request.Do(ctx, c.c, headers, http.MethodGet, u.String(), nil)
 		if err != nil {
+			var requestErr request.Error
+			if errors.As(err, &requestErr) {
+				var authErr authError
+				if err := json.Unmarshal(requestErr.Body, &authErr); err != nil {
+					return err
+				}
+				authErr.StatusCode = requestErr.StatusCode
+				return authErr
+			}
 			return err
 		}
 		return nil
 	}, func(o *retry.Policy) {
 		o.Retry = shouldRetry
 	}); err != nil {
+		return auth.Token{}, err
+	}
+
+	var r authResult
+	if err := json.Unmarshal(b, &r); err != nil {
 		return auth.Token{}, err
 	}
 

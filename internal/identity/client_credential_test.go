@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/request"
 	"github.com/KarlGW/azcfg/version"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -97,13 +98,13 @@ func TestNewClientCredential(t *testing.T) {
 func TestClientCredential_Token(t *testing.T) {
 	var tests = []struct {
 		name    string
-		input   func(client httpClient) *ClientCredential
+		input   func(client request.Client) *ClientCredential
 		want    auth.Token
 		wantErr error
 	}{
 		{
 			name: "get token",
-			input: func(client httpClient) *ClientCredential {
+			input: func(client request.Client) *ClientCredential {
 				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithHTTPClient(client))
 				return cred
 			},
@@ -114,7 +115,7 @@ func TestClientCredential_Token(t *testing.T) {
 		},
 		{
 			name: "get token from cache",
-			input: func(client httpClient) *ClientCredential {
+			input: func(client request.Client) *ClientCredential {
 				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithHTTPClient(client))
 				cred.tokens[_testScope] = &auth.Token{
 					AccessToken: "ey54321",
@@ -129,7 +130,7 @@ func TestClientCredential_Token(t *testing.T) {
 		},
 		{
 			name: "get token from cache (expired)",
-			input: func(client httpClient) *ClientCredential {
+			input: func(client request.Client) *ClientCredential {
 				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithHTTPClient(client))
 				cred.tokens[_testScope] = &auth.Token{
 					AccessToken: "ey54321",
@@ -144,7 +145,7 @@ func TestClientCredential_Token(t *testing.T) {
 		},
 		{
 			name: "error",
-			input: func(client httpClient) *ClientCredential {
+			input: func(client request.Client) *ClientCredential {
 				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithHTTPClient(client))
 				return cred
 			},

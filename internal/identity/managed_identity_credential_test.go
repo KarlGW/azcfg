@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/request"
 	"github.com/KarlGW/azcfg/version"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -182,7 +183,7 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input struct {
-			cred func(client httpClient) *ManagedIdentityCredential
+			cred func(client request.Client) *ManagedIdentityCredential
 			envs map[string]string
 		}
 		want struct {
@@ -194,10 +195,10 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 		{
 			name: "get token (imds)",
 			input: struct {
-				cred func(client httpClient) *ManagedIdentityCredential
+				cred func(client request.Client) *ManagedIdentityCredential
 				envs map[string]string
 			}{
-				cred: func(client httpClient) *ManagedIdentityCredential {
+				cred: func(client request.Client) *ManagedIdentityCredential {
 					cred, _ := NewManagedIdentityCredential(WithHTTPClient(client))
 					return cred
 				},
@@ -219,10 +220,10 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 		{
 			name: "get token from cache (imds)",
 			input: struct {
-				cred func(client httpClient) *ManagedIdentityCredential
+				cred func(client request.Client) *ManagedIdentityCredential
 				envs map[string]string
 			}{
-				cred: func(client httpClient) *ManagedIdentityCredential {
+				cred: func(client request.Client) *ManagedIdentityCredential {
 					cred, _ := NewManagedIdentityCredential(WithHTTPClient(client))
 					cred.tokens[_testScope] = &auth.Token{
 						AccessToken: "ey54321",
@@ -248,10 +249,10 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 		{
 			name: "get token from cache (expired) (imds)",
 			input: struct {
-				cred func(client httpClient) *ManagedIdentityCredential
+				cred func(client request.Client) *ManagedIdentityCredential
 				envs map[string]string
 			}{
-				cred: func(client httpClient) *ManagedIdentityCredential {
+				cred: func(client request.Client) *ManagedIdentityCredential {
 					cred, _ := NewManagedIdentityCredential(WithHTTPClient(client))
 					cred.tokens[_testScope] = &auth.Token{
 						AccessToken: "ey54321",
@@ -277,10 +278,10 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 		{
 			name: "get token (imds) (client id)",
 			input: struct {
-				cred func(client httpClient) *ManagedIdentityCredential
+				cred func(client request.Client) *ManagedIdentityCredential
 				envs map[string]string
 			}{
-				cred: func(client httpClient) *ManagedIdentityCredential {
+				cred: func(client request.Client) *ManagedIdentityCredential {
 					cred, _ := NewManagedIdentityCredential(WithHTTPClient(client), WithClientID(_testClientID))
 					return cred
 				},
@@ -303,10 +304,10 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 		{
 			name: "get token (imds) (resource id)",
 			input: struct {
-				cred func(client httpClient) *ManagedIdentityCredential
+				cred func(client request.Client) *ManagedIdentityCredential
 				envs map[string]string
 			}{
-				cred: func(client httpClient) *ManagedIdentityCredential {
+				cred: func(client request.Client) *ManagedIdentityCredential {
 					cred, _ := NewManagedIdentityCredential(WithHTTPClient(client), WithResourceID(_testResourceID))
 					return cred
 				},
@@ -329,10 +330,10 @@ func TestManagedIdentityCredential_Token(t *testing.T) {
 		{
 			name: "error",
 			input: struct {
-				cred func(client httpClient) *ManagedIdentityCredential
+				cred func(client request.Client) *ManagedIdentityCredential
 				envs map[string]string
 			}{
-				cred: func(client httpClient) *ManagedIdentityCredential {
+				cred: func(client request.Client) *ManagedIdentityCredential {
 					cred, _ := NewManagedIdentityCredential(WithHTTPClient(client))
 					return cred
 				},

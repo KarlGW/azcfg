@@ -3,6 +3,7 @@ package identity
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/request"
 	"github.com/KarlGW/azcfg/internal/retry"
 	"github.com/KarlGW/azcfg/version"
 )
@@ -30,7 +32,7 @@ var (
 // according to the client credential flow. It contains all the necessary settings
 // to perform token requests.
 type ClientCredential struct {
-	c            httpClient
+	c            request.Client
 	tokens       map[auth.Scope]*auth.Token
 	endpoint     string
 	userAgent    string
@@ -122,23 +124,36 @@ func (c *ClientCredential) tokenRequest(ctx context.Context, scope string) (auth
 		return auth.Token{}, ErrMissingCredentials
 	}
 
-	var r authResult
-	if err := retry.Do(ctx, func() error {
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewBufferString(data.Encode()))
-		if err != nil {
-			return err
-		}
-		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-		req.Header.Add("User-Agent", c.userAgent)
+	headers := http.Header{
+		"Content-Type": []string{"application/x-www-form-urlencoded"},
+		"User-Agent":   []string{c.userAgent},
+	}
 
-		r, err = request(c.c, req)
+	var b []byte
+	if err := retry.Do(ctx, func() error {
+		var err error
+		b, err = request.Do(ctx, c.c, headers, http.MethodPost, c.endpoint, bytes.NewBufferString(data.Encode()))
 		if err != nil {
+			var requestErr request.Error
+			if errors.As(err, &requestErr) {
+				var authErr authError
+				if err := json.Unmarshal(requestErr.Body, &authErr); err != nil {
+					return err
+				}
+				authErr.StatusCode = requestErr.StatusCode
+				return authErr
+			}
 			return err
 		}
 		return nil
 	}, func(o *retry.Policy) {
 		o.Retry = shouldRetry
 	}); err != nil {
+		return auth.Token{}, err
+	}
+
+	var r authResult
+	if err := json.Unmarshal(b, &r); err != nil {
 		return auth.Token{}, err
 	}
 

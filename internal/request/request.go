@@ -7,11 +7,6 @@ import (
 	"net/http"
 )
 
-var (
-	// ErrNotFound is returned when a resource is not found.
-	ErrNotFound = errors.New("not found")
-)
-
 // Client is the interface that wraps around method Do.
 type Client interface {
 	Do(req *http.Request) (*http.Response, error)

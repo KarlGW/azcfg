@@ -12,7 +12,7 @@ type Client interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-// Do performs a request with the provided method and target url.
+// Do performs a request with the provided arguments.
 func Do(ctx context.Context, client Client, headers http.Header, method, url string, body io.Reader) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {

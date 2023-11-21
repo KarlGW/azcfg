@@ -2,7 +2,6 @@ package request
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -43,35 +42,19 @@ func Do(ctx context.Context, client Client, headers http.Header, method, url str
 	}
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode > http.StatusNoContent {
-		switch resp.StatusCode {
-		case http.StatusNotFound:
-			return nil, ErrNotFound
-		default:
-			e := ErrorResponse{StatusCode: resp.StatusCode}
-			if len(b) > 0 {
-				if err := json.Unmarshal(b, &e); err != nil {
-					return nil, err
-				}
-			}
-			return nil, e
-		}
+		return nil, Error{StatusCode: resp.StatusCode, Body: b}
 	}
 
 	return b, nil
 }
 
-// ErrorRespone represents an error response from Key Vault actions.
-type ErrorResponse struct {
-	Err        ErrorResponseError `json:"error"`
+// Error represents an error response from requests.
+type Error struct {
 	StatusCode int
+	Body       []byte
 }
 
-// ErrorResponseError represents the inner error in an error response.
-type ErrorResponseError struct {
-	Message string `json:"message"`
-}
-
-// Error returns the inner error message or errorResponse.
-func (e ErrorResponse) Error() string {
-	return e.Err.Message
+// Error returns the body of the Error.
+func (e Error) Error() string {
+	return string(e.Body)
 }

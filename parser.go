@@ -20,14 +20,12 @@ const (
 	defaultConcurrency = 10
 )
 
-// secretClient is the interface that wraps around method GetSecrets
-// and KeyVault.
+// secretClient is the interface that wraps around method GetSecrets.
 type secretClient interface {
 	GetSecrets(names []string, options ...secret.Option) (map[string]secret.Secret, error)
 }
 
-// settingClient is the interface that wraps around method GetSettings
-// and AppConfiguration.
+// settingClient is the interface that wraps around method GetSettings.
 type settingClient interface {
 	GetSettings(keys []string, options ...setting.Option) (map[string]setting.Setting, error)
 }

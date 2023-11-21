@@ -248,7 +248,7 @@ type secretError struct {
 	StatusCode int
 }
 
-// Error returns the message from the SecretError.
+// Error returns the message from the secretError.
 func (e secretError) Error() string {
 	return e.Err.Message
 }

@@ -100,10 +100,6 @@ func (c Client) Get(ctx context.Context, key string, options ...Option) (Setting
 		u += "&label=" + opts.Label
 	}
 
-	header := http.Header{
-		"User-Agent": []string{c.userAgent},
-	}
-
 	var authHeader string
 	if c.cred != nil {
 		token, err := c.cred.Token(ctx, auth.WithScope(auth.ScopeAppConfig))
@@ -116,15 +112,22 @@ func (c Client) Get(ctx context.Context, key string, options ...Option) (Setting
 		// Add this functionality further on.
 		authHeader = ""
 	}
-	header.Add("Authorization", authHeader)
+
+	headers := http.Header{
+		"User-Agent":    []string{c.userAgent},
+		"Authorization": []string{authHeader},
+	}
 
 	var b []byte
 	if err := retry.Do(ctx, func() error {
 		var err error
-		b, err = request.Do(ctx, c.c, header, http.MethodGet, u, nil)
+		b, err = request.Do(ctx, c.c, headers, http.MethodGet, u, nil)
 		if err != nil {
-			if errors.Is(err, request.ErrNotFound) {
-				err = fmt.Errorf("setting %s: %w", key, err)
+			var requestErr request.Error
+			if errors.As(err, &requestErr) {
+				if requestErr.StatusCode == http.StatusNotFound {
+					err = fmt.Errorf("setting: %s: %w", key, ErrNotFound)
+				}
 			}
 			return err
 		}
@@ -132,6 +135,15 @@ func (c Client) Get(ctx context.Context, key string, options ...Option) (Setting
 	}, func(o *retry.Policy) {
 		o.Retry = shouldRetry
 	}); err != nil {
+		var requestErr request.Error
+		if errors.As(err, &requestErr) {
+			var settingErr settingError
+			if err := json.Unmarshal(requestErr.Body, &settingErr); err != nil {
+				return Setting{}, err
+			}
+			settingErr.StatusCode = requestErr.StatusCode
+			return Setting{}, settingErr
+		}
 		return Setting{}, err
 	}
 
@@ -185,7 +197,7 @@ func (c Client) getSettings(ctx context.Context, keys []string, options ...Optio
 					}
 					sr := settingResult{key: key}
 					setting, err := c.Get(ctx, key, options...)
-					if err != nil && !errors.Is(err, request.ErrNotFound) {
+					if err != nil && !errors.Is(err, ErrNotFound) {
 						sr.err = err
 						srCh <- sr
 						cancel()
@@ -241,7 +253,7 @@ func shouldRetry(err error) bool {
 	if err == nil {
 		return false
 	}
-	var e request.ErrorResponse
+	var e request.Error
 	if errors.As(err, &e) {
 		if e.StatusCode == 0 || e.StatusCode == http.StatusInternalServerError {
 			return true
@@ -249,3 +261,24 @@ func shouldRetry(err error) bool {
 	}
 	return false
 }
+
+// settingError represents an error returned from the App Configuration
+// REST API.
+type settingError struct {
+	Type       string `json:"type"`
+	Title      string `json:"title"`
+	Name       string `json:"name"`
+	Detail     string `json:"detail"`
+	Status     int    `json:"status"`
+	StatusCode int
+}
+
+// Error returns the detail from the settingError.
+func (e settingError) Error() string {
+	return e.Detail
+}
+
+var (
+	// ErrNotFound is returned when a setting is not found.
+	ErrNotFound = errors.New("not found")
+)

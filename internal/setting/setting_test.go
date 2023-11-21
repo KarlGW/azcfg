@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
-	"github.com/KarlGW/azcfg/internal/request"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -88,10 +87,9 @@ func TestClient_GetSettings(t *testing.T) {
 				err:  errServer,
 			},
 			want: nil,
-			wantErr: request.ErrorResponse{
-				Err: request.ErrorResponseError{
-					Message: "bad request",
-				},
+			wantErr: settingError{
+				Detail:     "bad request",
+				Status:     http.StatusBadRequest,
 				StatusCode: http.StatusBadRequest,
 			},
 		},
@@ -155,7 +153,7 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 		if errors.Is(c.err, errServer) {
 			return &http.Response{
 				StatusCode: http.StatusBadRequest,
-				Body:       io.NopCloser(bytes.NewBuffer([]byte(`{"error":{"message":"bad request"}}`))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte(`{"detail":"bad request","status":400}`))),
 			}, nil
 		}
 		return nil, c.err

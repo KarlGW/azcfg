@@ -101,7 +101,8 @@ func TestClient_Do(t *testing.T) {
 			name: "successful GET - context exceeded",
 			input: input{
 				req: func() *http.Request {
-					ctx, _ := context.WithTimeout(context.Background(), time.Millisecond*1)
+					ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*1)
+					defer cancel()
 					req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://example.com", nil)
 					return req
 				},

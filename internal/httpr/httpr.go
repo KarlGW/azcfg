@@ -20,7 +20,7 @@ type Client struct {
 	cl *http.Client
 	rp RetryPolicy
 	to time.Duration
-	rt http.RoundTripper
+	tr *http.Transport
 }
 
 // Option is a function that configures a *Client.
@@ -39,7 +39,7 @@ func NewClient(options ...Option) *Client {
 	if c.cl == nil {
 		c.cl = &http.Client{
 			Timeout:   defaultTimout,
-			Transport: c.rt,
+			Transport: c.tr,
 		}
 	}
 	return c

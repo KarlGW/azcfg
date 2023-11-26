@@ -160,22 +160,21 @@ func (c *ManagedIdentityCredential) tokenRequest(ctx context.Context, scope stri
 		headers.Add(k, v[0])
 	}
 
-	b, err := request.Do(ctx, c.c, headers, http.MethodGet, u.String(), nil)
+	resp, err := request.Do(ctx, c.c, headers, http.MethodGet, u.String(), nil)
 	if err != nil {
-		var requestErr request.Error
-		if errors.As(err, &requestErr) {
-			var authErr authError
-			if err := json.Unmarshal(requestErr.Body, &authErr); err != nil {
-				return auth.Token{}, err
-			}
-			authErr.StatusCode = requestErr.StatusCode
-			return auth.Token{}, authErr
-		}
 		return auth.Token{}, err
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode > http.StatusNoContent {
+		var authErr authError
+		if err := json.Unmarshal(resp.Body, &authErr); err != nil {
+			return auth.Token{}, err
+		}
+		authErr.StatusCode = resp.StatusCode
+		return auth.Token{}, authErr
 	}
 
 	var r authResult
-	if err := json.Unmarshal(b, &r); err != nil {
+	if err := json.Unmarshal(resp.Body, &r); err != nil {
 		return auth.Token{}, err
 	}
 

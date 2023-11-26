@@ -14,10 +14,10 @@ type Client interface {
 }
 
 // Do performs a request with the provided arguments.
-func Do(ctx context.Context, client Client, headers http.Header, method, url string, body []byte) ([]byte, error) {
+func Do(ctx context.Context, client Client, headers http.Header, method, url string, body []byte) (Response, error) {
 	req, err := httpr.NewRequest(ctx, method, url, body)
 	if err != nil {
-		return nil, err
+		return Response{}, err
 	}
 	for k, v := range headers {
 		req.Header.Set(k, v[0])
@@ -25,29 +25,23 @@ func Do(ctx context.Context, client Client, headers http.Header, method, url str
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return Response{}, err
 	}
 	defer resp.Body.Close()
 
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return Response{}, err
 	}
 
-	if resp.StatusCode < http.StatusOK || resp.StatusCode > http.StatusNoContent {
-		return nil, Error{StatusCode: resp.StatusCode, Body: b}
-	}
-
-	return b, nil
+	return Response{
+		StatusCode: resp.StatusCode,
+		Body:       b,
+	}, nil
 }
 
-// Error represents an error response from requests.
-type Error struct {
+// Response represents an HTTP response.
+type Response struct {
 	StatusCode int
 	Body       []byte
-}
-
-// Error returns the body of the Error.
-func (e Error) Error() string {
-	return string(e.Body)
 }

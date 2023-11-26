@@ -47,8 +47,10 @@ func NewClient(options ...Option) *Client {
 
 // Do sends an HTTP request and returns an HTTP response.
 func (c Client) Do(r *http.Request) (*http.Response, error) {
-	if err := bufferRequestBody(r); err != nil {
-		return nil, err
+	if r.Body != nil && r.GetBody == nil {
+		if err := bufferRequestBody(r); err != nil {
+			return nil, err
+		}
 	}
 
 	retries := 0
@@ -65,8 +67,10 @@ func (c Client) Do(r *http.Request) (*http.Response, error) {
 			if err := drainResponse(resp); err != nil {
 				return nil, err
 			}
-			if err := resetRequest(r); err != nil {
-				return nil, err
+			if r.Body != nil && r.GetBody != nil {
+				if err := resetRequest(r); err != nil {
+					return nil, err
+				}
 			}
 		case <-r.Context().Done():
 			return nil, r.Context().Err()
@@ -78,6 +82,9 @@ func (c Client) Do(r *http.Request) (*http.Response, error) {
 // and sets r.GetBody with the buffer to be used
 // with retries.
 func bufferRequestBody(r *http.Request) error {
+	if r.Body == nil {
+		return nil
+	}
 	b, err := io.ReadAll(r.Body)
 	if err != nil {
 		return err

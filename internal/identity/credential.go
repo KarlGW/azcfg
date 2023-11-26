@@ -2,14 +2,12 @@ package identity
 
 import (
 	"errors"
-	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
-	"github.com/KarlGW/azcfg/internal/request"
 )
 
 var (
@@ -65,21 +63,6 @@ func tokenFromAuthResult(t authResult) auth.Token {
 		AccessToken: t.AccessToken,
 		ExpiresOn:   time.Now().Add(time.Duration(expiresIn) * time.Second),
 	}
-}
-
-// shouldRetry contains retry policy for token requests.
-func shouldRetry(err error) bool {
-	if err == nil {
-		return false
-	}
-	var e request.Error
-	if errors.As(err, &e) {
-		if e.StatusCode == 0 || e.StatusCode >= http.StatusInternalServerError {
-			return true
-		}
-		return false
-	}
-	return false
 }
 
 // validGUID checks if the provided string is a valid GUID.

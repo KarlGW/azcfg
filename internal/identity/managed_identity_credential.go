@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/httpr"
 	"github.com/KarlGW/azcfg/internal/request"
-	"github.com/KarlGW/azcfg/internal/retry"
 	"github.com/KarlGW/azcfg/version"
 )
 
@@ -68,7 +68,7 @@ type ManagedIdentityCredential struct {
 // NewManagedIdentityCredential creates and returns a new *ManagedIdentityCredential.
 func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentityCredential, error) {
 	c := &ManagedIdentityCredential{
-		c:         &http.Client{},
+		c:         httpr.NewClient(),
 		header:    http.Header{},
 		tokens:    make(map[auth.Scope]*auth.Token),
 		userAgent: "azcfg/" + version.Version(),
@@ -160,26 +160,17 @@ func (c *ManagedIdentityCredential) tokenRequest(ctx context.Context, scope stri
 		headers.Add(k, v[0])
 	}
 
-	var b []byte
-	if err := retry.Do(ctx, func() error {
-		var err error
-		b, err = request.Do(ctx, c.c, headers, http.MethodGet, u.String(), nil)
-		if err != nil {
-			var requestErr request.Error
-			if errors.As(err, &requestErr) {
-				var authErr authError
-				if err := json.Unmarshal(requestErr.Body, &authErr); err != nil {
-					return err
-				}
-				authErr.StatusCode = requestErr.StatusCode
-				return authErr
+	b, err := request.Do(ctx, c.c, headers, http.MethodGet, u.String(), nil)
+	if err != nil {
+		var requestErr request.Error
+		if errors.As(err, &requestErr) {
+			var authErr authError
+			if err := json.Unmarshal(requestErr.Body, &authErr); err != nil {
+				return auth.Token{}, err
 			}
-			return err
+			authErr.StatusCode = requestErr.StatusCode
+			return auth.Token{}, authErr
 		}
-		return nil
-	}, func(o *retry.Policy) {
-		o.Retry = shouldRetry
-	}); err != nil {
 		return auth.Token{}, err
 	}
 

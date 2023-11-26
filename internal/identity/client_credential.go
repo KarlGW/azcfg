@@ -1,7 +1,6 @@
 package identity
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,8 +11,8 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/httpr"
 	"github.com/KarlGW/azcfg/internal/request"
-	"github.com/KarlGW/azcfg/internal/retry"
 	"github.com/KarlGW/azcfg/version"
 )
 
@@ -52,7 +51,7 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 	}
 
 	c := &ClientCredential{
-		c:         &http.Client{},
+		c:         httpr.NewClient(),
 		tokens:    make(map[auth.Scope]*auth.Token),
 		userAgent: "azcfg/" + version.Version(),
 		endpoint:  strings.Replace(authEndpoint, "{tenant}", tenantID, 1),
@@ -129,26 +128,17 @@ func (c *ClientCredential) tokenRequest(ctx context.Context, scope string) (auth
 		"User-Agent":   []string{c.userAgent},
 	}
 
-	var b []byte
-	if err := retry.Do(ctx, func() error {
-		var err error
-		b, err = request.Do(ctx, c.c, headers, http.MethodPost, c.endpoint, bytes.NewBufferString(data.Encode()))
-		if err != nil {
-			var requestErr request.Error
-			if errors.As(err, &requestErr) {
-				var authErr authError
-				if err := json.Unmarshal(requestErr.Body, &authErr); err != nil {
-					return err
-				}
-				authErr.StatusCode = requestErr.StatusCode
-				return authErr
+	b, err := request.Do(ctx, c.c, headers, http.MethodPost, c.endpoint, []byte(data.Encode()))
+	if err != nil {
+		var requestErr request.Error
+		if errors.As(err, &requestErr) {
+			var authErr authError
+			if err := json.Unmarshal(requestErr.Body, &authErr); err != nil {
+				return auth.Token{}, err
 			}
-			return err
+			authErr.StatusCode = requestErr.StatusCode
+			return auth.Token{}, authErr
 		}
-		return nil
-	}, func(o *retry.Policy) {
-		o.Retry = shouldRetry
-	}); err != nil {
 		return auth.Token{}, err
 	}
 

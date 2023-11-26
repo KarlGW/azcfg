@@ -14,8 +14,8 @@ type Client interface {
 }
 
 // Do performs a request with the provided arguments.
-func Do(ctx context.Context, client Client, headers http.Header, method, url string, body io.Reader) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, method, url, body)
+func Do(ctx context.Context, client Client, headers http.Header, method, url string, body []byte) ([]byte, error) {
+	req, err := httpr.NewRequest(ctx, method, url, body)
 	if err != nil {
 		return nil, err
 	}
@@ -26,9 +26,6 @@ func Do(ctx context.Context, client Client, headers http.Header, method, url str
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
-	}
-	if resp.Body == nil {
-		return nil, errors.New("no body")
 	}
 	defer resp.Body.Close()
 

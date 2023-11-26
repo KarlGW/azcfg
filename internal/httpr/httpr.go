@@ -2,6 +2,7 @@ package httpr
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"math"
 	"net/http"
@@ -170,4 +171,21 @@ func defaultRetryPolicy() RetryPolicy {
 		Retry:      shouldRetry,
 		Backoff:    exponentialBackoff,
 	}
+}
+
+// NewRequest makes use of http.NewRequestWithContext and takes a []byte instead
+// of a io.ReadCloser as a body. If the provided body is not empty it will
+// set the GetBody function of the resulting request. This to prepare
+// the request for retries as implemented by Do from the httpr.Client.
+func NewRequest(ctx context.Context, method, url string, body []byte) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	if len(body) > 0 {
+		req.GetBody = func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewReader(body)), nil
+		}
+	}
+	return req, err
 }

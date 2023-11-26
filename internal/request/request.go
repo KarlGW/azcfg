@@ -2,9 +2,10 @@ package request
 
 import (
 	"context"
-	"errors"
 	"io"
 	"net/http"
+
+	"github.com/KarlGW/azcfg/internal/httpr"
 )
 
 // Client is the interface that wraps around method Do.

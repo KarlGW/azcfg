@@ -27,7 +27,7 @@ type Client struct {
 type Option func(c *Client)
 
 // NewClient creates and returns a new *Client with the
-// provided options
+// provided options.
 func NewClient(options ...Option) *Client {
 	c := &Client{
 		timeout:     defaultTimeout,

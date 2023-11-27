@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/httpr"
 	"github.com/KarlGW/azcfg/internal/request"
-	"github.com/KarlGW/azcfg/internal/retry"
 	"github.com/KarlGW/azcfg/version"
 )
 
@@ -65,9 +65,7 @@ func NewClient(appConfiguration string, cred auth.Credential, options ...ClientO
 		option(c)
 	}
 	if c.c == nil {
-		c.c = &http.Client{
-			Timeout: c.timeout,
-		}
+		c.c = httpr.NewClient()
 	}
 	return c
 }
@@ -118,37 +116,22 @@ func (c Client) Get(ctx context.Context, key string, options ...Option) (Setting
 		"Authorization": []string{authHeader},
 	}
 
-	var b []byte
-	if err := retry.Do(ctx, func() error {
-		var err error
-		b, err = request.Do(ctx, c.c, headers, http.MethodGet, u, nil)
-		if err != nil {
-			var requestErr request.Error
-			if errors.As(err, &requestErr) {
-				if requestErr.StatusCode == http.StatusNotFound {
-					err = fmt.Errorf("setting: %s: %w", key, ErrNotFound)
-				}
-			}
-			return err
-		}
-		return nil
-	}, func(o *retry.Policy) {
-		o.Retry = shouldRetry
-	}); err != nil {
-		var requestErr request.Error
-		if errors.As(err, &requestErr) {
-			var settingErr settingError
-			if err := json.Unmarshal(requestErr.Body, &settingErr); err != nil {
-				return Setting{}, err
-			}
-			settingErr.StatusCode = requestErr.StatusCode
-			return Setting{}, settingErr
-		}
+	resp, err := request.Do(ctx, c.c, headers, http.MethodGet, u, nil)
+	if err != nil {
 		return Setting{}, err
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		var settingErr settingError
+		if err := json.Unmarshal(resp.Body, &settingErr); err != nil {
+			return Setting{}, err
+		}
+		settingErr.StatusCode = resp.StatusCode
+		return Setting{}, settingErr
+	}
+
 	var setting Setting
-	if err := json.Unmarshal(b, &setting); err != nil {
+	if err := json.Unmarshal(resp.Body, &setting); err != nil {
 		return setting, err
 	}
 
@@ -197,7 +180,7 @@ func (c Client) getSettings(ctx context.Context, keys []string, options ...Optio
 					}
 					sr := settingResult{key: key}
 					setting, err := c.Get(ctx, key, options...)
-					if err != nil && !errors.Is(err, ErrNotFound) {
+					if err != nil && !isSettingError(err, http.StatusNotFound) {
 						sr.err = err
 						srCh <- sr
 						cancel()
@@ -248,20 +231,6 @@ func WithLabel(label string) Option {
 	}
 }
 
-// shouldRetry contains retry policy for setting requests.
-func shouldRetry(err error) bool {
-	if err == nil {
-		return false
-	}
-	var e request.Error
-	if errors.As(err, &e) {
-		if e.StatusCode == 0 || e.StatusCode == http.StatusInternalServerError {
-			return true
-		}
-	}
-	return false
-}
-
 // settingError represents an error returned from the App Configuration
 // REST API.
 type settingError struct {
@@ -278,7 +247,23 @@ func (e settingError) Error() string {
 	return e.Detail
 }
 
-var (
-	// ErrNotFound is returned when a setting is not found.
-	ErrNotFound = errors.New("not found")
-)
+// isSettingError checks if the provided error is a settingError.
+// If the optional statusCodes is provided it further
+// requires that they should match that with the
+// provided error.
+func isSettingError(err error, statusCodes ...int) bool {
+	var settingErr settingError
+	if errors.As(err, &settingErr) {
+		if len(statusCodes) == 0 {
+			return true
+		} else {
+			for _, statusCode := range statusCodes {
+				if settingErr.StatusCode == statusCode {
+					return true
+				}
+			}
+		}
+
+	}
+	return false
+}

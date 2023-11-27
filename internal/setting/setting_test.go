@@ -173,3 +173,67 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 		Body:       io.NopCloser(bytes.NewBuffer(b)),
 	}, nil
 }
+
+func TestIsSettingError(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input struct {
+			err         error
+			statusCodes []int
+		}
+		want bool
+	}{
+		{
+			name: "is not a settingError",
+			input: struct {
+				err         error
+				statusCodes []int
+			}{
+				err: errors.New("error"),
+			},
+			want: false,
+		},
+		{
+			name: "is a settingError",
+			input: struct {
+				err         error
+				statusCodes []int
+			}{
+				err: settingError{},
+			},
+			want: true,
+		},
+		{
+			name: "is a settingError with statusCode",
+			input: struct {
+				err         error
+				statusCodes []int
+			}{
+				err:         settingError{StatusCode: http.StatusNotFound},
+				statusCodes: []int{http.StatusNotFound},
+			},
+			want: true,
+		},
+		{
+			name: "is a settingError with statusCode",
+			input: struct {
+				err         error
+				statusCodes []int
+			}{
+				err:         settingError{StatusCode: http.StatusNotFound},
+				statusCodes: []int{http.StatusBadRequest},
+			},
+			want: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := isSettingError(test.input.err, test.input.statusCodes...)
+
+			if test.want != got {
+				t.Errorf("isSettingError() = unexpected result, want: %v, got: %v\n", test.want, got)
+			}
+		})
+	}
+}

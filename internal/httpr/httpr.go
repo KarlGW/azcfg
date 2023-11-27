@@ -10,18 +10,17 @@ import (
 )
 
 const (
-	// defaultTimeout contains the default timeout of
-	// a *Client.
-	defaultTimout = time.Second * 30
+	// defaultTimeout contains the default timeout of a *Client.
+	defaultTimeout = time.Second * 30
 )
 
 // Client wraps around a standard library *http.Client with
 // added retry functionality.
 type Client struct {
-	cl *http.Client
-	rp RetryPolicy
-	to time.Duration
-	tr *http.Transport
+	cl          *http.Client
+	transport   *http.Transport
+	retryPolicy RetryPolicy
+	timeout     time.Duration
 }
 
 // Option is a function that configures a *Client.
@@ -31,16 +30,16 @@ type Option func(c *Client)
 // provided options
 func NewClient(options ...Option) *Client {
 	c := &Client{
-		to: defaultTimout,
-		rp: defaultRetryPolicy(),
+		timeout:     defaultTimeout,
+		retryPolicy: defaultRetryPolicy(),
 	}
 	for _, option := range options {
 		option(c)
 	}
 	if c.cl == nil {
 		c.cl = &http.Client{
-			Timeout:   defaultTimout,
-			Transport: c.tr,
+			Timeout:   defaultTimeout,
+			Transport: c.transport,
 		}
 	}
 	return c
@@ -57,11 +56,11 @@ func (c Client) Do(r *http.Request) (*http.Response, error) {
 	retries := 0
 	for {
 		resp, err := c.cl.Do(r)
-		if !c.rp.Retry(resp, err) || retries >= c.rp.MaxRetries {
+		if !c.retryPolicy.Retry(resp, err) || retries >= c.retryPolicy.MaxRetries {
 			return resp, err
 		}
 
-		d := c.rp.Backoff(c.rp.MinDelay, c.rp.MaxDelay, retries)
+		d := c.retryPolicy.Backoff(c.retryPolicy.MinDelay, c.retryPolicy.MaxDelay, retries)
 		select {
 		case <-time.After(d):
 			retries++

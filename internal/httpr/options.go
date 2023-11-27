@@ -8,21 +8,21 @@ import (
 // WithTimeout sets the timeout of the *Client.
 func WithTimeout(d time.Duration) Option {
 	return func(c *Client) {
-		c.to = d
+		c.timeout = d
 	}
 }
 
 // WithTransport sets the transport (roundtripper) for
 // the *Client.
-func WithTransport(tr *http.Transport) Option {
+func WithTransport(transport *http.Transport) Option {
 	return func(c *Client) {
-		c.tr = tr
+		c.transport = transport
 	}
 }
 
 // WithRetryPolicy sets retry policy for the *Client.
-func WithRetryPolicy(rp RetryPolicy) Option {
+func WithRetryPolicy(retryPolicy RetryPolicy) Option {
 	return func(c *Client) {
-		c.rp = rp
+		c.retryPolicy = retryPolicy
 	}
 }

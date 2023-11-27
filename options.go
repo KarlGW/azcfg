@@ -23,7 +23,7 @@ type Options struct {
 	// KeyVault is the name of the Key Vault containing secrets. Used to override the
 	// default method of aquiring target Key Vault.
 	KeyVault string
-	// AppConfiguration is the name of the App Configuration containing settigs. Used to override the
+	// AppConfiguration is the name of the App Configuration containing settibgs. Used to override the
 	// default method of aquiring target App Configuration.
 	AppConfiguration string
 	// Label for setting in an Azure App Configuration.

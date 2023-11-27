@@ -83,7 +83,7 @@ func (c Client) GetSecrets(names []string, options ...Option) (map[string]Secret
 	return c.getSecrets(ctx, names, options...)
 }
 
-// get a secret.
+// Get a secret.
 func (c Client) Get(ctx context.Context, name string, options ...Option) (Secret, error) {
 	opts := Options{}
 	for _, option := range options {

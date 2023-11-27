@@ -78,7 +78,7 @@ type Options struct {
 // Option is a function that sets options for client operations.
 type Option func(o *Options)
 
-// Get settings (key-values) by names.
+// GetSettings get settings (key-values) by keys.
 func (c Client) GetSettings(keys []string, options ...Option) (map[string]Setting, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
@@ -86,7 +86,7 @@ func (c Client) GetSettings(keys []string, options ...Option) (map[string]Settin
 	return c.getSettings(ctx, keys, options...)
 }
 
-// get a setting.
+// Get a setting.
 func (c Client) Get(ctx context.Context, key string, options ...Option) (Setting, error) {
 	opts := Options{}
 	for _, option := range options {

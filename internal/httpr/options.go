@@ -12,8 +12,7 @@ func WithTimeout(d time.Duration) Option {
 	}
 }
 
-// WithTransport sets the transport (roundtripper) for
-// the *Client.
+// WithTransport sets the transport for the *Client.
 func WithTransport(transport *http.Transport) Option {
 	return func(c *Client) {
 		c.transport = transport

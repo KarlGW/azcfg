@@ -39,7 +39,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 			},
 			want: &ManagedIdentityCredential{
 				c: &http.Client{},
-				header: http.Header{
+				headers: http.Header{
 					"User-Agent": {"azcfg/" + version.Version()},
 					"Metadata":   {"true"},
 				},
@@ -61,7 +61,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 			},
 			want: &ManagedIdentityCredential{
 				c: &http.Client{},
-				header: http.Header{
+				headers: http.Header{
 					"User-Agent": {"azcfg/" + version.Version()},
 					"Metadata":   {"true"},
 				},
@@ -84,7 +84,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 			},
 			want: &ManagedIdentityCredential{
 				c: &http.Client{},
-				header: http.Header{
+				headers: http.Header{
 					"User-Agent": {"azcfg/" + version.Version()},
 					"Metadata":   {"true"},
 				},
@@ -108,7 +108,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 			},
 			want: &ManagedIdentityCredential{
 				c: &http.Client{},
-				header: http.Header{
+				headers: http.Header{
 					"User-Agent":        {"azcfg/" + version.Version()},
 					"X-Identity-Header": {"12345"},
 				},

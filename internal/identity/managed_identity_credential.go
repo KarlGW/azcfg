@@ -55,7 +55,7 @@ const (
 // settings to perform token requests.
 type ManagedIdentityCredential struct {
 	c          request.Client
-	header     http.Header
+	headers    http.Header
 	tokens     map[auth.Scope]*auth.Token
 	endpoint   string
 	userAgent  string
@@ -69,7 +69,7 @@ type ManagedIdentityCredential struct {
 func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentityCredential, error) {
 	c := &ManagedIdentityCredential{
 		c:         httpr.NewClient(),
-		header:    http.Header{},
+		headers:   http.Header{},
 		tokens:    make(map[auth.Scope]*auth.Token),
 		userAgent: "azcfg/" + version.Version(),
 	}
@@ -99,13 +99,13 @@ func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentity
 	if endpoint, ok := os.LookupEnv(identityEndpoint); ok {
 		if header, ok := os.LookupEnv(identityHeader); ok {
 			c.endpoint, c.apiVersion = endpoint, appServiceAPIVersion
-			c.header.Add("X-Identity-Header", header)
+			c.headers.Add("X-Identity-Header", header)
 		} else {
 			return nil, ErrUnsupportedManagedIdentityType
 		}
 	} else {
 		c.endpoint, c.apiVersion = imdsEndpoint, imdsAPIVersion
-		c.header.Add("Metadata", "true")
+		c.headers.Add("Metadata", "true")
 	}
 
 	return c, nil
@@ -156,7 +156,7 @@ func (c *ManagedIdentityCredential) tokenRequest(ctx context.Context, scope stri
 	headers := http.Header{
 		"User-Agent": []string{c.userAgent},
 	}
-	for k, v := range c.header {
+	for k, v := range c.headers {
 		headers.Add(k, v[0])
 	}
 

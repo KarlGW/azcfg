@@ -143,7 +143,7 @@ func (c *ManagedIdentityCredential) tokenRequest(ctx context.Context, scope stri
 		return auth.Token{}, err
 	}
 	qs := url.Values{
-		"resource":    {strings.TrimSuffix(string(scope), "/.default")},
+		"resource":    {strings.TrimSuffix(scope, "/.default")},
 		"api-version": {c.apiVersion},
 	}
 	if len(c.clientID) > 0 {

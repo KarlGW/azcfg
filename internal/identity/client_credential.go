@@ -113,7 +113,7 @@ func (c *ClientCredential) Token(ctx context.Context, options ...auth.TokenOptio
 // based on the settings of the ClientCredential.
 func (c *ClientCredential) tokenRequest(ctx context.Context, scope string) (auth.Token, error) {
 	data := url.Values{
-		"scope":      {string(scope)},
+		"scope":      {scope},
 		"grant_type": {"client_credentials"},
 		"client_id":  {c.clientID},
 	}

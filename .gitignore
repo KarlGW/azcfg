@@ -3,3 +3,5 @@ testdata/
 go.work
 go.work.sum
 TODO.md
+
+.DS_Store

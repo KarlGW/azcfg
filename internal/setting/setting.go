@@ -50,7 +50,7 @@ type Client struct {
 }
 
 // ClientOption is a function that sets options to *Client.
-type ClientOption func(o *Client)
+type ClientOption func(c *Client)
 
 // NewClient creates and returns a new Client.
 func NewClient(appConfiguration string, cred auth.Credential, options ...ClientOption) *Client {

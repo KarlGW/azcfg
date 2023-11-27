@@ -11,9 +11,9 @@ type Options struct {
 	// Credential is the credential to be used with the Client. Used to override
 	// the default method of aquiring credentials.
 	Credential auth.Credential
-	// SecretClient is a client used to retreive secrets.
+	// SecretClient is a client used to retrieve secrets.
 	SecretClient secretClient
-	// SettingClient is a client used to retreive settings.
+	// SettingClient is a client used to retrieve settings.
 	SettingClient settingClient
 	// Timeout is the total timeout for retrieval of secrets. Defaults to 5 seconds.
 	Timeout time.Duration

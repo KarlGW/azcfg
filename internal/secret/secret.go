@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/httpr"
 	"github.com/KarlGW/azcfg/internal/request"
-	"github.com/KarlGW/azcfg/internal/retry"
 	"github.com/KarlGW/azcfg/version"
 )
 
@@ -64,9 +64,7 @@ func NewClient(keyVault string, cred auth.Credential, options ...ClientOption) *
 		option(c)
 	}
 	if c.c == nil {
-		c.c = &http.Client{
-			Timeout: c.timeout,
-		}
+		c.c = httpr.NewClient()
 	}
 	return c
 }
@@ -103,36 +101,22 @@ func (c Client) Get(ctx context.Context, name string, options ...Option) (Secret
 		"Authorization": []string{"Bearer " + token.AccessToken},
 	}
 
-	var b []byte
-	if err := retry.Do(ctx, func() error {
-		b, err = request.Do(ctx, c.c, headers, http.MethodGet, u, nil)
-		if err != nil {
-			var requestErr request.Error
-			if errors.As(err, &requestErr) {
-				if requestErr.StatusCode == http.StatusNotFound {
-					err = fmt.Errorf("secret: %s: %w", name, ErrNotFound)
-				}
-			}
-			return err
-		}
-		return nil
-	}, func(o *retry.Policy) {
-		o.Retry = shouldRetry
-	}); err != nil {
-		var requestErr request.Error
-		if errors.As(err, &requestErr) {
-			var secretErr secretError
-			if err := json.Unmarshal(requestErr.Body, &secretErr); err != nil {
-				return Secret{}, err
-			}
-			secretErr.StatusCode = requestErr.StatusCode
-			return Secret{}, secretErr
-		}
+	resp, err := request.Do(ctx, c.c, headers, http.MethodGet, u, nil)
+	if err != nil {
 		return Secret{}, err
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		var secretErr secretError
+		if err := json.Unmarshal(resp.Body, &secretErr); err != nil {
+			return Secret{}, err
+		}
+		secretErr.StatusCode = resp.StatusCode
+		return Secret{}, secretErr
+	}
+
 	var secret Secret
-	if err := json.Unmarshal(b, &secret); err != nil {
+	if err := json.Unmarshal(resp.Body, &secret); err != nil {
 		return secret, err
 	}
 
@@ -181,7 +165,7 @@ func (c Client) getSecrets(ctx context.Context, names []string, options ...Optio
 					}
 					sr := secretResult{name: name}
 					secret, err := c.Get(ctx, name, options...)
-					if err != nil && !errors.Is(err, ErrNotFound) {
+					if err != nil && !isSecretError(err, http.StatusNotFound) {
 						sr.err = err
 						srCh <- sr
 						cancel()
@@ -225,20 +209,6 @@ func WithTimeout(d time.Duration) ClientOption {
 	}
 }
 
-// shouldRetry contains retry policy for secret requests.
-func shouldRetry(err error) bool {
-	if err == nil {
-		return false
-	}
-	var e request.Error
-	if errors.As(err, &e) {
-		if e.StatusCode == 0 || e.StatusCode == http.StatusInternalServerError {
-			return true
-		}
-	}
-	return false
-}
-
 // secretError represents an error returned from the Key Vault REST API.
 type secretError struct {
 	Err struct {
@@ -253,7 +223,23 @@ func (e secretError) Error() string {
 	return e.Err.Message
 }
 
-var (
-	// ErrNotFound is returned when a secret is not found.
-	ErrNotFound = errors.New("not found")
-)
+// isSecretError checks if the provided error is a secretError.
+// If the optional statusCodes is provided it further
+// requires that they should match that with the
+// provided error.
+func isSecretError(err error, statusCodes ...int) bool {
+	var secretErr secretError
+	if errors.As(err, &secretErr) {
+		if len(statusCodes) == 0 {
+			return true
+		} else {
+			for _, statusCode := range statusCodes {
+				if secretErr.StatusCode == statusCode {
+					return true
+				}
+			}
+		}
+
+	}
+	return false
+}

@@ -173,3 +173,67 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 		Body:       io.NopCloser(bytes.NewBuffer(b)),
 	}, nil
 }
+
+func TestIsSecretError(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input struct {
+			err         error
+			statusCodes []int
+		}
+		want bool
+	}{
+		{
+			name: "is not a secretError",
+			input: struct {
+				err         error
+				statusCodes []int
+			}{
+				err: errors.New("error"),
+			},
+			want: false,
+		},
+		{
+			name: "is a secretError",
+			input: struct {
+				err         error
+				statusCodes []int
+			}{
+				err: secretError{},
+			},
+			want: true,
+		},
+		{
+			name: "is a secretError with statusCode",
+			input: struct {
+				err         error
+				statusCodes []int
+			}{
+				err:         secretError{StatusCode: http.StatusNotFound},
+				statusCodes: []int{http.StatusNotFound},
+			},
+			want: true,
+		},
+		{
+			name: "is a secretError with statusCode",
+			input: struct {
+				err         error
+				statusCodes []int
+			}{
+				err:         secretError{StatusCode: http.StatusNotFound},
+				statusCodes: []int{http.StatusBadRequest},
+			},
+			want: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := isSecretError(test.input.err, test.input.statusCodes...)
+
+			if test.want != got {
+				t.Errorf("isSecretError() = unexpected result, want: %v, got: %v\n", test.want, got)
+			}
+		})
+	}
+}

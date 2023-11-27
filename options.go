@@ -15,7 +15,7 @@ type Options struct {
 	SecretClient secretClient
 	// SettingClient is a client used to retrieve settings.
 	SettingClient settingClient
-	// Timeout is the total timeout for retrieval of secrets. Defaults to 5 seconds.
+	// Timeout is the total timeout for retrieval of secrets. Defaults to 10 seconds.
 	Timeout time.Duration
 	// Concurrency is the amount of secrets that will be retrieved concurrently.
 	// Defaults to 10.

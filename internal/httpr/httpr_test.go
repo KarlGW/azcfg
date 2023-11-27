@@ -44,7 +44,7 @@ func TestClient_Do(t *testing.T) {
 				retryPolicy: RetryPolicy{
 					MinDelay: time.Millisecond * 1,
 					MaxDelay: time.Millisecond * 5,
-					Retry:    shouldRetry,
+					Retry:    defaultRetry,
 					Backoff:  exponentialBackoff,
 				},
 			},
@@ -63,7 +63,7 @@ func TestClient_Do(t *testing.T) {
 				retryPolicy: RetryPolicy{
 					MinDelay:   time.Millisecond * 1,
 					MaxDelay:   time.Millisecond * 5,
-					Retry:      shouldRetry,
+					Retry:      defaultRetry,
 					Backoff:    exponentialBackoff,
 					MaxRetries: 3,
 				},
@@ -85,7 +85,7 @@ func TestClient_Do(t *testing.T) {
 				retryPolicy: RetryPolicy{
 					MinDelay:   time.Millisecond * 1,
 					MaxDelay:   time.Millisecond * 5,
-					Retry:      shouldRetry,
+					Retry:      defaultRetry,
 					Backoff:    exponentialBackoff,
 					MaxRetries: 3,
 				},
@@ -109,7 +109,7 @@ func TestClient_Do(t *testing.T) {
 				retryPolicy: RetryPolicy{
 					MinDelay:   time.Millisecond * 5,
 					MaxDelay:   time.Millisecond * 10,
-					Retry:      shouldRetry,
+					Retry:      defaultRetry,
 					Backoff:    exponentialBackoff,
 					MaxRetries: 3,
 				},
@@ -132,7 +132,7 @@ func TestClient_Do(t *testing.T) {
 				retryPolicy: RetryPolicy{
 					MinDelay: time.Millisecond * 1,
 					MaxDelay: time.Millisecond * 5,
-					Retry:    shouldRetry,
+					Retry:    defaultRetry,
 					Backoff:  exponentialBackoff,
 				},
 			},
@@ -151,7 +151,7 @@ func TestClient_Do(t *testing.T) {
 				retryPolicy: RetryPolicy{
 					MinDelay:   time.Millisecond * 1,
 					MaxDelay:   time.Millisecond * 5,
-					Retry:      shouldRetry,
+					Retry:      defaultRetry,
 					Backoff:    exponentialBackoff,
 					MaxRetries: 3,
 				},

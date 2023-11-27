@@ -112,7 +112,7 @@ func resetRequest(r *http.Request) error {
 	return nil
 }
 
-// drainResponse drains the response body if before a retry.
+// drainResponse drains the response body before a retry.
 func drainResponse(r *http.Response) error {
 	if r == nil {
 		return nil
@@ -133,11 +133,12 @@ type RetryPolicy struct {
 	Backoff    backoff
 }
 
-// retry is a function that takes an error and returns
-// true of alse based on the error.
+// retry is a function that takes an *http.Response and an error
+// and evaluates if a retry should be done.
 type retry func(r *http.Response, err error) bool
 
-func shouldRetry(r *http.Response, err error) bool {
+// defaultRetry is the default implementation of retry.
+func defaultRetry(r *http.Response, err error) bool {
 	if err != nil {
 		return true
 	}
@@ -167,7 +168,7 @@ func defaultRetryPolicy() RetryPolicy {
 		MinDelay:   time.Millisecond * 500,
 		MaxDelay:   time.Second * 5,
 		MaxRetries: 3,
-		Retry:      shouldRetry,
+		Retry:      defaultRetry,
 		Backoff:    exponentialBackoff,
 	}
 }

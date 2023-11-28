@@ -151,9 +151,6 @@ func (c Client) getSecrets(ctx context.Context, names []string, options ...Optio
 		concurrency = len(names)
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	var wg sync.WaitGroup
 	for i := 1; i <= concurrency; i++ {
 		wg.Add(1)
@@ -170,7 +167,6 @@ func (c Client) getSecrets(ctx context.Context, names []string, options ...Optio
 					if err != nil && !isSecretError(err, http.StatusNotFound) {
 						sr.err = err
 						srCh <- sr
-						cancel()
 						return
 					}
 					sr.secret = secret

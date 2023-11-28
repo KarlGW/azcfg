@@ -166,9 +166,6 @@ func (c Client) getSettings(ctx context.Context, keys []string, options ...Optio
 		concurrency = len(keys)
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	var wg sync.WaitGroup
 	for i := 1; i <= concurrency; i++ {
 		wg.Add(1)
@@ -185,7 +182,6 @@ func (c Client) getSettings(ctx context.Context, keys []string, options ...Optio
 					if err != nil && !isSettingError(err, http.StatusNotFound) {
 						sr.err = err
 						srCh <- sr
-						cancel()
 						return
 					}
 					sr.setting = setting

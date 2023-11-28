@@ -3,8 +3,8 @@
 ## github.com/Azure/azure-sdk-for-go/sdk/azcore
 
 * Name: github.com/Azure/azure-sdk-for-go/sdk/azcore
-* Version: v1.8.0
-* License: [MIT](https://github.com/Azure/azure-sdk-for-go/blob/sdk/azcore/v1.8.0/sdk/azcore/LICENSE.txt)
+* Version: v1.9.0
+* License: [MIT](https://github.com/Azure/azure-sdk-for-go/blob/sdk/azcore/v1.9.0/sdk/azcore/LICENSE.txt)
 
 ```
 MIT License
@@ -34,8 +34,8 @@ SOFTWARE
 ## github.com/Azure/azure-sdk-for-go/sdk/internal
 
 * Name: github.com/Azure/azure-sdk-for-go/sdk/internal
-* Version: v1.3.0
-* License: [MIT](https://github.com/Azure/azure-sdk-for-go/blob/sdk/internal/v1.3.0/sdk/internal/LICENSE.txt)
+* Version: v1.5.0
+* License: [MIT](https://github.com/Azure/azure-sdk-for-go/blob/sdk/internal/v1.5.0/sdk/internal/LICENSE.txt)
 
 ```
 MIT License
@@ -102,8 +102,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## golang.org/x/net
 
 * Name: golang.org/x/net
-* Version: v0.17.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/net/+/v0.17.0:LICENSE)
+* Version: v0.19.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/net/+/v0.19.0:LICENSE)
 
 ```
 Copyright (c) 2009 The Go Authors. All rights reserved.
@@ -139,8 +139,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ## golang.org/x/text
 
 * Name: golang.org/x/text
-* Version: v0.13.0
-* License: [BSD-3-Clause](https://cs.opensource.google/go/x/text/+/v0.13.0:LICENSE)
+* Version: v0.14.0
+* License: [BSD-3-Clause](https://cs.opensource.google/go/x/text/+/v0.14.0:LICENSE)
 
 ```
 Copyright (c) 2009 The Go Authors. All rights reserved.

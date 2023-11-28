@@ -211,16 +211,16 @@ func (c Client) getSettings(ctx context.Context, keys []string, options ...Optio
 }
 
 // WithConcurrency sets the concurrency for secret retrieval.
-func WithConcurrency(c int) ClientOption {
-	return func(cl *Client) {
-		cl.concurrency = c
+func WithConcurrency(n int) ClientOption {
+	return func(c *Client) {
+		c.concurrency = n
 	}
 }
 
 // WithTimeout sets timeout for secret retreival.
 func WithTimeout(d time.Duration) ClientOption {
-	return func(cl *Client) {
-		cl.timeout = d
+	return func(c *Client) {
+		c.timeout = d
 	}
 }
 

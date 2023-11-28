@@ -1,8 +1,8 @@
 package identity
 
 import (
-	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -11,7 +11,8 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
-	"github.com/KarlGW/azcfg/internal/retry"
+	"github.com/KarlGW/azcfg/internal/httpr"
+	"github.com/KarlGW/azcfg/internal/request"
 	"github.com/KarlGW/azcfg/version"
 )
 
@@ -30,15 +31,14 @@ var (
 // according to the client credential flow. It contains all the necessary settings
 // to perform token requests.
 type ClientCredential struct {
-	c            httpClient
-	header       http.Header
-	token        *auth.Token
+	c            request.Client
+	tokens       map[auth.Scope]*auth.Token
 	endpoint     string
+	userAgent    string
 	tenantID     string
 	clientID     string
 	clientSecret string
-	scope        string
-	mu           *sync.RWMutex
+	mu           sync.RWMutex
 }
 
 // NewClientCredential creates and returns a new *ClientCredential.
@@ -51,15 +51,12 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 	}
 
 	c := &ClientCredential{
-		c: &http.Client{},
-		header: http.Header{
-			"User-Agent":   {"azcfg/" + version.Version()},
-			"Content-Type": {"application/x-www-form-urlencoded"},
-		},
-		endpoint: strings.Replace(authEndpoint, "{tenant}", tenantID, 1),
-		tenantID: tenantID,
-		clientID: clientID,
-		mu:       &sync.RWMutex{},
+		c:         httpr.NewClient(),
+		tokens:    make(map[auth.Scope]*auth.Token),
+		userAgent: "azcfg/" + version.Version(),
+		endpoint:  strings.Replace(authEndpoint, "{tenant}", tenantID, 1),
+		tenantID:  tenantID,
+		clientID:  clientID,
 	}
 
 	opts := CredentialOptions{}
@@ -73,12 +70,6 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 
 	if len(opts.clientSecret) > 0 {
 		c.clientSecret = opts.clientSecret
-	}
-
-	if len(opts.scope) > 0 {
-		c.scope = opts.scope
-	} else {
-		c.scope = defaultScope
 	}
 
 	return c, nil
@@ -95,26 +86,34 @@ func NewClientSecretCredential(tenantID, clientID, clientSecret string, options 
 }
 
 // Token returns a new auth.Token for requests to the Azure REST API.
-func (c *ClientCredential) Token(ctx context.Context) (auth.Token, error) {
+func (c *ClientCredential) Token(ctx context.Context, options ...auth.TokenOption) (auth.Token, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.token != nil && c.token.ExpiresOn.After(time.Now()) {
-		return *c.token, nil
+	opts := auth.TokenOptions{
+		Scope: auth.ScopeResourceManager,
 	}
-	token, err := c.tokenRequest(ctx)
+	for _, option := range options {
+		option(&opts)
+	}
+
+	if c.tokens[opts.Scope] != nil && c.tokens[opts.Scope].ExpiresOn.UTC().After(time.Now().UTC()) {
+		return *c.tokens[opts.Scope], nil
+	}
+
+	token, err := c.tokenRequest(ctx, string(opts.Scope))
 	if err != nil {
 		return auth.Token{}, err
 	}
-	c.token = &token
-	return *c.token, nil
+	c.tokens[opts.Scope] = &token
+	return *c.tokens[opts.Scope], nil
 }
 
 // tokenRequest requests a token after creating the request body
 // based on the settings of the ClientCredential.
-func (c ClientCredential) tokenRequest(ctx context.Context) (auth.Token, error) {
+func (c *ClientCredential) tokenRequest(ctx context.Context, scope string) (auth.Token, error) {
 	data := url.Values{
-		"scope":      {c.scope},
+		"scope":      {scope},
 		"grant_type": {"client_credentials"},
 		"client_id":  {c.clientID},
 	}
@@ -124,24 +123,26 @@ func (c ClientCredential) tokenRequest(ctx context.Context) (auth.Token, error) 
 		return auth.Token{}, ErrMissingCredentials
 	}
 
-	var r authResult
-	if err := retry.Do(ctx, func() error {
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewBufferString(data.Encode()))
-		if err != nil {
-			return err
-		}
-		for k, v := range c.header {
-			req.Header.Add(k, strings.Join(v, ", "))
-		}
+	headers := http.Header{
+		"Content-Type": []string{"application/x-www-form-urlencoded"},
+		"User-Agent":   []string{c.userAgent},
+	}
 
-		r, err = request(c.c, req)
-		if err != nil {
-			return err
+	resp, err := request.Do(ctx, c.c, headers, http.MethodPost, c.endpoint, []byte(data.Encode()))
+	if err != nil {
+		return auth.Token{}, err
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode > http.StatusNoContent {
+		var authErr authError
+		if err := json.Unmarshal(resp.Body, &authErr); err != nil {
+			return auth.Token{}, err
 		}
-		return nil
-	}, func(o *retry.Policy) {
-		o.Retry = shouldRetry
-	}); err != nil {
+		authErr.StatusCode = resp.StatusCode
+		return auth.Token{}, authErr
+	}
+
+	var r authResult
+	if err := json.Unmarshal(resp.Body, &r); err != nil {
 		return auth.Token{}, err
 	}
 

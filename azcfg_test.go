@@ -5,8 +5,10 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/KarlGW/azcfg/internal/secret"
+	"github.com/KarlGW/azcfg/internal/setting"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -20,17 +22,26 @@ func TestParse(t *testing.T) {
 		{
 			name: "parse",
 			input: Struct{
-				String:    "initial string",
-				Bool:      false,
-				BoolPtr:   toPtr(false),
-				StringPtr: toPtr("initial string ptr"),
-				Empty:     "",
+				String:           "initial string",
+				StringPtr:        toPtr("initial string ptr"),
+				StringSetting:    "initial string setting",
+				StringSettingPtr: toPtr("initial string setting ptr"),
+				Bool:             false,
+				BoolPtr:          toPtr(false),
+				BoolSetting:      false,
+				BoolSettingPtr:   toPtr(false),
+				Empty:            "",
+				EmptySetting:     "",
 				NestedStructA: NestedStructA{
-					Int:         1,
-					Int64:       1,
-					Uint:        1,
-					Uint64:      1,
-					IntNotParse: 1,
+					Int:           1,
+					Int64:         1,
+					IntSetting:    1,
+					Int64Setting:  1,
+					Uint:          1,
+					Uint64:        1,
+					UintSetting:   1,
+					Uint64Setting: 1,
+					IntNotParse:   1,
 					NestedNestedStruct: NestedNestedStruct{
 						NestedString: "initial nested string",
 					},
@@ -43,50 +54,143 @@ func TestParse(t *testing.T) {
 					Int:         2,
 					IntNotParse: 2,
 				},
-				unexportedField: "initial string",
+				unexportedField:        "initial string",
+				unexportedSettingField: "initial string",
 			},
 			want: Struct{
-				String:    "new string",
-				StringPtr: toPtr("new string ptr"),
-				Bool:      true,
-				BoolPtr:   toPtr(true),
+				String:           "new string",
+				StringPtr:        toPtr("new string ptr"),
+				Bool:             true,
+				BoolPtr:          toPtr(true),
+				BoolSetting:      true,
+				BoolSettingPtr:   toPtr(true),
+				StringSetting:    "new string setting",
+				StringSettingPtr: toPtr("new string setting ptr"),
 				NestedStructA: NestedStructA{
-					Int:            100,
-					Int64:          100,
-					IntNotParse:    1,
-					Uint:           100,
-					Uint64:         100,
-					StringSlice:    []string{"a", "b", "c"},
-					StringSlicePtr: []*string{toPtr("a"), toPtr("b"), toPtr("c")},
-					IntSlice:       []int{1, 2, 3},
-					IntSlicePtr:    []*int{toPtr(1), toPtr(2), toPtr(3)},
+					Int:                   100,
+					Int64:                 100,
+					IntSetting:            100,
+					Int64Setting:          100,
+					IntNotParse:           1,
+					Uint:                  100,
+					Uint64:                100,
+					UintSetting:           100,
+					Uint64Setting:         100,
+					StringSlice:           []string{"a", "b", "c"},
+					StringSlicePtr:        []*string{toPtr("a"), toPtr("b"), toPtr("c")},
+					StringSliceSetting:    []string{"a", "b", "c"},
+					StringSliceSettingPtr: []*string{toPtr("a"), toPtr("b"), toPtr("c")},
+					IntSlice:              []int{1, 2, 3},
+					IntSlicePtr:           []*int{toPtr(1), toPtr(2), toPtr(3)},
+					IntSliceSetting:       []int{1, 2, 3},
+					IntSliceSettingPtr:    []*int{toPtr(1), toPtr(2), toPtr(3)},
 					NestedNestedStruct: NestedNestedStruct{
 						NestedString: "new nested string",
 					},
 				},
 				NestedStructB: &NestedStructB{
-					Float64:    100,
-					Float64Ptr: toPtr[float64](100),
+					Float64:           100,
+					Float64Ptr:        toPtr[float64](100),
+					Float64Setting:    100,
+					Float64SettingPtr: toPtr[float64](100),
 				},
 				unexportedNestedStructA: NestedStructA{
 					Int:         2,
 					IntNotParse: 2,
 				},
-				unexportedField: "initial string",
+				unexportedField:        "initial string",
+				unexportedSettingField: "initial string",
 			},
+		},
+		{
+			name: "parse - error getting secrets and settings",
+			input: Struct{
+				String:           "initial string",
+				StringPtr:        toPtr("initial string ptr"),
+				StringSetting:    "initial string setting",
+				StringSettingPtr: toPtr("initial string setting ptr"),
+				Bool:             false,
+				BoolPtr:          toPtr(false),
+				BoolSetting:      false,
+				BoolSettingPtr:   toPtr(false),
+				Empty:            "",
+				EmptySetting:     "",
+				NestedStructA: NestedStructA{
+					Int:           1,
+					Int64:         1,
+					IntSetting:    1,
+					Int64Setting:  1,
+					Uint:          1,
+					Uint64:        1,
+					UintSetting:   1,
+					Uint64Setting: 1,
+					IntNotParse:   1,
+					NestedNestedStruct: NestedNestedStruct{
+						NestedString: "initial nested string",
+					},
+				},
+				NestedStructB: &NestedStructB{
+					Float64:    1,
+					Float64Ptr: toPtr[float64](1),
+				},
+				unexportedNestedStructA: NestedStructA{
+					Int:         2,
+					IntNotParse: 2,
+				},
+				unexportedField:        "initial string",
+				unexportedSettingField: "initial string",
+			},
+			want: Struct{
+				String:           "initial string",
+				StringPtr:        toPtr("initial string ptr"),
+				StringSetting:    "initial string setting",
+				StringSettingPtr: toPtr("initial string setting ptr"),
+				Bool:             false,
+				BoolPtr:          toPtr(false),
+				BoolSetting:      false,
+				BoolSettingPtr:   toPtr(false),
+				Empty:            "",
+				EmptySetting:     "",
+				NestedStructA: NestedStructA{
+					Int:           1,
+					Int64:         1,
+					IntSetting:    1,
+					Int64Setting:  1,
+					Uint:          1,
+					Uint64:        1,
+					UintSetting:   1,
+					Uint64Setting: 1,
+					IntNotParse:   1,
+					NestedNestedStruct: NestedNestedStruct{
+						NestedString: "initial nested string",
+					},
+				},
+				NestedStructB: &NestedStructB{
+					Float64:    1,
+					Float64Ptr: toPtr[float64](1),
+				},
+				unexportedNestedStructA: NestedStructA{
+					Int:         2,
+					IntNotParse: 2,
+				},
+				unexportedField:        "initial string",
+				unexportedSettingField: "initial string",
+			},
+			wantErr: errors.New("error"),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			client := mockClient{}
+			secretClient := mockSecretClient{err: test.wantErr}
+			settingClient := mockSettingClient{err: test.wantErr}
 
-			err := parse(&test.input, client)
+			gotErr := parse(&test.input, secretClient, settingClient, "")
 			if diff := cmp.Diff(test.want, test.input, cmp.AllowUnexported(Struct{})); diff != "" {
-				t.Errorf("parse(%+v, %+v) = unexpected result, (-want, +got)\n%s\n", test.input, client, diff)
+				t.Errorf("parse() = unexpected result, (-want, +got)\n%s\n", diff)
 			}
 
-			if test.wantErr != nil && err == nil {
+			if test.wantErr != nil && gotErr == nil {
 				t.Errorf("Unexpected result, should return error\n")
 			}
 		})
@@ -100,24 +204,30 @@ func TestParseRequired(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name:    "required",
-			input:   StructWithRequired{},
-			wantErr: &RequiredError{message: "secrets: empty and empty-float64 are required"},
+			name:  "required",
+			input: StructWithRequired{},
+			wantErr: &RequiredFieldsError{
+				errors: []error{
+					requiredSecretsError{message: requiredErrorMessage(map[string]secret.Secret{"empty": {}, "empty-float64": {}}, []string{"empty", "empty-float64"}, "secret")},
+					requiredSettingsError{message: requiredErrorMessage(map[string]setting.Setting{"empty-setting": {}}, []string{"empty-setting"}, "setting")},
+				},
+			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			client := mockClient{}
+			secretClient := mockSecretClient{}
+			settingClient := mockSettingClient{}
 
-			err := parse(&test.input, client)
-			if test.wantErr != nil && err == nil {
+			gotErr := parse(&test.input, secretClient, settingClient, "")
+			if test.wantErr != nil && gotErr == nil {
 				t.Errorf("Unexpected result, should return error\n")
 			}
 
-			if test.wantErr != nil && err != nil {
-				if diff := cmp.Diff(test.wantErr.Error(), err.Error()); diff != "" {
-					t.Errorf("parse(%+v, %+v) = unexpected result, (-want, +got)\n%s\n", test.wantErr.Error(), err.Error(), diff)
+			if test.wantErr != nil && gotErr != nil {
+				if diff := cmp.Diff(test.wantErr.Error(), gotErr.Error()); diff != "" {
+					t.Errorf("parse(%+v, %+v) = unexpected result, (-want, +got)\n%s\n", test.wantErr.Error(), gotErr.Error(), diff)
 				}
 			}
 		})
@@ -221,31 +331,47 @@ func TestSplitTrim(t *testing.T) {
 type Struct struct {
 	String                  string  `secret:"string"`
 	StringPtr               *string `secret:"string-ptr"`
+	StringSetting           string  `setting:"string-setting"`
+	StringSettingPtr        *string `setting:"string-setting-ptr"`
 	Bool                    bool    `secret:"bool"`
 	BoolPtr                 *bool   `secret:"bool-ptr"`
+	BoolSetting             bool    `setting:"bool-setting"`
+	BoolSettingPtr          *bool   `setting:"bool-setting-ptr"`
 	Empty                   string  `secret:"empty"`
+	EmptySetting            string  `setting:"empty-setting"`
 	NestedStructA           NestedStructA
 	NestedStructB           *NestedStructB
 	unexportedNestedStructA NestedStructA
 	unexportedField         string `secret:"string"`
+	unexportedSettingField  string `setting:"setting"`
 }
 
 type NestedStructA struct {
-	Int                int    `secret:"int"`
-	Int64              int64  `secret:"int64"`
-	Uint               uint   `secret:"uint"`
-	Uint64             uint64 `secret:"uint64"`
-	IntNotParse        int
-	StringSlice        []string  `secret:"string-slice"`
-	StringSlicePtr     []*string `secret:"string-slice-ptr"`
-	IntSlice           []int     `secret:"int-slice"`
-	IntSlicePtr        []*int    `secret:"int-slice-ptr"`
-	NestedNestedStruct NestedNestedStruct
+	Int                   int    `secret:"int"`
+	IntSetting            int    `setting:"int-setting"`
+	Int64                 int64  `secret:"int64"`
+	Int64Setting          int64  `setting:"int64-setting"`
+	Uint                  uint   `secret:"uint"`
+	Uint64                uint64 `secret:"uint64"`
+	UintSetting           uint   `setting:"uint-setting"`
+	Uint64Setting         uint64 `setting:"uint64-setting"`
+	IntNotParse           int
+	StringSlice           []string  `secret:"string-slice"`
+	StringSlicePtr        []*string `secret:"string-slice-ptr"`
+	StringSliceSetting    []string  `setting:"string-slice-setting"`
+	StringSliceSettingPtr []*string `setting:"string-slice-setting-ptr"`
+	IntSlice              []int     `secret:"int-slice"`
+	IntSlicePtr           []*int    `secret:"int-slice-ptr"`
+	IntSliceSetting       []int     `setting:"int-slice-setting"`
+	IntSliceSettingPtr    []*int    `setting:"int-slice-setting-ptr"`
+	NestedNestedStruct    NestedNestedStruct
 }
 
 type NestedStructB struct {
-	Float64    float64  `secret:"float64"`
-	Float64Ptr *float64 `secret:"float64-ptr"`
+	Float64           float64  `secret:"float64"`
+	Float64Ptr        *float64 `secret:"float64-ptr"`
+	Float64Setting    float64  `setting:"float64-setting"`
+	Float64SettingPtr *float64 `setting:"float64-setting-ptr"`
 }
 
 type NestedNestedStruct struct {
@@ -255,6 +381,7 @@ type NestedNestedStruct struct {
 type StructWithRequired struct {
 	String                   string `secret:"string"`
 	Empty                    string `secret:"empty,required"`
+	EmptySetting             string `setting:"empty-setting,required"`
 	NestedStructWithRequired NestedStructWithRequired
 }
 
@@ -263,19 +390,15 @@ type NestedStructWithRequired struct {
 	Float64 float64 `secret:"empty-float64,required"`
 }
 
-type mockClient struct {
-	err bool
+type mockSecretClient struct {
+	err error
 }
 
-func (c mockClient) Get(names ...string) (map[string]secret.Secret, error) {
-	if c.err == true {
+func (c mockSecretClient) GetSecrets(names []string, options ...secret.Option) (map[string]secret.Secret, error) {
+	if c.err != nil {
 		return nil, errors.New("could not get secrets")
 	}
 	return responseSecrets, nil
-}
-
-func toPtr[V any](v V) *V {
-	return &v
 }
 
 var (
@@ -296,5 +419,41 @@ var (
 		"string-slice-ptr": {Value: "a,b,c"},
 		"int-slice":        {Value: "1,2,3"},
 		"int-slice-ptr":    {Value: "1,2,3"},
+	}
+)
+
+type mockSettingClient struct {
+	err error
+}
+
+func (c mockSettingClient) GetSettings(keys []string, options ...setting.Option) (map[string]setting.Setting, error) {
+	time.Sleep(time.Millisecond * 10)
+	if c.err != nil {
+		return nil, errors.New("could not get settings")
+	}
+	return responseSettings, nil
+}
+
+func toPtr[V any](v V) *V {
+	return &v
+}
+
+var (
+	responseSettings = map[string]setting.Setting{
+		"string-setting":           {Value: "new string setting"},
+		"string-setting-ptr":       {Value: "new string setting ptr"},
+		"bool-setting":             {Value: "true"},
+		"bool-setting-ptr":         {Value: "true"},
+		"empty-setting":            {Value: ""},
+		"int-setting":              {Value: "100"},
+		"int64-setting":            {Value: "100"},
+		"uint-setting":             {Value: "100"},
+		"uint64-setting":           {Value: "100"},
+		"float64-setting":          {Value: "100"},
+		"float64-setting-ptr":      {Value: "100"},
+		"string-slice-setting":     {Value: "a,b,c"},
+		"string-slice-setting-ptr": {Value: "a,b,c"},
+		"int-slice-setting":        {Value: "1,2,3"},
+		"int-slice-setting-ptr":    {Value: "1,2,3"},
 	}
 )

@@ -11,7 +11,8 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
-	"github.com/KarlGW/azcfg/internal/retry"
+	"github.com/KarlGW/azcfg/internal/httpr"
+	"github.com/KarlGW/azcfg/internal/request"
 	"github.com/KarlGW/azcfg/version"
 )
 
@@ -20,6 +21,10 @@ const (
 	baseURL = "https://{vault}.vault.azure.net/secrets"
 	// apiVersion is the API version of the Key Vault REST API endpoint.
 	apiVersion = "7.4"
+	// defaultConcurrency is the default concurrency set on the client.
+	defaultConcurrency = 10
+	// defaultTimeout is the default timeout set on the client.
+	defaultTimeout = time.Second * 10
 )
 
 // Secret represents a secret as returned from the Key Vault REST API.
@@ -27,94 +32,93 @@ type Secret struct {
 	Value string `json:"value"`
 }
 
-// httpClient is an interface that wraps around method Do.
-type httpClient interface {
-	Do(req *http.Request) (*http.Response, error)
+// GetValue returns the Value of the Secret.
+func (s Secret) GetValue() string {
+	return s.Value
 }
 
 // Client contains methods to call the Azure Key Vault REST API and
 // base settings for handling the requests.
 type Client struct {
-	c           httpClient
+	c           request.Client
 	cred        auth.Credential
-	header      http.Header
 	baseURL     string
+	userAgent   string
 	concurrency int
 	timeout     time.Duration
 }
 
-// ClientOptions contains options for the Client.
-type ClientOptions struct {
-	HTTPClient  httpClient
-	Concurrency int
-	Timeout     time.Duration
-}
-
-// ClientOption is a function that sets options to *ClientOptions.
-type ClientOption func(o *ClientOptions)
+// ClientOption is a function that sets options to *Client.
+type ClientOption func(c *Client)
 
 // NewClient creates and returns a new Client.
-func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Client {
-	opts := ClientOptions{
-		Concurrency: 10,
-		Timeout:     time.Second * 10,
+func NewClient(keyVault string, cred auth.Credential, options ...ClientOption) *Client {
+	c := &Client{
+		cred:        cred,
+		baseURL:     strings.Replace(baseURL, "{vault}", keyVault, 1),
+		userAgent:   "azcfg/" + version.Version(),
+		concurrency: defaultConcurrency,
+		timeout:     defaultTimeout,
 	}
+	for _, option := range options {
+		option(c)
+	}
+	if c.c == nil {
+		c.c = httpr.NewClient()
+	}
+	return c
+}
+
+// Options for client operations.
+type Options struct{}
+
+// Option is a function that sets options for client operations.
+type Option func(o *Options)
+
+// GetSecrets gets secrets by names.
+func (c Client) GetSecrets(names []string, options ...Option) (map[string]Secret, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+
+	return c.getSecrets(ctx, names, options...)
+}
+
+// Get a secret.
+func (c Client) Get(ctx context.Context, name string, options ...Option) (Secret, error) {
+	opts := Options{}
 	for _, option := range options {
 		option(&opts)
 	}
 
-	if opts.HTTPClient == nil {
-		opts.HTTPClient = &http.Client{
-			Timeout: opts.Timeout,
-		}
-	}
-
-	return &Client{
-		c:    opts.HTTPClient,
-		cred: cred,
-		header: http.Header{
-			"User-Agent": {"azcfg/" + version.Version()},
-		},
-		baseURL:     strings.Replace(baseURL, "{vault}", vault, 1),
-		concurrency: opts.Concurrency,
-		timeout:     opts.Timeout,
-	}
-}
-
-// Get secrets by names.
-func (c Client) Get(names ...string) (map[string]Secret, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
-	defer cancel()
-
-	return c.getSecrets(ctx, names)
-}
-
-// get a secret.
-func (c Client) get(ctx context.Context, name string) (Secret, error) {
 	u := fmt.Sprintf("%s/%s?api-version=%s", c.baseURL, name, apiVersion)
-	token, err := c.cred.Token(ctx)
+	token, err := c.cred.Token(ctx, auth.WithScope(auth.ScopeKeyVault))
 	if err != nil {
 		return Secret{}, err
 	}
 
-	var b []byte
-	if err := retry.Do(ctx, func() error {
-		b, err = request(ctx, c.c, addAuthHeader(c.header, token.AccessToken), http.MethodGet, u)
-		if err != nil {
-			if errors.Is(err, errSecretNotFound) {
-				err = fmt.Errorf("secret %s: %w", name, err)
-			}
-			return err
-		}
-		return nil
-	}, func(o *retry.Policy) {
-		o.Retry = shouldRetry
-	}); err != nil {
+	headers := http.Header{
+		"User-Agent":    []string{c.userAgent},
+		"Authorization": []string{"Bearer " + token.AccessToken},
+	}
+
+	resp, err := request.Do(ctx, c.c, headers, http.MethodGet, u, nil)
+	if err != nil {
 		return Secret{}, err
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		var secretErr secretError
+		if len(resp.Body) > 0 {
+			if err := json.Unmarshal(resp.Body, &secretErr); err != nil {
+				return Secret{}, err
+			}
+		}
+		secretErr.StatusCode = resp.StatusCode
+		return Secret{}, secretErr
+	}
+
 	var secret Secret
-	if err := json.Unmarshal(b, &secret); err != nil {
+	if err := json.Unmarshal(resp.Body, &secret); err != nil {
 		return secret, err
 	}
 
@@ -131,7 +135,7 @@ type secretResult struct {
 
 // getSecrets gets secrets by the provided names and returns them as a map[string]Secret
 // where the secret name is the key.
-func (c Client) getSecrets(ctx context.Context, names []string) (map[string]Secret, error) {
+func (c Client) getSecrets(ctx context.Context, names []string, options ...Option) (map[string]Secret, error) {
 	namesCh := make(chan string)
 	srCh := make(chan secretResult)
 
@@ -147,9 +151,6 @@ func (c Client) getSecrets(ctx context.Context, names []string) (map[string]Secr
 		concurrency = len(names)
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	var wg sync.WaitGroup
 	for i := 1; i <= concurrency; i++ {
 		wg.Add(1)
@@ -162,11 +163,10 @@ func (c Client) getSecrets(ctx context.Context, names []string) (map[string]Secr
 						return
 					}
 					sr := secretResult{name: name}
-					secret, err := c.get(ctx, name)
-					if err != nil && !errors.Is(err, errSecretNotFound) {
+					secret, err := c.Get(ctx, name, options...)
+					if err != nil && !isSecretError(err, http.StatusNotFound) {
 						sr.err = err
 						srCh <- sr
-						cancel()
 						return
 					}
 					sr.secret = secret
@@ -190,34 +190,54 @@ func (c Client) getSecrets(ctx context.Context, names []string) (map[string]Secr
 		}
 		secrets[sr.name] = sr.secret
 	}
-
 	return secrets, nil
 }
 
 // WithConcurrency sets the concurrency for secret retrieval.
-func WithConcurrency(c int) ClientOption {
-	return func(o *ClientOptions) {
-		o.Concurrency = c
+func WithConcurrency(n int) ClientOption {
+	return func(c *Client) {
+		c.concurrency = n
 	}
 }
 
 // WithTimeout sets timeout for secret retreival.
 func WithTimeout(d time.Duration) ClientOption {
-	return func(o *ClientOptions) {
-		o.Timeout = d
+	return func(c *Client) {
+		c.timeout = d
 	}
 }
 
-// shouldRetry contains retry policy for secret requests.
-func shouldRetry(err error) bool {
-	if err == nil {
-		return false
-	}
-	var e errorResponse
-	if errors.As(err, &e) {
-		if e.StatusCode == 0 || e.StatusCode == http.StatusInternalServerError {
+// secretError represents an error returned from the Key Vault REST API.
+type secretError struct {
+	Err struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"error"`
+	StatusCode int
+}
+
+// Error returns the message from the secretError.
+func (e secretError) Error() string {
+	return e.Err.Message
+}
+
+// isSecretError checks if the provided error is a secretError.
+// If the optional statusCodes is provided it further
+// requires that they should match that with the
+// provided error.
+func isSecretError(err error, statusCodes ...int) bool {
+	var secretErr secretError
+	if errors.As(err, &secretErr) {
+		if len(statusCodes) == 0 {
 			return true
+		} else {
+			for _, statusCode := range statusCodes {
+				if secretErr.StatusCode == statusCode {
+					return true
+				}
+			}
 		}
+
 	}
 	return false
 }

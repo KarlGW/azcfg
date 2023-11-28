@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/request"
 	"github.com/KarlGW/azcfg/version"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -38,21 +38,15 @@ func TestNewClientCredential(t *testing.T) {
 				clientID: _testClientID,
 				options: []CredentialOption{
 					WithSecret(_testClientSecret),
-					WithScope(_testScope),
 				},
 			},
 			want: &ClientCredential{
-				c: &http.Client{},
-				header: http.Header{
-					"User-Agent":   {"azcfg/" + version.Version()},
-					"Content-Type": {"application/x-www-form-urlencoded"},
-				},
+				c:            &http.Client{},
 				endpoint:     fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/token", _testTenantID),
+				userAgent:    "azcfg/" + version.Version(),
 				tenantID:     _testTenantID,
 				clientID:     _testClientID,
 				clientSecret: _testClientSecret,
-				scope:        _testScope,
-				mu:           &sync.RWMutex{},
 			},
 			wantErr: nil,
 		},
@@ -104,14 +98,14 @@ func TestNewClientCredential(t *testing.T) {
 func TestClientCredential_Token(t *testing.T) {
 	var tests = []struct {
 		name    string
-		input   func(client httpClient) *ClientCredential
+		input   func(client request.Client) *ClientCredential
 		want    auth.Token
 		wantErr error
 	}{
 		{
 			name: "get token",
-			input: func(client httpClient) *ClientCredential {
-				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(_testScope), WithHTTPClient(client))
+			input: func(client request.Client) *ClientCredential {
+				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithHTTPClient(client))
 				return cred
 			},
 			want: auth.Token{
@@ -121,9 +115,9 @@ func TestClientCredential_Token(t *testing.T) {
 		},
 		{
 			name: "get token from cache",
-			input: func(client httpClient) *ClientCredential {
-				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(_testScope), WithHTTPClient(client))
-				cred.token = &auth.Token{
+			input: func(client request.Client) *ClientCredential {
+				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithHTTPClient(client))
+				cred.tokens[_testScope] = &auth.Token{
 					AccessToken: "ey54321",
 					ExpiresOn:   time.Now().Add(time.Hour),
 				}
@@ -136,9 +130,9 @@ func TestClientCredential_Token(t *testing.T) {
 		},
 		{
 			name: "get token from cache (expired)",
-			input: func(client httpClient) *ClientCredential {
-				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(_testScope), WithHTTPClient(client))
-				cred.token = &auth.Token{
+			input: func(client request.Client) *ClientCredential {
+				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithHTTPClient(client))
+				cred.tokens[_testScope] = &auth.Token{
 					AccessToken: "ey54321",
 					ExpiresOn:   time.Now().Add(time.Hour * -3),
 				}
@@ -151,8 +145,8 @@ func TestClientCredential_Token(t *testing.T) {
 		},
 		{
 			name: "error",
-			input: func(client httpClient) *ClientCredential {
-				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithScope(_testScope), WithHTTPClient(client))
+			input: func(client request.Client) *ClientCredential {
+				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithSecret("1234"), WithHTTPClient(client))
 				return cred
 			},
 			want:    auth.Token{},
@@ -167,7 +161,9 @@ func TestClientCredential_Token(t *testing.T) {
 
 			client := setupHTTPClient(ts.Listener.Addr().String(), test.wantErr)
 			cred := test.input(client)
-			got, gotErr := cred.Token(context.Background())
+			got, gotErr := cred.Token(context.Background(), func(o *auth.TokenOptions) {
+				o.Scope = _testScope
+			})
 
 			if diff := cmp.Diff(test.want, got, cmpopts.IgnoreFields(auth.Token{}, "ExpiresOn")); diff != "" {
 				t.Errorf("Token() = unexpected result (-want +got)\n%s\n", diff)

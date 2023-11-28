@@ -9,6 +9,7 @@ import (
 	"github.com/KarlGW/azcfg/auth"
 	"github.com/KarlGW/azcfg/internal/identity"
 	"github.com/KarlGW/azcfg/internal/secret"
+	"github.com/KarlGW/azcfg/internal/setting"
 	"github.com/KarlGW/azcfg/stub"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -31,20 +32,21 @@ func TestNewParser(t *testing.T) {
 				envs    map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_KEYVAULT_NAME": "vault",
-					"AZCFG_TENANT_ID":     "1111",
-					"AZCFG_CLIENT_ID":     "2222",
-					"AZCFG_CLIENT_SECRET": "3333",
+					"AZCFG_KEYVAULT_NAME":         "vault",
+					"AZCFG_APPCONFIGURATION_NAME": "appconfig",
+					"AZCFG_TENANT_ID":             "1111",
+					"AZCFG_CLIENT_ID":             "2222",
+					"AZCFG_CLIENT_SECRET":         "3333",
 				},
 			},
 			want: &parser{
-				cl: &secret.Client{},
+				secretClient:  &secret.Client{},
+				settingClient: &setting.Client{},
 				cred: mockCredential{
 					t: "sp",
 				},
 				timeout:     time.Second * 10,
 				concurrency: 10,
-				vault:       "vault",
 			},
 		},
 		{
@@ -57,17 +59,18 @@ func TestNewParser(t *testing.T) {
 					WithConcurrency(20),
 					WithTimeout(time.Second * 10),
 					WithClientSecretCredential("1111", "2222", "3333"),
-					WithVault("vault1"),
+					WithKeyVault("vault1"),
+					WithAppConfiguration("appconfig"),
 				},
 			},
 			want: &parser{
-				cl: &secret.Client{},
+				secretClient:  &secret.Client{},
+				settingClient: &setting.Client{},
 				cred: mockCredential{
 					t: "sp",
 				},
 				timeout:     time.Second * 10,
 				concurrency: 20,
-				vault:       "vault1",
 			},
 		},
 		{
@@ -77,29 +80,15 @@ func TestNewParser(t *testing.T) {
 				envs    map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_KEYVAULT_NAME": "vault",
-					"AZCFG_TENANT_ID":     "1111",
-					"AZCFG_CLIENT_ID":     "2222",
-					"AZCFG_CLIENT_SECRET": "3333",
+					"AZCFG_KEYVAULT_NAME":         "vault",
+					"AZCFG_APPCONFIGURATION_NAME": "appconfig",
+					"AZCFG_TENANT_ID":             "1111",
+					"AZCFG_CLIENT_ID":             "2222",
+					"AZCFG_CLIENT_SECRET":         "3333",
 				},
 			},
 			want:    nil,
 			wantErr: identity.ErrInvalidClientID,
-		},
-		{
-			name: "error vault not set",
-			input: struct {
-				options []Option
-				envs    map[string]string
-			}{
-				envs: map[string]string{
-					"AZCFG_TENANT_ID":     "1111",
-					"AZCFG_CLIENT_ID":     "2222",
-					"AZCFG_CLIENT_SECRET": "3333",
-				},
-			},
-			want:    nil,
-			wantErr: ErrVaultNotSet,
 		},
 		{
 			name: "secret client provided",
@@ -112,11 +101,48 @@ func TestNewParser(t *testing.T) {
 				},
 			},
 			want: &parser{
-				cl:          stub.SecretClient{},
-				cred:        nil,
-				timeout:     time.Second * 10,
-				concurrency: 10,
-				vault:       "",
+				secretClient:  stub.SecretClient{},
+				settingClient: nil,
+				cred:          nil,
+				timeout:       time.Second * 10,
+				concurrency:   10,
+			},
+		},
+		{
+			name: "setting client provided",
+			input: struct {
+				options []Option
+				envs    map[string]string
+			}{
+				options: []Option{
+					WithSettingClient(stub.NewSettingClient(nil, nil)),
+				},
+			},
+			want: &parser{
+				secretClient:  nil,
+				settingClient: stub.SettingClient{},
+				cred:          nil,
+				timeout:       time.Second * 10,
+				concurrency:   10,
+			},
+		},
+		{
+			name: "secret and setting client provided",
+			input: struct {
+				options []Option
+				envs    map[string]string
+			}{
+				options: []Option{
+					WithSecretClient(stub.NewSecretClient(nil, nil)),
+					WithSettingClient(stub.NewSettingClient(nil, nil)),
+				},
+			},
+			want: &parser{
+				secretClient:  stub.SecretClient{},
+				settingClient: stub.SettingClient{},
+				cred:          nil,
+				timeout:       time.Second * 10,
+				concurrency:   10,
 			},
 		},
 	}
@@ -145,7 +171,7 @@ func TestNewParser(t *testing.T) {
 
 			got, gotErr := NewParser(test.input.options...)
 
-			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(parser{}, mockCredential{}), cmpopts.IgnoreUnexported(secret.Client{}, stub.SecretClient{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(parser{}, mockCredential{}), cmpopts.IgnoreUnexported(secret.Client{}, stub.SecretClient{}, setting.Client{}, stub.SettingClient{})); diff != "" {
 				t.Errorf("NewParser() = unexpected result (-want +got)\n%s\n", diff)
 			}
 
@@ -153,69 +179,6 @@ func TestNewParser(t *testing.T) {
 				t.Errorf("NewParser() = unexpected error (-want +got)\n%s\n", diff)
 			}
 		})
-	}
-}
-
-func TestOptions(t *testing.T) {
-	var tests = []struct {
-		name  string
-		input Option
-		want  Options
-	}{
-		{
-			name:  "WithCredential()",
-			input: WithCredential(mockCredential{}),
-			want: Options{
-				Credential: mockCredential{},
-			},
-		},
-		{
-			name:  "WithVault()",
-			input: WithVault("vault"),
-			want: Options{
-				Vault: "vault",
-			},
-		},
-		{
-			name:  "WithConcurrency()",
-			input: WithConcurrency(5),
-			want: Options{
-				Concurrency: 5,
-			},
-		},
-		{
-			name:  "WithTimeout()",
-			input: WithTimeout(time.Second * 5),
-			want: Options{
-				Timeout: time.Second * 5,
-			},
-		},
-		{
-			name:  "WithClientSecretCredential()",
-			input: WithClientSecretCredential("1111", "2222", "3333"),
-			want: Options{
-				TenantID:     "1111",
-				ClientID:     "2222",
-				ClientSecret: "3333",
-			},
-		},
-		{
-			name:  "WithManagedIdentity()",
-			input: WithManagedIdentity("2222"),
-			want: Options{
-				ClientID:           "2222",
-				UseManagedIdentity: true,
-			},
-		},
-	}
-
-	for _, test := range tests {
-		got := Options{}
-		test.input(&got)
-
-		if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(mockCredential{})); diff != "" {
-			t.Errorf("%s = unexpected result (-want +got)\n%s\n", test.name, diff)
-		}
 	}
 }
 
@@ -320,7 +283,7 @@ func TestSetupCredential(t *testing.T) {
 	}
 }
 
-func TestSetupVault(t *testing.T) {
+func TestSetupKeyVault(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input struct {
@@ -371,10 +334,117 @@ func TestSetupVault(t *testing.T) {
 			setEnvVars(test.input.envs)
 			defer unsetEnvVars(test.input.envs)
 
-			got := setupVault(test.input.vault)
+			got := setupKeyVault(test.input.vault)
 
 			if test.want != got {
-				t.Errorf("setupVault() = unexpected result, want: %s, got: %s\n", test.want, got)
+				t.Errorf("setupKeyVault() = unexpected result, want: %s, got: %s\n", test.want, got)
+			}
+		})
+	}
+}
+
+func TestSetupAppConfiguration(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input struct {
+			appConfig string
+			label     string
+			envs      map[string]string
+		}
+		wantAppConfig string
+		wantLabel     string
+	}{
+		{
+			name: "App Configuration from environment",
+			input: struct {
+				appConfig string
+				label     string
+				envs      map[string]string
+			}{
+				envs: map[string]string{
+					"AZCFG_APPCONFIGURATION_NAME": "appconfig",
+				},
+			},
+			wantAppConfig: "appconfig",
+		},
+		{
+			name: "App Confiruation from options",
+			input: struct {
+				appConfig string
+				label     string
+				envs      map[string]string
+			}{
+				appConfig: "appconfig",
+			},
+			wantAppConfig: "appconfig",
+		},
+		{
+			name: "App Configuration from option, override environment",
+			input: struct {
+				appConfig string
+				label     string
+				envs      map[string]string
+			}{
+				appConfig: "appconfig1",
+				envs: map[string]string{
+					"AZCFG_APPCONFIGURATION_NAME": "appconfig2",
+				},
+			},
+			wantAppConfig: "appconfig1",
+		},
+		{
+			name: "App Configuration label from environment",
+			input: struct {
+				appConfig string
+				label     string
+				envs      map[string]string
+			}{
+				envs: map[string]string{
+					"AZCFG_APPCONFIGURATION_LABEL": "label",
+				},
+			},
+			wantLabel: "label",
+		},
+		{
+			name: "App Configuration label from options",
+			input: struct {
+				appConfig string
+				label     string
+				envs      map[string]string
+			}{
+				label: "label",
+			},
+			wantLabel: "label",
+		},
+		{
+			name: "App Configuration label from options, override environment",
+			input: struct {
+				appConfig string
+				label     string
+				envs      map[string]string
+			}{
+				label: "label1",
+				envs: map[string]string{
+					"AZCFG_APPCONFIGURATION_LABEL": "label2",
+				},
+			},
+			wantLabel: "label1",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			setEnvVars(test.input.envs)
+			defer unsetEnvVars(test.input.envs)
+
+			gotAppConfig, gotLabel := setupAppConfiguration(test.input.appConfig, test.input.label)
+
+			if test.wantAppConfig != gotAppConfig {
+				t.Errorf("setupAppConfiguration() = unexpected result, want: %s, got: %s\n", test.wantAppConfig, gotAppConfig)
+			}
+
+			if test.wantLabel != gotLabel {
+				t.Errorf("setupAppConfiguration() = unexpected result, want: %s, got: %s\n", test.wantLabel, gotLabel)
 			}
 		})
 	}
@@ -397,6 +467,6 @@ type mockCredential struct {
 	t string
 }
 
-func (c mockCredential) Token(ctx context.Context) (auth.Token, error) {
+func (c mockCredential) Token(ctx context.Context, options ...auth.TokenOption) (auth.Token, error) {
 	return auth.Token{}, nil
 }

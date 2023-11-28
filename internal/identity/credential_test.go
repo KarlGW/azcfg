@@ -4,6 +4,13 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"testing"
+	"time"
+
+	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/request"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 var (
@@ -11,10 +18,62 @@ var (
 	_testClientID     = "afb5e3e4-0fa1-4a22-aa35-6387dc0bc09d"
 	_testClientSecret = "12345"
 	_testResourceID   = "/subscriptions/93af3dd4-71ff-498e-ab46-7137dc2575e4/resourcegroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity"
-	_testScope        = "https://vault.azure.net/.default"
+	_testScope        = auth.ScopeResourceManager
 )
 
-func setupHTTPClient(target string, err error) httpClient {
+func TestTokenFromAuthResult(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input authResult
+		want  auth.Token
+	}{
+		{
+			name: "ExpiresIn is string",
+			input: authResult{
+				AccessToken: "ey12345",
+				ExpiresIn:   "3599",
+			},
+			want: auth.Token{
+				AccessToken: "ey12345",
+				ExpiresOn:   time.Now().Add(time.Duration(3599 * time.Second)),
+			},
+		},
+		{
+			name: "ExpiresIn is float64",
+			input: authResult{
+				AccessToken: "ey12345",
+				ExpiresIn:   float64(3599),
+			},
+			want: auth.Token{
+				AccessToken: "ey12345",
+				ExpiresOn:   time.Now().Add(time.Duration(3599 * time.Second)),
+			},
+		},
+		{
+			name: "ExpiresIn is int",
+			input: authResult{
+				AccessToken: "ey12345",
+				ExpiresIn:   int(3599),
+			},
+			want: auth.Token{
+				AccessToken: "ey12345",
+				ExpiresOn:   time.Now().Add(time.Duration(3599 * time.Second)),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := tokenFromAuthResult(test.input)
+
+			if diff := cmp.Diff(test.want, got, cmpopts.EquateApproxTime(time.Millisecond)); diff != "" {
+				t.Errorf("tokenFromAuthResult() = unexpected result (-want +got)\n%s\n", diff)
+			}
+		})
+	}
+}
+
+func setupHTTPClient(target string, err error) request.Client {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,

@@ -2,6 +2,7 @@ package identity
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -11,7 +12,8 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
-	"github.com/KarlGW/azcfg/internal/retry"
+	"github.com/KarlGW/azcfg/internal/httpr"
+	"github.com/KarlGW/azcfg/internal/request"
 	"github.com/KarlGW/azcfg/version"
 )
 
@@ -52,25 +54,24 @@ const (
 // to Azure according to the managed identity credential flow. It contains all the necessary
 // settings to perform token requests.
 type ManagedIdentityCredential struct {
-	c          httpClient
-	header     http.Header
-	token      *auth.Token
+	c          request.Client
+	headers    http.Header
+	tokens     map[auth.Scope]*auth.Token
 	endpoint   string
+	userAgent  string
 	apiVersion string
 	clientID   string
 	resourceID string
-	scope      string
-	mu         *sync.RWMutex
+	mu         sync.RWMutex
 }
 
 // NewManagedIdentityCredential creates and returns a new *ManagedIdentityCredential.
 func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentityCredential, error) {
 	c := &ManagedIdentityCredential{
-		c: &http.Client{},
-		header: http.Header{
-			"User-Agent": {"azcfg/" + version.Version()},
-		},
-		mu: &sync.RWMutex{},
+		c:         httpr.NewClient(),
+		headers:   http.Header{},
+		tokens:    make(map[auth.Scope]*auth.Token),
+		userAgent: "azcfg/" + version.Version(),
 	}
 	opts := CredentialOptions{}
 	for _, option := range options {
@@ -95,52 +96,54 @@ func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentity
 		c.resourceID = opts.resourceID
 	}
 
-	if len(opts.scope) > 0 {
-		c.scope = strings.TrimSuffix(opts.scope, "/.default")
-	} else {
-		c.scope = defaultResource
-	}
-
 	if endpoint, ok := os.LookupEnv(identityEndpoint); ok {
 		if header, ok := os.LookupEnv(identityHeader); ok {
 			c.endpoint, c.apiVersion = endpoint, appServiceAPIVersion
-			c.header.Add("X-Identity-Header", header)
+			c.headers.Add("X-Identity-Header", header)
 		} else {
 			return nil, ErrUnsupportedManagedIdentityType
 		}
 	} else {
 		c.endpoint, c.apiVersion = imdsEndpoint, imdsAPIVersion
-		c.header.Add("Metadata", "true")
+		c.headers.Add("Metadata", "true")
 	}
 
 	return c, nil
 }
 
 // Token returns a new auth.Token for requests to the Azure REST API.
-func (c *ManagedIdentityCredential) Token(ctx context.Context) (auth.Token, error) {
+func (c *ManagedIdentityCredential) Token(ctx context.Context, options ...auth.TokenOption) (auth.Token, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.token != nil && c.token.ExpiresOn.After(time.Now()) {
-		return *c.token, nil
+	opts := auth.TokenOptions{
+		Scope: auth.ScopeResourceManager,
 	}
-	token, err := c.tokenRequest(ctx)
+	for _, option := range options {
+		option(&opts)
+	}
+
+	if c.tokens[opts.Scope] != nil && c.tokens[opts.Scope].ExpiresOn.UTC().After(time.Now().UTC()) {
+		return *c.tokens[opts.Scope], nil
+	}
+
+	token, err := c.tokenRequest(ctx, string(opts.Scope))
 	if err != nil {
 		return auth.Token{}, err
 	}
-	c.token = &token
-	return *c.token, nil
+	c.tokens[opts.Scope] = &token
+	return *c.tokens[opts.Scope], nil
 }
 
 // tokenRequest requests a token after creating the request body
 // based on the settings of the ManagedIdentityCredential.
-func (c ManagedIdentityCredential) tokenRequest(ctx context.Context) (auth.Token, error) {
+func (c *ManagedIdentityCredential) tokenRequest(ctx context.Context, scope string) (auth.Token, error) {
 	u, err := url.Parse(c.endpoint)
 	if err != nil {
 		return auth.Token{}, err
 	}
 	qs := url.Values{
-		"resource":    {c.scope},
+		"resource":    {strings.TrimSuffix(scope, "/.default")},
 		"api-version": {c.apiVersion},
 	}
 	if len(c.clientID) > 0 {
@@ -150,24 +153,28 @@ func (c ManagedIdentityCredential) tokenRequest(ctx context.Context) (auth.Token
 	}
 	u.RawQuery = qs.Encode()
 
-	var r authResult
-	if err := retry.Do(ctx, func() error {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-		if err != nil {
-			return err
-		}
-		for k, v := range c.header {
-			req.Header.Add(k, strings.Join(v, ", "))
-		}
+	headers := http.Header{
+		"User-Agent": []string{c.userAgent},
+	}
+	for k, v := range c.headers {
+		headers.Add(k, v[0])
+	}
 
-		r, err = request(c.c, req)
-		if err != nil {
-			return err
+	resp, err := request.Do(ctx, c.c, headers, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return auth.Token{}, err
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode > http.StatusNoContent {
+		var authErr authError
+		if err := json.Unmarshal(resp.Body, &authErr); err != nil {
+			return auth.Token{}, err
 		}
-		return nil
-	}, func(o *retry.Policy) {
-		o.Retry = shouldRetry
-	}); err != nil {
+		authErr.StatusCode = resp.StatusCode
+		return auth.Token{}, authErr
+	}
+
+	var r authResult
+	if err := json.Unmarshal(resp.Body, &r); err != nil {
 		return auth.Token{}, err
 	}
 

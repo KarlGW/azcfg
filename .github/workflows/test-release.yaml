@@ -35,7 +35,7 @@ jobs:
       run: go get
     
     - name: Test
-      run: go vet && go test -v ./...
+      run: go vet ./... && go test -v ./...
   
   release:
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}

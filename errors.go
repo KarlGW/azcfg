@@ -3,35 +3,65 @@ package azcfg
 import (
 	"errors"
 	"strings"
-
-	"github.com/KarlGW/azcfg/internal/secret"
 )
 
 var (
-	// ErrVaultNotSet is returned when no vault is set.
-	ErrVaultNotSet = errors.New("a vault must be set")
+	// errRequired is returned when a secret/setting is required.
+	errRequired = errors.New("required")
 )
 
-// RequiredError represents an error when a secret is required.
-type RequiredError struct {
-	secret  string
+var (
+	// ErrInvalidSecretClient is returned when a secret client is not configured
+	// properly. Either Key Vault name is not set or a provided secretClient
+	// is nil.
+	ErrInvalidSecretClient = errors.New("invalid secret client")
+	// ErrInvalidSettingClient is returned when a setting client is not configured
+	// properly. Either App Configuration name is not set or a provided settingClient
+	// is nil.
+	ErrInvalidSettingClient = errors.New("invalid setting client")
+)
+
+// RequiredFieldsError represents an error when either secrets or settings
+// are required but not set.
+type RequiredFieldsError struct {
+	errors []error
+}
+
+// Error returns the combined error messages from the errors
+// contained in RequiredFieldsError.
+func (e *RequiredFieldsError) Error() string {
+	var msgs []string
+	for _, err := range e.errors {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "\n")
+}
+
+// requiredSecretsError represents an error when secrets are required
+// but not set.
+type requiredSecretsError struct {
 	message string
 }
 
-// Error implements interface error.
-func (e *RequiredError) Error() string {
+// Error returns the message set in requiredSecretsError.
+func (e requiredSecretsError) Error() string {
 	return e.message
 }
 
-// setMessage sets the message of *RequiredError.
-func (e *RequiredError) setMessage(secrets map[string]secret.Secret, required []string) error {
-	e.message = requiredErrorMessage(secrets, required)
-	return e
+// requiredSettingsError represents an error when settings are required
+// but not set.
+type requiredSettingsError struct {
+	message string
 }
 
-// requiredErrorMessage builds a message based on the provided map[string]string (secrets)
+// Error returns the message set in requiredSettingsError.
+func (e requiredSettingsError) Error() string {
+	return e.message
+}
+
+// requiredErrorMessage builds a message based on the provided map[string]V (HasValue)
 // and []string (required).
-func requiredErrorMessage(secrets map[string]secret.Secret, required []string) string {
+func requiredErrorMessage[V HasValue](values map[string]V, required []string, t string) string {
 	if len(required) == 0 {
 		return ""
 	}
@@ -39,7 +69,7 @@ func requiredErrorMessage(secrets map[string]secret.Secret, required []string) s
 	req := make([]string, 0)
 	l := 0
 	for _, r := range required {
-		if len(secrets[r].Value) == 0 {
+		if len(values[r].GetValue()) == 0 {
 			req = append(req, r)
 			l++
 		}
@@ -47,10 +77,10 @@ func requiredErrorMessage(secrets map[string]secret.Secret, required []string) s
 
 	var message strings.Builder
 	if l == 1 {
-		message.WriteString("secret: " + req[0] + " is required")
+		message.WriteString(t + ": " + req[0] + " is required")
 		return message.String()
 	}
-	message.WriteString("secrets: ")
+	message.WriteString(t + "s: ")
 	for i, r := range req {
 		message.WriteString(r)
 		if i < l-1 && l > 2 && i != l-2 {
@@ -62,4 +92,30 @@ func requiredErrorMessage(secrets map[string]secret.Secret, required []string) s
 	}
 	message.WriteString(" are required")
 	return message.String()
+}
+
+// buildErr builds the resulting error and returns it.
+func buildErr(errs ...error) error {
+	if len(errs) == 0 {
+		return nil
+	}
+	var reqErr *RequiredFieldsError
+	var msgs []string
+	for _, err := range errs {
+		if errors.Is(err, requiredSecretsError{}) || errors.Is(err, requiredSettingsError{}) {
+			if reqErr == nil {
+				reqErr = &RequiredFieldsError{
+					errors: []error{err},
+				}
+			} else {
+				reqErr.errors = append(reqErr.errors, err)
+			}
+		} else {
+			msgs = append(msgs, err.Error())
+		}
+	}
+	if reqErr != nil {
+		return reqErr
+	}
+	return errors.New(strings.Join(msgs, "\n"))
 }

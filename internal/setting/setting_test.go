@@ -1,10 +1,9 @@
-package secret
+package setting
 
 import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"path"
@@ -18,91 +17,92 @@ import (
 
 var (
 	errRequest = errors.New("request error")
-	errServer  = fmt.Errorf("internal server error")
+	errServer  = errors.New("internal server error")
 )
 
-func TestClient_GetSecrets(t *testing.T) {
+func TestClient_GetSettings(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input struct {
-			names  []string
-			bodies map[string][]byte
-			err    error
+			keys    []string
+			options []Option
+			bodies  map[string][]byte
+			err     error
 		}
-		want    map[string]Secret
+		want    map[string]Setting
 		wantErr error
 	}{
 		{
-			name: "get secrets",
+			name: "get settings",
 			input: struct {
-				names  []string
-				bodies map[string][]byte
-				err    error
+				keys    []string
+				options []Option
+				bodies  map[string][]byte
+				err     error
 			}{
-				names: []string{"secret-a", "secret-b", "secret-c"},
+				keys: []string{"setting-a", "setting-b", "setting-c"},
 				bodies: map[string][]byte{
-					"secret-a": []byte(`{"value":"a"}`),
-					"secret-b": []byte(`{"value":"b"}`),
-					"secret-c": []byte(`{"value":"c"}`),
+					"setting-a": []byte(`{"value":"a"}`),
+					"setting-b": []byte(`{"value":"b"}`),
+					"setting-c": []byte(`{"value":"c"}`),
 				},
 			},
-			want: map[string]Secret{
-				"secret-a": {Value: "a"},
-				"secret-b": {Value: "b"},
-				"secret-c": {Value: "c"},
+			want: map[string]Setting{
+				"setting-a": {Value: "a"},
+				"setting-b": {Value: "b"},
+				"setting-c": {Value: "c"},
 			},
 			wantErr: nil,
 		},
 		{
-			name: "secret not found",
+			name: "setting not found",
 			input: struct {
-				names  []string
-				bodies map[string][]byte
-				err    error
+				keys    []string
+				options []Option
+				bodies  map[string][]byte
+				err     error
 			}{
-				names: []string{"secret-a", "secret-b", "secret-c"},
+				keys: []string{"setting-a", "setting-b", "setting-c"},
 				bodies: map[string][]byte{
-					"secret-a": []byte(`{"value":"a"}`),
-					"secret-c": []byte(`{"value":"c"}`),
+					"setting-a": []byte(`{"value":"a"}`),
+					"setting-c": []byte(`{"value":"c"}`),
 				},
 			},
-			want: map[string]Secret{
-				"secret-a": {Value: "a"},
-				"secret-b": {Value: ""},
-				"secret-c": {Value: "c"},
+			want: map[string]Setting{
+				"setting-a": {Value: "a"},
+				"setting-b": {Value: ""},
+				"setting-c": {Value: "c"},
 			},
 			wantErr: nil,
 		},
 		{
 			name: "server error",
 			input: struct {
-				names  []string
-				bodies map[string][]byte
-				err    error
+				keys    []string
+				options []Option
+				bodies  map[string][]byte
+				err     error
 			}{
-				names: []string{"secret-a"},
-				err:   errServer,
+				keys: []string{"setting-a"},
+				err:  errServer,
 			},
 			want: nil,
-			wantErr: secretError{
-				Err: struct {
-					Code    string `json:"code"`
-					Message string `json:"message"`
-				}{
-					Message: "bad request",
-				},
+			wantErr: settingError{
+				Detail:     "bad request",
+				Status:     http.StatusBadRequest,
 				StatusCode: http.StatusBadRequest,
 			},
 		},
 		{
 			name: "request error",
 			input: struct {
-				names  []string
-				bodies map[string][]byte
-				err    error
+				keys    []string
+				options []Option
+				bodies  map[string][]byte
+				err     error
 			}{
-				names: []string{"secret-a"},
-				err:   errRequest,
+				keys: []string{"setting-a"},
+				err:  errRequest,
 			},
 			want:    nil,
 			wantErr: errRequest,
@@ -111,7 +111,7 @@ func TestClient_GetSecrets(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			client := NewClient("vault", mockCredential{}, func(c *Client) {
+			client := NewClient("config", mockCredential{}, func(c *Client) {
 				c.c = mockHttpClient{
 					bodies: test.input.bodies,
 					err:    test.input.err,
@@ -119,14 +119,14 @@ func TestClient_GetSecrets(t *testing.T) {
 				c.timeout = time.Millisecond * 10
 			})
 
-			got, gotErr := client.GetSecrets(test.input.names)
+			got, gotErr := client.GetSettings(test.input.keys, test.input.options...)
 
 			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("GetSecrets() = unexpected result (-want +got)\n%s\n", diff)
+				t.Errorf("GetSettings() = unexpected result (-want +got)\n%s\n", diff)
 			}
 
 			if diff := cmp.Diff(test.wantErr, gotErr, cmpopts.EquateErrors()); diff != "" {
-				t.Errorf("GetSecrets() = unexpected error (-want +got)\n%s\n", diff)
+				t.Errorf("GetSettings() = unexpected error (-want +got)\n%s\n", diff)
 			}
 		})
 	}
@@ -153,7 +153,7 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 		if errors.Is(c.err, errServer) {
 			return &http.Response{
 				StatusCode: http.StatusBadRequest,
-				Body:       io.NopCloser(bytes.NewBuffer([]byte(`{"error":{"message":"bad request"}}`))),
+				Body:       io.NopCloser(bytes.NewBuffer([]byte(`{"detail":"bad request","status":400}`))),
 			}, nil
 		}
 		return nil, c.err
@@ -174,7 +174,7 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 	}, nil
 }
 
-func TestIsSecretError(t *testing.T) {
+func TestIsSettingError(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input struct {
@@ -184,7 +184,7 @@ func TestIsSecretError(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "is not a secretError",
+			name: "is not a settingError",
 			input: struct {
 				err         error
 				statusCodes []int
@@ -194,33 +194,33 @@ func TestIsSecretError(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "is a secretError",
+			name: "is a settingError",
 			input: struct {
 				err         error
 				statusCodes []int
 			}{
-				err: secretError{},
+				err: settingError{},
 			},
 			want: true,
 		},
 		{
-			name: "is a secretError with statusCode",
+			name: "is a settingError with statusCode",
 			input: struct {
 				err         error
 				statusCodes []int
 			}{
-				err:         secretError{StatusCode: http.StatusNotFound},
+				err:         settingError{StatusCode: http.StatusNotFound},
 				statusCodes: []int{http.StatusNotFound},
 			},
 			want: true,
 		},
 		{
-			name: "is a secretError with statusCode",
+			name: "is a settingError with statusCode",
 			input: struct {
 				err         error
 				statusCodes []int
 			}{
-				err:         secretError{StatusCode: http.StatusNotFound},
+				err:         settingError{StatusCode: http.StatusNotFound},
 				statusCodes: []int{http.StatusBadRequest},
 			},
 			want: false,
@@ -229,10 +229,10 @@ func TestIsSecretError(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := isSecretError(test.input.err, test.input.statusCodes...)
+			got := isSettingError(test.input.err, test.input.statusCodes...)
 
 			if test.want != got {
-				t.Errorf("isSecretError() = unexpected result, want: %v, got: %v\n", test.want, got)
+				t.Errorf("isSettingError() = unexpected result, want: %v, got: %v\n", test.want, got)
 			}
 		})
 	}

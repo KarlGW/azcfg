@@ -2,81 +2,66 @@ package identity
 
 import (
 	"errors"
-	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
+
+	"github.com/KarlGW/azcfg/auth"
 )
 
 var (
+	// ErrEmptyTokenResponse is returned when the response from a token request
+	// is empty.
+	ErrEmptyTokenResponse = errors.New("empty token response")
+	// ErrTokenResponse is an erroneous token request.
+	ErrTokenResponse = errors.New("token response error")
 	// ErrInvalidTenantID is returned when an invalid Tenant ID is provided.
 	ErrInvalidTenantID = errors.New("invalid tenant ID")
 	// ErrInvalidClientID is returned when an invalid Client ID is provided.
 	ErrInvalidClientID = errors.New("invalid client ID")
 )
 
-const (
-	defaultResource = "https://management.azure.com"
-	defaultScope    = defaultResource + "/.default"
-)
-
-// httpClient is the interface that wraps around method Do.
-type httpClient interface {
-	Do(req *http.Request) (*http.Response, error)
+// authResult represents a token response from the authentication
+// endpoint for Azure.
+type authResult struct {
+	AccessToken string `json:"access_token"`
+	// ExpiresIn is amount of seconds until the token expires.
+	// The reason any is used is that in earler API versions
+	// as used by IMDS backed managed identities a string is
+	// returned, whereas in newer a number is returned.
+	ExpiresIn any `json:"expires_in"`
 }
 
-// CredentialOptions contains options for the various credential
-// types.
-type CredentialOptions struct {
-	// httpClient is a user provided client to override the default client.
-	httpClient httpClient
-	// clientID is the client ID of the client credential or
-	// user assigned identity.
-	clientID string
-	// clientSecret is the secret of a client credential with a shared
-	// secret (client secret credential).
-	clientSecret string
-	// resourceID of the user assigned identity, use this or clientID
-	// to target a specific user assigned identity.
-	resourceID string
-	// scope is the current scope of the credential.
-	scope string
+// authError represents an error response from the
+// authentication endpoint for Azure.
+type authError struct {
+	Code             string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+	StatusCode       int
 }
 
-// CredentialOption is a function to set *CredentialOptions.
-type CredentialOption func(o *CredentialOptions)
+// Error returns the ErrorDescription of authError.
+func (e authError) Error() string {
+	return e.ErrorDescription
+}
 
-// WithClientID sets the client ID.
-func WithClientID(id string) CredentialOption {
-	return func(o *CredentialOptions) {
-		o.clientID = id
+// tokenFromAuthResult returns an auth.Token from an authResult.
+func tokenFromAuthResult(t authResult) auth.Token {
+	var expiresIn int
+	switch e := t.ExpiresIn.(type) {
+	case string:
+		expiresIn, _ = strconv.Atoi(e)
+	case float64:
+		expiresIn = int(e)
+	case int:
+		expiresIn = e
+	default:
+		expiresIn = 0
 	}
-}
-
-// WithResourceID sets the resource ID.
-func WithResourceID(id string) CredentialOption {
-	return func(o *CredentialOptions) {
-		o.resourceID = id
-	}
-}
-
-// WithSecret sets the client secret.
-func WithSecret(secret string) CredentialOption {
-	return func(o *CredentialOptions) {
-		o.clientSecret = secret
-	}
-}
-
-// WithScope sets the scope.
-func WithScope(scope string) CredentialOption {
-	return func(o *CredentialOptions) {
-		o.scope = scope
-	}
-}
-
-// WithHTTPClient sets the HTTP client of the credential.
-func WithHTTPClient(c httpClient) CredentialOption {
-	return func(o *CredentialOptions) {
-		o.httpClient = c
+	return auth.Token{
+		AccessToken: t.AccessToken,
+		ExpiresOn:   time.Now().Add(time.Duration(expiresIn) * time.Second),
 	}
 }
 

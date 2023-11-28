@@ -111,12 +111,12 @@ func TestClient_GetSecrets(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			client := NewClient("vault", mockCredential{}, func(cl *Client) {
-				cl.c = mockHttpClient{
+			client := NewClient("vault", mockCredential{}, func(c *Client) {
+				c.c = mockHttpClient{
 					bodies: test.input.bodies,
 					err:    test.input.err,
 				}
-				cl.timeout = time.Millisecond * 10
+				c.timeout = time.Millisecond * 10
 			})
 
 			got, gotErr := client.GetSecrets(test.input.names)

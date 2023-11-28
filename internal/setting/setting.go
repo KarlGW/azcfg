@@ -123,8 +123,10 @@ func (c Client) Get(ctx context.Context, key string, options ...Option) (Setting
 
 	if resp.StatusCode != http.StatusOK {
 		var settingErr settingError
-		if err := json.Unmarshal(resp.Body, &settingErr); err != nil {
-			return Setting{}, err
+		if len(resp.Body) > 0 {
+			if err := json.Unmarshal(resp.Body, &settingErr); err != nil {
+				return Setting{}, err
+			}
 		}
 		settingErr.StatusCode = resp.StatusCode
 		return Setting{}, settingErr

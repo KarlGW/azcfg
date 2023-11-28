@@ -15,7 +15,9 @@ func WithTimeout(d time.Duration) Option {
 // WithTransport sets the transport for the *Client.
 func WithTransport(transport *http.Transport) Option {
 	return func(c *Client) {
-		c.transport = transport
+		if transport != nil {
+			c.transport = transport
+		}
 	}
 }
 

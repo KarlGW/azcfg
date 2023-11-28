@@ -38,8 +38,10 @@ func NewClient(options ...Option) *Client {
 	}
 	if c.cl == nil {
 		c.cl = &http.Client{
-			Timeout:   defaultTimeout,
-			Transport: c.transport,
+			Timeout: defaultTimeout,
+		}
+		if c.transport != nil {
+			c.cl.Transport = c.transport
 		}
 	}
 	return c

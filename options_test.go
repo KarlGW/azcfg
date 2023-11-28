@@ -16,14 +16,14 @@ func TestOptions(t *testing.T) {
 		want  Options
 	}{
 		{
-			name:  "WithCredential()",
+			name:  "WithCredential",
 			input: WithCredential(mockCredential{}),
 			want: Options{
 				Credential: mockCredential{},
 			},
 		},
 		{
-			name:  "WithKeyVault()",
+			name:  "WithKeyVault",
 			input: WithKeyVault("vault"),
 			want: Options{
 				KeyVault: "vault",
@@ -37,21 +37,21 @@ func TestOptions(t *testing.T) {
 			},
 		},
 		{
-			name:  "WithConcurrency()",
+			name:  "WithConcurrency",
 			input: WithConcurrency(5),
 			want: Options{
 				Concurrency: 5,
 			},
 		},
 		{
-			name:  "WithTimeout()",
+			name:  "WithTimeout",
 			input: WithTimeout(time.Second * 5),
 			want: Options{
 				Timeout: time.Second * 5,
 			},
 		},
 		{
-			name:  "WithClientSecretCredential()",
+			name:  "WithClientSecretCredential",
 			input: WithClientSecretCredential("1111", "2222", "3333"),
 			want: Options{
 				TenantID:     "1111",
@@ -60,7 +60,7 @@ func TestOptions(t *testing.T) {
 			},
 		},
 		{
-			name:  "WithManagedIdentity()",
+			name:  "WithManagedIdentity",
 			input: WithManagedIdentity("2222"),
 			want: Options{
 				ClientID:           "2222",

@@ -108,8 +108,10 @@ func (c Client) Get(ctx context.Context, name string, options ...Option) (Secret
 
 	if resp.StatusCode != http.StatusOK {
 		var secretErr secretError
-		if err := json.Unmarshal(resp.Body, &secretErr); err != nil {
-			return Secret{}, err
+		if len(resp.Body) > 0 {
+			if err := json.Unmarshal(resp.Body, &secretErr); err != nil {
+				return Secret{}, err
+			}
 		}
 		secretErr.StatusCode = resp.StatusCode
 		return Secret{}, secretErr

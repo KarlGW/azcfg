@@ -43,6 +43,9 @@ func parse(d any, secretClient secretClient, settingClient settingClient, label 
 
 	secretFields, requiredSecrets := getFields(v, secretTag)
 	if len(secretFields) > 0 {
+		if secretClient == nil {
+			return ErrInvalidSecretClient
+		}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -65,6 +68,9 @@ func parse(d any, secretClient secretClient, settingClient settingClient, label 
 
 	settingFields, requiredSettings := getFields(v, settingTag)
 	if len(settingFields) > 0 {
+		if settingClient == nil {
+			return ErrInvalidSettingClient
+		}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

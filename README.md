@@ -349,7 +349,7 @@ go get github.com/KarlGW/azcfg/authopts
 package main
 
 import (
-    "github.com/Azure/azure-sdk-for-go/sdk/azcore"
+    "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
     "github.com/KarlGW/azcfg"
     "github.com/KarlGW/azcfg/authopts"
 )

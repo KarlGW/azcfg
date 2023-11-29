@@ -4,6 +4,8 @@ github.com/Azure/azure-sdk-for-go/sdk/internal v1.5.0 h1:d81/ng9rET2YqdVkVwkb6EX
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.5.0/go.mod h1:s4kgfzA0covAXNicZHDMN58jExvcng2mC/DepXiF1EI=
 github.com/KarlGW/azcfg v0.10.0 h1:SU4CdWM9Y2ZheSUD0SzBYk/2CAvJpncW8SMYSHWJtbg=
 github.com/KarlGW/azcfg v0.10.0/go.mod h1:q768t6rlJw21todHst+uUNkXrb6Mcg/vScVBgohWACE=
+github.com/KarlGW/azcfg v0.10.1 h1:0HVaubjMYm48EQ0BCBNth/umyR801LgyPZJ2KvImhrg=
+github.com/KarlGW/azcfg v0.10.1/go.mod h1:q768t6rlJw21todHst+uUNkXrb6Mcg/vScVBgohWACE=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=

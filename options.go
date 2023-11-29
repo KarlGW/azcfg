@@ -15,11 +15,6 @@ type Options struct {
 	SecretClient secretClient
 	// SettingClient is a client used to retrieve settings.
 	SettingClient settingClient
-	// Timeout is the total timeout for retrieval of secrets. Defaults to 10 seconds.
-	Timeout time.Duration
-	// Concurrency is the amount of secrets that will be retrieved concurrently.
-	// Defaults to 10.
-	Concurrency int
 	// KeyVault is the name of the Key Vault containing secrets. Used to override the
 	// default method of aquiring target Key Vault.
 	KeyVault string
@@ -34,6 +29,11 @@ type Options struct {
 	ClientID string
 	// ClientSecret of the Service Principal with access to target Key Vault.
 	ClientSecret string
+	// Concurrency is the amount of secrets that will be retrieved concurrently.
+	// Defaults to 10.
+	Concurrency int
+	// Timeout is the total timeout for retrieval of secrets. Defaults to 10 seconds.
+	Timeout time.Duration
 	// UseManagedIdentity set to use a managed identity. To use a user assigned managed identity, use
 	// together with ClientID.
 	UseManagedIdentity bool

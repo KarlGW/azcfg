@@ -7,8 +7,8 @@ import (
 
 // Token contains the access token and when it expires.
 type Token struct {
-	AccessToken string
 	ExpiresOn   time.Time
+	AccessToken string
 }
 
 // TokenOptions contains options for a token request.

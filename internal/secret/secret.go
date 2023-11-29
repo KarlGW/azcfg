@@ -128,9 +128,9 @@ func (c Client) Get(ctx context.Context, name string, options ...Option) (Secret
 // secretResults contains results from retreiving secrets. Should
 // be used with a channel for handling results and errors.
 type secretResult struct {
-	name   string
 	secret Secret
 	err    error
+	name   string
 }
 
 // getSecrets gets secrets by the provided names and returns them as a map[string]Secret

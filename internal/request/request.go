@@ -42,6 +42,6 @@ func Do(ctx context.Context, client Client, headers http.Header, method, url str
 
 // Response represents an HTTP response.
 type Response struct {
-	StatusCode int
 	Body       []byte
+	StatusCode int
 }

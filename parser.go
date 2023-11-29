@@ -35,9 +35,9 @@ type parser struct {
 	secretClient  secretClient
 	settingClient settingClient
 	cred          auth.Credential
+	label         string
 	timeout       time.Duration
 	concurrency   int
-	label         string
 }
 
 // NewParser creates and returns a *Parser. With no options provided

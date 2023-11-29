@@ -25,12 +25,12 @@ var (
 // authResult represents a token response from the authentication
 // endpoint for Azure.
 type authResult struct {
-	AccessToken string `json:"access_token"`
 	// ExpiresIn is amount of seconds until the token expires.
 	// The reason any is used is that in earler API versions
 	// as used by IMDS backed managed identities a string is
 	// returned, whereas in newer a number is returned.
-	ExpiresIn any `json:"expires_in"`
+	ExpiresIn   any    `json:"expires_in"`
+	AccessToken string `json:"access_token"`
 }
 
 // authError represents an error response from the

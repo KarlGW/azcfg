@@ -128,11 +128,11 @@ func drainResponse(r *http.Response) error {
 
 // RetryPolicy contains rules for retries.
 type RetryPolicy struct {
+	Retry      retry
+	Backoff    backoff
 	MinDelay   time.Duration
 	MaxDelay   time.Duration
 	MaxRetries int
-	Retry      retry
-	Backoff    backoff
 }
 
 // retry is a function that takes an *http.Response and an error

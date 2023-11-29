@@ -143,9 +143,9 @@ func (c Client) Get(ctx context.Context, key string, options ...Option) (Setting
 // settingResult contains result from retreiving settings. Should
 // be used with a channel for handling results and errors.
 type settingResult struct {
-	key     string
 	setting Setting
 	err     error
+	key     string
 }
 
 // getSettings gets settings by the provided keys and returns them as a map[string]Setting

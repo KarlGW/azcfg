@@ -2,10 +2,6 @@ github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.0 h1:fb8kj/Dh4CSwgsOzHeZY4Xh68
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.0/go.mod h1:uReU2sSxZExRPBAg3qKzmAucSi51+SP1OhohieR821Q=
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.5.0 h1:d81/ng9rET2YqdVkVwkb6EXeRrLJIwyGnJcAlAWKwhs=
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.5.0/go.mod h1:s4kgfzA0covAXNicZHDMN58jExvcng2mC/DepXiF1EI=
-github.com/KarlGW/azcfg v0.10.0 h1:SU4CdWM9Y2ZheSUD0SzBYk/2CAvJpncW8SMYSHWJtbg=
-github.com/KarlGW/azcfg v0.10.0/go.mod h1:q768t6rlJw21todHst+uUNkXrb6Mcg/vScVBgohWACE=
-github.com/KarlGW/azcfg v0.10.1 h1:0HVaubjMYm48EQ0BCBNth/umyR801LgyPZJ2KvImhrg=
-github.com/KarlGW/azcfg v0.10.1/go.mod h1:q768t6rlJw21todHst+uUNkXrb6Mcg/vScVBgohWACE=
 github.com/KarlGW/azcfg v0.10.2 h1:ow1eZ7tppVeId9y/Mm8vtrkGB/uajrl5EsCB4yiye70=
 github.com/KarlGW/azcfg v0.10.2/go.mod h1:q768t6rlJw21todHst+uUNkXrb6Mcg/vScVBgohWACE=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=

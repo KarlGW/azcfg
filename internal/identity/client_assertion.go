@@ -52,8 +52,8 @@ func newClientAssertionJWT(tenantID, clientID string, certs []*x509.Certificate,
 // jwt is a JSON web token used for client credential with assertion.
 type jwt struct {
 	header    header
-	claims    claims
 	signature signature
+	claims    claims
 }
 
 // Encode returns the jwt as a string encoded for use in the request body.
@@ -89,11 +89,11 @@ func (h header) Encode() string {
 // claims is a JSON web token claims.
 type claims struct {
 	AUD string `json:"aud"`
-	EXP int64  `json:"exp"`
 	ISS string `json:"iss"`
 	JTI string `json:"jti"`
-	NBF int64  `json:"nbf"`
 	SUB string `json:"sub"`
+	EXP int64  `json:"exp"`
+	NBF int64  `json:"nbf"`
 	IAT int64  `json:"iat"`
 }
 

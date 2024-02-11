@@ -285,18 +285,25 @@ environment variables.
 
 ##### Environment variables
 
-**Service Principal**
+For all authentication scenarios the following environment variables are used:
 
 * `AZCFG_KEYVAULT_NAME` - Name of the Azure Key Vault (if using secrets).
 * `AZCFG_APPCONFIGURATION_NAME` - Name of the Azure App Configuration (if using settings).
+
+**Service Principal (client credentials with secret)**
+
 * `AZCFG_TENANT_ID` - Tenant ID of the service principal/application registration.
 * `AZCFG_CLIENT_ID` - Client ID (also called Application ID) of the service principal/application registration.
 * `AZCFG_CLIENT_SECRET`- Client Secret of the service principal/application registration.
 
+**Service Principal (client credentials with certificate)**
+
+* `AZCFG_CLIENT_CERTIFICATE` - Base64 encoded certificate. Use this or `AZCFG_CLIENT_CERTIFICATE_PATH`, not both.
+* `AZCFG_CLIENT_CERTIFICATE_PATH` - Path to certificate. Use this or `AZCFG_CLIENT_CERTIFICATE`, not both.
+* `AZCFG_CLIENT_CERTIFICATE_PASSWORD` - Password to certificate, if any.
+
 **Managed identity**
 
-* `AZCFG_KEYVAULT_NAME` - Name of the Azure Key Vault.
-* `AZCFG_APPCONFIGURATION_NAME` - Name of the Azure App Configuration.
 * `AZCFG_CLIENT_ID` - (Optional) Client ID (also called Application ID) of the Managed Identity. Set if using a user assigned managed identity.
 
 

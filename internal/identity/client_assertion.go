@@ -9,17 +9,20 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 )
 
 // newClientAssertionJWT creates a new assertion jwt for a client credential.
-func newClientAssertionJWT(tenantID, clientID string, certs []*x509.Certificate, key *rsa.PrivateKey) (jwt, error) {
+func newClientAssertionJWT(tenantID, clientID string, cert certificate) (jwt, error) {
 	header := header{
 		ALG: "RS256",
 		TYP: "JWT",
-		X5T: newX5T(certs[0].Raw),
-		X5C: []string{},
+		X5T: cert.thumbprint,
+	}
+	if len(cert.x5c) > 0 {
+		header.X5C = cert.x5c
 	}
 
 	uuid, err := newUUID()
@@ -42,7 +45,7 @@ func newClientAssertionJWT(tenantID, clientID string, certs []*x509.Certificate,
 		claims: claims,
 	}
 
-	if err := t.sign(key); err != nil {
+	if err := t.sign(cert.key); err != nil {
 		return jwt{}, err
 	}
 
@@ -111,12 +114,6 @@ func (s signature) Encode() string {
 	return base64.URLEncoding.EncodeToString(s)
 }
 
-// newX5T creates a new x5t thumbprint for the jwt.
-func newX5T(der []byte) string {
-	hashed := sha1.Sum(der)
-	return base64.StdEncoding.EncodeToString(hashed[:])
-}
-
 // newUUID creates a new UUID for the jwt.
 var newUUID = func() (string, error) {
 	uuid := make([]byte, 16)
@@ -129,4 +126,51 @@ var newUUID = func() (string, error) {
 	uuid[8] = (uuid[8] & 0x3f) | 0x80
 
 	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:]), nil
+}
+
+// certificate is a processed certificate chain and key that contains
+// the main certificate, the private key, the thumbprint and
+// the x5c chain.
+type certificate struct {
+	cert       *x509.Certificate
+	key        *rsa.PrivateKey
+	thumbprint string
+	x5c        []string
+}
+
+// isZero returns true if certificate is empty.
+func (c certificate) isZero() bool {
+	return c.cert == nil && c.key == nil && len(c.thumbprint) == 0
+}
+
+// newCertificate processes the provided certificates and key and returns
+// a certificateChain.
+func newCertificate(certs []*x509.Certificate, key *rsa.PrivateKey) (certificate, error) {
+	c := certificate{
+		key: key,
+	}
+	if key == nil {
+		return certificate{}, errors.New("private key is required")
+	}
+
+	for _, cert := range certs {
+		if cert == nil {
+			continue
+		}
+		ck, ok := cert.PublicKey.(*rsa.PublicKey)
+		if ok && c.key.E == ck.E && c.key.N.Cmp(ck.N) == 0 {
+			c.cert = cert
+			hashed := sha1.Sum(c.cert.Raw)
+			c.thumbprint = base64.StdEncoding.EncodeToString(hashed[:])
+			c.x5c = append([]string{base64.StdEncoding.EncodeToString(cert.Raw)}, c.x5c...)
+
+		} else {
+			c.x5c = append(c.x5c, base64.StdEncoding.EncodeToString(cert.Raw))
+		}
+	}
+	if c.cert == nil {
+		return certificate{}, errors.New("provided certificates and key does not match")
+	}
+
+	return c, nil
 }

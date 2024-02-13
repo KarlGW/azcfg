@@ -33,16 +33,15 @@ var (
 // according to the client credential flow. It contains all the necessary settings
 // to perform token requests.
 type ClientCredential struct {
-	c         request.Client
-	tokens    map[auth.Scope]*auth.Token
-	key       *rsa.PrivateKey
-	endpoint  string
-	userAgent string
-	tenantID  string
-	clientID  string
-	secret    string
-	certs     []*x509.Certificate
-	mu        sync.RWMutex
+	c           request.Client
+	tokens      map[auth.Scope]*auth.Token
+	endpoint    string
+	userAgent   string
+	tenantID    string
+	clientID    string
+	secret      string
+	certificate certificate
+	mu          sync.RWMutex
 }
 
 // NewClientCredential creates and returns a new *ClientCredential.
@@ -75,10 +74,11 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 		c.secret = opts.secret
 	}
 	if len(opts.certificates) > 0 {
-		c.certs = opts.certificates
-	}
-	if opts.key != nil {
-		c.key = opts.key
+		cert, err := newCertificate(opts.certificates, opts.key)
+		if err != nil {
+			return nil, err
+		}
+		c.certificate = cert
 	}
 
 	return c, nil
@@ -141,8 +141,8 @@ func (c *ClientCredential) tokenRequest(ctx context.Context, scope string) (auth
 	}
 	if len(c.secret) != 0 {
 		data.Add("client_secret", c.secret)
-	} else if len(c.certs) != 0 {
-		assertion, err := newClientAssertionJWT(c.tenantID, c.clientID, c.certs, c.key)
+	} else if !c.certificate.isZero() {
+		assertion, err := newClientAssertionJWT(c.tenantID, c.clientID, c.certificate)
 		if err != nil {
 			return auth.Token{}, err
 		}

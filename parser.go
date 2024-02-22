@@ -131,18 +131,18 @@ func setupCredential(options Options) (auth.Credential, error) {
 
 // credentialFromEnvironment gets credential details from environment variables.
 func credentialFromEnvironment() (auth.Credential, error) {
-	tenantID, clientID, clientSecret := os.Getenv("AZCFG_TENANT_ID"), os.Getenv("AZCFG_CLIENT_ID"), os.Getenv("AZCFG_CLIENT_SECRET")
+	tenantID, clientID, clientSecret := os.Getenv(azcfgTenantID), os.Getenv(azcfgClientID), os.Getenv(azcfgClientSecret)
 	if len(tenantID) > 0 && len(clientID) > 0 && len(clientSecret) > 0 {
 		return newClientCredential(tenantID, clientID, clientSecret)
-	} else {
-		return newManagedIdentityCredential(clientID)
 	}
+
+	return newManagedIdentityCredential(clientID)
 }
 
 // setupKeyVault configures target Key Vault based on the provided parameters.
 func setupKeyVault(vault string) string {
 	if len(vault) == 0 {
-		return os.Getenv("AZCFG_KEYVAULT_NAME")
+		return os.Getenv(azcfgKeyVaultName)
 	} else {
 		return vault
 	}
@@ -152,10 +152,10 @@ func setupKeyVault(vault string) string {
 // parameters.
 func setupAppConfiguration(appConfiguration, label string) (string, string) {
 	if len(appConfiguration) == 0 {
-		appConfiguration = os.Getenv("AZCFG_APPCONFIGURATION_NAME")
+		appConfiguration = os.Getenv(azcfgAppConfigurationName)
 	}
 	if len(label) == 0 {
-		label = os.Getenv("AZCFG_APPCONFIGURATION_LABEL")
+		label = os.Getenv(azcfgAppConfigurationLabel)
 	}
 	return appConfiguration, label
 }

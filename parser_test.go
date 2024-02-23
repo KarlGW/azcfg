@@ -149,7 +149,7 @@ func TestNewParser(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			newClientCredential = func(tenantID, clientID, clientSecret string) (auth.Credential, error) {
+			newClientSecretCredential = func(tenantID, clientID, clientSecret string) (auth.Credential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
@@ -250,7 +250,7 @@ func TestSetupCredential(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			newClientCredential = func(tenantID, clientID, clientSecret string) (auth.Credential, error) {
+			newClientSecretCredential = func(tenantID, clientID, clientSecret string) (auth.Credential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}

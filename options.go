@@ -43,6 +43,8 @@ type Options struct {
 	// UseManagedIdentity set to use a managed identity. To use a user assigned managed identity, use
 	// together with ClientID.
 	UseManagedIdentity bool
+	// credFn is a function used to retreive credentials.
+	credFn func() (auth.Credential, error)
 }
 
 // Option is a function that sets Options.
@@ -87,9 +89,9 @@ func WithTimeout(d time.Duration) Option {
 // a secret (client secret credential) for the Key Vault.
 func WithClientSecretCredential(tenantID, clientID, clientSecret string) Option {
 	return func(o *Options) {
-		o.TenantID = tenantID
-		o.ClientID = clientID
-		o.ClientSecret = clientSecret
+		o.credFn = func() (auth.Credential, error) {
+			return newClientSecretCredential(tenantID, clientID, clientSecret)
+		}
 	}
 }
 
@@ -97,10 +99,9 @@ func WithClientSecretCredential(tenantID, clientID, clientSecret string) Option 
 // a certificate (client certificate credential) for the Key Vault.
 func WithClientCertificateCredential(tenantID, clientID string, certificates []*x509.Certificate, key *rsa.PrivateKey) Option {
 	return func(o *Options) {
-		o.TenantID = tenantID
-		o.ClientID = clientID
-		o.Certificates = certificates
-		o.PrivateKey = key
+		o.credFn = func() (auth.Credential, error) {
+			return newClientCertificateCredential(tenantID, clientID, certificates, key)
+		}
 	}
 }
 
@@ -108,10 +109,13 @@ func WithClientCertificateCredential(tenantID, clientID string, certificates []*
 // for credentials for the Key Vault.
 func WithManagedIdentity(clientID ...string) Option {
 	return func(o *Options) {
+		var cid string
 		if len(clientID) > 0 {
-			o.ClientID = clientID[0]
+			cid = clientID[0]
 		}
-		o.UseManagedIdentity = true
+		o.credFn = func() (auth.Credential, error) {
+			return newManagedIdentityCredential(cid)
+		}
 	}
 }
 

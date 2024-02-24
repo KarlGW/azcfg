@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/KarlGW/azcfg/auth"
 	"github.com/KarlGW/azcfg/stub"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -54,18 +55,15 @@ func TestOptions(t *testing.T) {
 			name:  "WithClientSecretCredential",
 			input: WithClientSecretCredential("1111", "2222", "3333"),
 			want: Options{
-				TenantID:     "1111",
-				ClientID:     "2222",
-				ClientSecret: "3333",
+				credFn: func() (auth.Credential, error) {
+					return newClientSecretCredential("1111", "2222", "3333")
+				},
 			},
 		},
 		{
 			name:  "WithManagedIdentity",
 			input: WithManagedIdentity("2222"),
-			want: Options{
-				ClientID:           "2222",
-				UseManagedIdentity: true,
-			},
+			want:  Options{},
 		},
 		{
 			name:  "WithSecretClient",
@@ -94,7 +92,7 @@ func TestOptions(t *testing.T) {
 		got := Options{}
 		test.input(&got)
 
-		if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(mockCredential{}), cmpopts.IgnoreUnexported(stub.SecretClient{}, stub.SettingClient{}), cmpopts.IgnoreFields(Options{}, "PrivateKey")); diff != "" {
+		if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Options{}, mockCredential{}), cmpopts.IgnoreUnexported(stub.SecretClient{}, stub.SettingClient{}), cmpopts.IgnoreFields(Options{}, "PrivateKey", "credFn")); diff != "" {
 			t.Errorf("%s = unexpected result (-want +got)\n%s\n", test.name, diff)
 		}
 	}

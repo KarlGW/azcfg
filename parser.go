@@ -111,9 +111,15 @@ func (p *parser) Parse(v any) error {
 // setupCredential configures credential based on the provided
 // options.
 func setupCredential(options Options) (auth.Credential, error) {
+	if options.credFn != nil {
+		return options.credFn()
+	}
+
 	if options.Credential != nil {
 		return options.Credential, nil
 	}
+
+	// Function to get settings from either options or environment variables.
 
 	if len(options.TenantID) == 0 && len(options.ClientID) == 0 && len(options.ClientSecret) == 0 && !options.UseManagedIdentity {
 		return credentialFromEnvironment()

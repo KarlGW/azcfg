@@ -310,7 +310,7 @@ func TestSetupKeyVault(t *testing.T) {
 				envs  map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_KEYVAULT_NAME": "vault",
+					azcfgKeyVaultName: "vault",
 				},
 			},
 			want: "vault",
@@ -333,7 +333,7 @@ func TestSetupKeyVault(t *testing.T) {
 			}{
 				vault: "vault1",
 				envs: map[string]string{
-					"AZCFG_KEYVAULT_NAME": "vault2",
+					azcfgKeyVaultName: "vault2",
 				},
 			},
 			want: "vault1",
@@ -374,7 +374,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 				envs      map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_APPCONFIGURATION_NAME": "appconfig",
+					azcfgAppConfigurationName: "appconfig",
 				},
 			},
 			wantAppConfig: "appconfig",
@@ -399,7 +399,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 			}{
 				appConfig: "appconfig1",
 				envs: map[string]string{
-					"AZCFG_APPCONFIGURATION_NAME": "appconfig2",
+					azcfgAppConfigurationName: "appconfig2",
 				},
 			},
 			wantAppConfig: "appconfig1",
@@ -412,7 +412,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 				envs      map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_APPCONFIGURATION_LABEL": "label",
+					azcfgAppConfigurationLabel: "label",
 				},
 			},
 			wantLabel: "label",
@@ -437,7 +437,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 			}{
 				label: "label1",
 				envs: map[string]string{
-					"AZCFG_APPCONFIGURATION_LABEL": "label2",
+					azcfgAppConfigurationLabel: "label2",
 				},
 			},
 			wantLabel: "label1",

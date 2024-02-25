@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	p "encoding/pem"
 	"errors"
-	"fmt"
 )
 
 var (
@@ -53,7 +52,6 @@ func CertificateAndKeyFomPEM(pem []byte) ([]*x509.Certificate, *rsa.PrivateKey, 
 			}
 			key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 			if err != nil {
-				fmt.Println("Error: ", err)
 				return nil, nil, err
 			}
 			k, ok := key.(*rsa.PrivateKey)

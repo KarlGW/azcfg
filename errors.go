@@ -19,6 +19,8 @@ var (
 	// properly. Either App Configuration name is not set or a provided settingClient
 	// is nil.
 	ErrInvalidSettingClient = errors.New("invalid setting client")
+	// ErrMissingClientID is returned when a client ID is required but not provided.
+	ErrMissingClientID = errors.New("client ID is required for client credentials")
 )
 
 // RequiredFieldsError represents an error when either secrets or settings

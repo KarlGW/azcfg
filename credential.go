@@ -10,8 +10,8 @@ import (
 	"github.com/KarlGW/azcfg/internal/identity"
 )
 
-// CertificateAndKeyFomPEM extracts the x509 certificates and private key from the given PEM.
-var CertificateAndKeyFromPem = identity.CertificateAndKeyFomPEM
+// CertificateAndKeyFromPEM extracts the x509 certificates and private key from the given PEM.
+var CertificateAndKeyFromPEM = identity.CertificateAndKeyFromPEM
 
 // credentialFunc is a function that returns an auth.Credential and an error.
 type credentialFunc func() (auth.Credential, error)
@@ -89,5 +89,5 @@ func certificateAndKey(certificate, certificatePath string) ([]*x509.Certificate
 		return nil, nil, err
 	}
 
-	return identity.CertificateAndKeyFomPEM(pem)
+	return identity.CertificateAndKeyFromPEM(pem)
 }

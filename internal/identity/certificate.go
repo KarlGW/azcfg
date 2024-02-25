@@ -18,8 +18,8 @@ var (
 	ErrKeyNotRSA = errors.New("private key is not an RSA key")
 )
 
-// CertificateAndKeyFomPEM extracts the x509 certificates and private key from the given PEM.
-func CertificateAndKeyFomPEM(pem []byte) ([]*x509.Certificate, *rsa.PrivateKey, error) {
+// CertificateAndKeyFromPEM extracts the x509 certificates and private key from the given PEM.
+func CertificateAndKeyFromPEM(pem []byte) ([]*x509.Certificate, *rsa.PrivateKey, error) {
 	var certs []*x509.Certificate
 	var privateKey *rsa.PrivateKey
 	for {

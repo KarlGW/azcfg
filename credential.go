@@ -89,5 +89,5 @@ func certificateAndKey(certificate, certificatePath string) ([]*x509.Certificate
 		return nil, nil, err
 	}
 
-	return identity.CertificateAndKeyFromPEM(pem)
+	return CertificateAndKeyFromPEM(pem)
 }

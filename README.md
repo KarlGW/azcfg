@@ -176,7 +176,7 @@ func main() {
 }
 ```
 
-```sh
+```go
 {Host: Port:0 Username:username-from-appconfig Password:password-from-appconfig Credential:{Key:12345}}
 ```
 

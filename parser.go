@@ -1,15 +1,11 @@
 package azcfg
 
 import (
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/base64"
 	"errors"
 	"os"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
-	"github.com/KarlGW/azcfg/internal/identity"
 	"github.com/KarlGW/azcfg/internal/secret"
 	"github.com/KarlGW/azcfg/internal/setting"
 )
@@ -119,51 +115,21 @@ func setupCredential(options Options) (auth.Credential, error) {
 		return options.Credential, nil
 	}
 
-	// Function to get settings from either options or environment variables.
+	credFn := credentialFuncFromOptions(options)
+	if credFn != nil {
+		return credFn()
+	}
 
-	if len(options.TenantID) == 0 && len(options.ClientID) == 0 && len(options.ClientSecret) == 0 && !options.UseManagedIdentity {
-		return credentialFromEnvironment()
-	} else if len(options.TenantID) > 0 && len(options.ClientID) > 0 && len(options.ClientSecret) > 0 && !options.UseManagedIdentity {
-		return credentialFromOptions(options)
-	} else if options.UseManagedIdentity {
-		return newManagedIdentityCredential(options.ClientID)
+	var err error
+	credFn, err = credentialFuncFromEnvironment()
+	if err != nil {
+		return nil, err
+	}
+	if credFn != nil {
+		return credFn()
 	}
 
 	return nil, errors.New("could not determine credentials and authentication method")
-}
-
-// credentialFromOptions gets credential details from the provided options.
-func credentialFromOptions(options Options) (auth.Credential, error) {
-	if len(options.ClientSecret) > 0 {
-		return newClientSecretCredential(options.TenantID, options.ClientID, options.ClientSecret)
-	}
-
-	if len(options.Certificates) > 0 && options.PrivateKey != nil {
-		return newClientCertificateCredential(options.TenantID, options.ClientID, options.Certificates, options.PrivateKey)
-	}
-	if options.UseManagedIdentity {
-		return newManagedIdentityCredential(options.ClientID)
-	}
-	return nil, nil
-}
-
-// credentialFromEnvironment gets credential details from environment variables.
-func credentialFromEnvironment() (auth.Credential, error) {
-	tenantID, clientID := os.Getenv(azcfgTenantID), os.Getenv(azcfgClientID)
-
-	if clientSecret := os.Getenv(azcfgClientSecret); len(clientSecret) > 0 {
-		return newClientSecretCredential(tenantID, clientID, clientSecret)
-	}
-
-	certificate, certificatePath := os.Getenv(azcfgCertificate), os.Getenv(azcfgCertificatePath)
-	if len(certificate) > 0 || len(certificatePath) > 0 {
-		certs, key, err := certificateAndKey(certificate, certificatePath)
-		if err != nil {
-			return nil, err
-		}
-		return newClientCertificateCredential(tenantID, clientID, certs, key)
-	}
-	return newManagedIdentityCredential(clientID)
 }
 
 // setupKeyVault configures target Key Vault based on the provided parameters.
@@ -185,32 +151,4 @@ func setupAppConfiguration(appConfiguration, label string) (string, string) {
 		label = os.Getenv(azcfgAppConfigurationLabel)
 	}
 	return appConfiguration, label
-}
-
-var newClientSecretCredential = func(tenantID, clientID, clientSecret string) (auth.Credential, error) {
-	return identity.NewClientSecretCredential(tenantID, clientID, clientSecret)
-}
-
-var newClientCertificateCredential = func(tenantID, clientID string, certificates []*x509.Certificate, key *rsa.PrivateKey) (auth.Credential, error) {
-	return identity.NewClientCertificateCredential(tenantID, clientID, certificates, key)
-}
-
-var newManagedIdentityCredential = func(clientID string) (auth.Credential, error) {
-	return identity.NewManagedIdentityCredential(identity.WithClientID(clientID))
-}
-
-// certificateAndKey gets the certificates and keys from the provided certificate or certificate path.
-func certificateAndKey(certificate, certificatePath string) ([]*x509.Certificate, *rsa.PrivateKey, error) {
-	var pem []byte
-	var err error
-	if len(certificate) > 0 {
-		pem, err = base64.StdEncoding.DecodeString(certificate)
-	} else if len(certificatePath) > 0 {
-		pem, err = os.ReadFile(certificatePath)
-	}
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return identity.CertificateAndKeyFomPEM(pem)
 }

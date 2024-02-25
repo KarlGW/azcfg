@@ -44,7 +44,7 @@ type Options struct {
 	// together with ClientID.
 	UseManagedIdentity bool
 	// credFn is a function used to retreive credentials.
-	credFn func() (auth.Credential, error)
+	credFn credentialFunc
 }
 
 // Option is a function that sets Options.

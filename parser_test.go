@@ -2,7 +2,8 @@ package azcfg
 
 import (
 	"context"
-	"os"
+	"crypto/rsa"
+	"crypto/x509"
 	"testing"
 	"time"
 
@@ -32,11 +33,11 @@ func TestNewParser(t *testing.T) {
 				envs    map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_KEYVAULT_NAME":         "vault",
-					"AZCFG_APPCONFIGURATION_NAME": "appconfig",
-					"AZCFG_TENANT_ID":             "1111",
-					"AZCFG_CLIENT_ID":             "2222",
-					"AZCFG_CLIENT_SECRET":         "3333",
+					azcfgKeyVaultName:         "vault",
+					azcfgAppConfigurationName: "appconfig",
+					azcfgTenantID:             "1111",
+					azcfgClientID:             "2222",
+					azcfgClientSecret:         "3333",
 				},
 			},
 			want: &parser{
@@ -80,11 +81,11 @@ func TestNewParser(t *testing.T) {
 				envs    map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_KEYVAULT_NAME":         "vault",
-					"AZCFG_APPCONFIGURATION_NAME": "appconfig",
-					"AZCFG_TENANT_ID":             "1111",
-					"AZCFG_CLIENT_ID":             "2222",
-					"AZCFG_CLIENT_SECRET":         "3333",
+					azcfgKeyVaultName:         "vault",
+					azcfgAppConfigurationName: "appconfig",
+					azcfgTenantID:             "1111",
+					azcfgClientID:             "2222",
+					azcfgClientSecret:         "3333",
 				},
 			},
 			want:    nil,
@@ -157,6 +158,14 @@ func TestNewParser(t *testing.T) {
 					t: "sp",
 				}, nil
 			}
+			newClientCertificateCredential = func(tenantID, clientID string, certificate []*x509.Certificate, key *rsa.PrivateKey) (auth.Credential, error) {
+				if test.wantErr != nil {
+					return nil, test.wantErr
+				}
+				return mockCredential{
+					t: "sp",
+				}, nil
+			}
 			newManagedIdentityCredential = func(clientID string) (auth.Credential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
@@ -166,8 +175,9 @@ func TestNewParser(t *testing.T) {
 				}, nil
 			}
 
-			setEnvVars(test.input.envs)
-			defer unsetEnvVars(test.input.envs)
+			for k, v := range test.input.envs {
+				t.Setenv(k, v)
+			}
 
 			got, gotErr := NewParser(test.input.options...)
 
@@ -199,9 +209,9 @@ func TestSetupCredential(t *testing.T) {
 				envs    map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_TENANT_ID":     "1111",
-					"AZCFG_CLIENT_ID":     "2222",
-					"AZCFG_CLIENT_SECRET": "3333",
+					azcfgTenantID:     "1111",
+					azcfgClientID:     "2222",
+					azcfgClientSecret: "3333",
 				},
 			},
 			want: mockCredential{
@@ -267,8 +277,9 @@ func TestSetupCredential(t *testing.T) {
 				}, nil
 			}
 
-			setEnvVars(test.input.envs)
-			defer unsetEnvVars(test.input.envs)
+			for k, v := range test.input.envs {
+				t.Setenv(k, v)
+			}
 
 			got, gotErr := setupCredential(test.input.options)
 
@@ -331,8 +342,9 @@ func TestSetupKeyVault(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			setEnvVars(test.input.envs)
-			defer unsetEnvVars(test.input.envs)
+			for k, v := range test.input.envs {
+				t.Setenv(k, v)
+			}
 
 			got := setupKeyVault(test.input.vault)
 
@@ -434,8 +446,9 @@ func TestSetupAppConfiguration(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			setEnvVars(test.input.envs)
-			defer unsetEnvVars(test.input.envs)
+			for k, v := range test.input.envs {
+				t.Setenv(k, v)
+			}
 
 			gotAppConfig, gotLabel := setupAppConfiguration(test.input.appConfig, test.input.label)
 
@@ -447,19 +460,6 @@ func TestSetupAppConfiguration(t *testing.T) {
 				t.Errorf("setupAppConfiguration() = unexpected result, want: %s, got: %s\n", test.wantLabel, gotLabel)
 			}
 		})
-	}
-}
-
-func setEnvVars(envs map[string]string) {
-	os.Clearenv()
-	for k, v := range envs {
-		os.Setenv(k, v)
-	}
-}
-
-func unsetEnvVars(envs map[string]string) {
-	for k := range envs {
-		os.Unsetenv(k)
 	}
 }
 

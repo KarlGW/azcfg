@@ -134,12 +134,12 @@ func getFields(v reflect.Value, tag string) ([]string, []string) {
 	return fields, required
 }
 
-// HasValue wraps around method GetValue,
-type HasValue interface {
+// hasValue wraps around method GetValue,
+type hasValue interface {
 	GetValue() string
 }
 
-func setFields[V HasValue](v reflect.Value, values map[string]V, tag string) error {
+func setFields[V hasValue](v reflect.Value, values map[string]V, tag string) error {
 	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		if !v.Field(i).CanSet() {

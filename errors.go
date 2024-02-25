@@ -61,7 +61,7 @@ func (e requiredSettingsError) Error() string {
 
 // requiredErrorMessage builds a message based on the provided map[string]V (HasValue)
 // and []string (required).
-func requiredErrorMessage[V HasValue](values map[string]V, required []string, t string) string {
+func requiredErrorMessage[V hasValue](values map[string]V, required []string, t string) string {
 	if len(required) == 0 {
 		return ""
 	}

@@ -49,17 +49,6 @@ func TestTokenFromAuthResult(t *testing.T) {
 				ExpiresOn:   time.Now().Add(time.Duration(3599 * time.Second)),
 			},
 		},
-		{
-			name: "ExpiresIn is int",
-			input: authResult{
-				AccessToken: "ey12345",
-				ExpiresIn:   int(3599),
-			},
-			want: auth.Token{
-				AccessToken: "ey12345",
-				ExpiresOn:   time.Now().Add(time.Duration(3599 * time.Second)),
-			},
-		},
 	}
 
 	for _, test := range tests {

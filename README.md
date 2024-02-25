@@ -298,8 +298,8 @@ For all authentication scenarios the following environment variables are used:
 
 **Service Principal (client credentials with certificate)**
 
-* `AZCFG_CLIENT_CERTIFICATE` - Base64 encoded certificate (PEM). Use this or `AZCFG_CLIENT_CERTIFICATE_PATH`, not both.
-* `AZCFG_CLIENT_CERTIFICATE_PATH` - Path to certificate (PEM). Use this or `AZCFG_CLIENT_CERTIFICATE`, not both.
+* `AZCFG_CLIENT_CERTIFICATE` - Base64 encoded certificate (PEM).
+* `AZCFG_CLIENT_CERTIFICATE_PATH` - Path to certificate (PEM).
 
 **Managed identity**
 

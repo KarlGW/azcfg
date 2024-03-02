@@ -189,6 +189,8 @@ var certificateAndKey = func(certificate, certificatePath string) ([]*x509.Certi
 		pem, err = base64.StdEncoding.DecodeString(certificate)
 	} else if len(certificatePath) > 0 {
 		pem, err = os.ReadFile(certificatePath)
+	} else {
+		return nil, nil, nil
 	}
 	if err != nil {
 		return nil, nil, err

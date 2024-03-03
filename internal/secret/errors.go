@@ -5,8 +5,6 @@ import "errors"
 const (
 	// SecretNotFound is the error code returned when a secret is not found.
 	SecretNotFound = "SecretNotFound"
-	// Unauthorized is the error code returned when a request is unauthorized.
-	Unauthorized = "Unauthorized"
 )
 
 // secretError represents an error returned from the Key Vault REST API.

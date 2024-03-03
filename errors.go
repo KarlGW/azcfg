@@ -11,14 +11,8 @@ var (
 )
 
 var (
-	// ErrInvalidSecretClient is returned when a secret client is not configured
-	// properly. Either Key Vault name is not set or a provided secretClient
-	// is nil.
-	ErrInvalidSecretClient = errors.New("invalid secret client")
-	// ErrInvalidSettingClient is returned when a setting client is not configured
-	// properly. Either App Configuration name is not set or a provided settingClient
-	// is nil.
-	ErrInvalidSettingClient = errors.New("invalid setting client")
+	// ErrInvalidCredential is returned when a credential is not valid.
+	ErrInvalidCredential = errors.New("invalid credential")
 	// ErrMissingClientID is returned when a client ID is required but not provided.
 	ErrMissingClientID = errors.New("client ID is required for client credentials")
 )

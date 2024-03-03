@@ -42,10 +42,7 @@ func parse(d any, secretClient secretClient, settingClient settingClient, label 
 	var wg sync.WaitGroup
 
 	secretFields, requiredSecrets := getFields(v, secretTag)
-	if len(secretFields) > 0 {
-		if secretClient == nil {
-			return fmt.Errorf("%w: required settings missing", ErrInvalidSecretClient)
-		}
+	if len(secretFields) > 0 && secretClient != nil {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -67,10 +64,7 @@ func parse(d any, secretClient secretClient, settingClient settingClient, label 
 	}
 
 	settingFields, requiredSettings := getFields(v, settingTag)
-	if len(settingFields) > 0 {
-		if settingClient == nil {
-			return fmt.Errorf("%w: required settings missing", ErrInvalidSettingClient)
-		}
+	if len(settingFields) > 0 && settingClient != nil {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

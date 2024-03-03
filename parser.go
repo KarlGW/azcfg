@@ -4,7 +4,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
-	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -164,7 +164,7 @@ func setupCredential(options Options) (auth.Credential, error) {
 		return newClientCertificateCredential(tenantID, clientID, certs, key)
 	}
 
-	return nil, errors.New("could not determine credentials and authentication method")
+	return nil, fmt.Errorf("%w: could not determine credential", ErrInvalidCredential)
 }
 
 // setupKeyVault configures target Key Vault based on the provided parameters.

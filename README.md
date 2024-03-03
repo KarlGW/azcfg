@@ -298,6 +298,8 @@ For all authentication scenarios the following environment variables are used:
 
 **Service Principal (client credentials with certificate)**
 
+* `AZCFG_TENANT_ID` - Tenant ID of the service principal/application registration.
+* `AZCFG_CLIENT_ID` - Client ID (also called Application ID) of the service principal/application registration.
 * `AZCFG_CLIENT_CERTIFICATE` - Base64 encoded certificate (PEM).
 * `AZCFG_CLIENT_CERTIFICATE_PATH` - Path to certificate (PEM).
 

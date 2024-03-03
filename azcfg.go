@@ -44,7 +44,7 @@ func parse(d any, secretClient secretClient, settingClient settingClient, label 
 	secretFields, requiredSecrets := getFields(v, secretTag)
 	if len(secretFields) > 0 {
 		if secretClient == nil {
-			return ErrInvalidSecretClient
+			return fmt.Errorf("%w: required settings missing", ErrInvalidSecretClient)
 		}
 		wg.Add(1)
 		go func() {
@@ -69,7 +69,7 @@ func parse(d any, secretClient secretClient, settingClient settingClient, label 
 	settingFields, requiredSettings := getFields(v, settingTag)
 	if len(settingFields) > 0 {
 		if settingClient == nil {
-			return ErrInvalidSettingClient
+			return fmt.Errorf("%w: required settings missing", ErrInvalidSettingClient)
 		}
 		wg.Add(1)
 		go func() {

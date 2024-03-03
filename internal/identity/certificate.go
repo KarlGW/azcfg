@@ -19,12 +19,6 @@ var (
 )
 
 // CertificateAndKeyFromPEM extracts the x509 certificates and private key from the given PEM.
-// The code for handling the parsing was inspired by the code from ChatGPT, [MSAL library for Go]
-// and [Azure SDK for Go]. Which all seem to follow a common and similar pattern.
-//
-// [MSAL library for Go]: https://github.com/AzureAD/microsoft-authentication-library-for-go/blob/728b089dd0b76102c21c29fcb28adf92cf4d554f/apps/confidential/confidential.go#L70
-// [Azure SDK for Go]: https://github.com/Azure/azure-sdk-for-go/blob/6a3e5dc68e51d116eddeb9fd1d2ffbb851be7d57/sdk/azidentity/client_certificate_credential.go#L91
-
 func CertificateAndKeyFromPEM(pem []byte) ([]*x509.Certificate, *rsa.PrivateKey, error) {
 	var certs []*x509.Certificate
 	var privateKey *rsa.PrivateKey

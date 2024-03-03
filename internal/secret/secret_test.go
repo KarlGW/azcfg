@@ -174,66 +174,42 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 	}, nil
 }
 
-func TestIsSecretError(t *testing.T) {
+func TestIsSecretNotFound(t *testing.T) {
 	var tests = []struct {
 		name  string
-		input struct {
-			err         error
-			statusCodes []int
-		}
-		want bool
+		input error
+		want  bool
 	}{
 		{
-			name: "is not a secretError",
-			input: struct {
-				err         error
-				statusCodes []int
-			}{
-				err: errors.New("error"),
-			},
-			want: false,
+			name:  "is a secretErr with error code SecretNotFound",
+			input: testNewSecretError(SecretNotFound),
+			want:  true,
 		},
 		{
-			name: "is a secretError",
-			input: struct {
-				err         error
-				statusCodes []int
-			}{
-				err: secretError{},
-			},
-			want: true,
+			name:  "is a secretErr with error code Unauthorized",
+			input: testNewSecretError(Unauthorized),
+			want:  false,
 		},
 		{
-			name: "is a secretError with statusCode",
-			input: struct {
-				err         error
-				statusCodes []int
-			}{
-				err:         secretError{StatusCode: http.StatusNotFound},
-				statusCodes: []int{http.StatusNotFound},
-			},
-			want: true,
-		},
-		{
-			name: "is a secretError with statusCode",
-			input: struct {
-				err         error
-				statusCodes []int
-			}{
-				err:         secretError{StatusCode: http.StatusNotFound},
-				statusCodes: []int{http.StatusBadRequest},
-			},
-			want: false,
+			name:  "is not a secretErr",
+			input: errors.New("error"),
+			want:  false,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := isSecretError(test.input.err, test.input.statusCodes...)
+			got := isSecretNotFound(test.input)
 
 			if test.want != got {
-				t.Errorf("isSecretError() = unexpected result, want: %v, got: %v\n", test.want, got)
+				t.Errorf("isSecretNotFound() = unexpected result, want: %v, got: %v\n", test.want, got)
 			}
 		})
 	}
+}
+
+func testNewSecretError(code string) secretError {
+	s := secretError{}
+	s.Err.Code = code
+	return s
 }

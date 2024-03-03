@@ -3,7 +3,6 @@ package secret
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -166,7 +165,7 @@ func (c Client) getSecrets(ctx context.Context, names []string, options ...Optio
 					}
 					sr := secretResult{name: name}
 					secret, err := c.Get(ctx, name, options...)
-					if err != nil && !isSecretError(err, http.StatusNotFound) {
+					if err != nil && !isSecretNotFound(err) {
 						sr.err = err
 						srCh <- sr
 						return
@@ -207,39 +206,4 @@ func WithTimeout(d time.Duration) ClientOption {
 	return func(c *Client) {
 		c.timeout = d
 	}
-}
-
-// secretError represents an error returned from the Key Vault REST API.
-type secretError struct {
-	Err struct {
-		Code    string `json:"code"`
-		Message string `json:"message"`
-	} `json:"error"`
-	StatusCode int
-}
-
-// Error returns the message from the secretError.
-func (e secretError) Error() string {
-	return e.Err.Message
-}
-
-// isSecretError checks if the provided error is a secretError.
-// If the optional statusCodes is provided it further
-// requires that they should match that with the
-// provided error.
-func isSecretError(err error, statusCodes ...int) bool {
-	var secretErr secretError
-	if errors.As(err, &secretErr) {
-		if len(statusCodes) == 0 {
-			return true
-		} else {
-			for _, statusCode := range statusCodes {
-				if secretErr.StatusCode == statusCode {
-					return true
-				}
-			}
-		}
-
-	}
-	return false
 }

@@ -64,7 +64,9 @@ func NewClient(keyVault string, cred auth.Credential, options ...ClientOption) *
 		option(c)
 	}
 	if c.c == nil {
-		c.c = httpr.NewClient()
+		c.c = httpr.NewClient(
+			httpr.WithTimeout(c.timeout),
+		)
 	}
 	return c
 }

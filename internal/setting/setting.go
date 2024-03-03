@@ -65,7 +65,9 @@ func NewClient(appConfiguration string, cred auth.Credential, options ...ClientO
 		option(c)
 	}
 	if c.c == nil {
-		c.c = httpr.NewClient()
+		c.c = httpr.NewClient(
+			httpr.WithTimeout(c.timeout),
+		)
 	}
 	return c
 }

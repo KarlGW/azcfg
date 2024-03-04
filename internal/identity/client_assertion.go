@@ -144,7 +144,7 @@ func (c certificate) isZero() bool {
 }
 
 // newCertificate processes the provided certificates and key and returns
-// a certificateChain.
+// a certificate.
 func newCertificate(certs []*x509.Certificate, key *rsa.PrivateKey) (certificate, error) {
 	c := certificate{
 		key: key,

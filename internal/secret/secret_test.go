@@ -164,7 +164,7 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 	if !ok {
 		return &http.Response{
 			StatusCode: http.StatusNotFound,
-			Body:       io.NopCloser(bytes.NewBuffer([]byte(`{"error":{}}`))),
+			Body:       io.NopCloser(bytes.NewBuffer([]byte(`{"error":{"code":"SecretNotFound"}}`))),
 		}, nil
 	}
 

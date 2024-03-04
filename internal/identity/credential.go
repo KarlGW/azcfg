@@ -54,8 +54,6 @@ func tokenFromAuthResult(t authResult) auth.Token {
 		expiresIn, _ = strconv.Atoi(e)
 	case float64:
 		expiresIn = int(e)
-	case int:
-		expiresIn = e
 	default:
 		expiresIn = 0
 	}

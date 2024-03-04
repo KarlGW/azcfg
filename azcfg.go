@@ -42,10 +42,7 @@ func parse(d any, secretClient secretClient, settingClient settingClient, label 
 	var wg sync.WaitGroup
 
 	secretFields, requiredSecrets := getFields(v, secretTag)
-	if len(secretFields) > 0 {
-		if secretClient == nil {
-			return ErrInvalidSecretClient
-		}
+	if len(secretFields) > 0 && secretClient != nil {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -67,10 +64,7 @@ func parse(d any, secretClient secretClient, settingClient settingClient, label 
 	}
 
 	settingFields, requiredSettings := getFields(v, settingTag)
-	if len(settingFields) > 0 {
-		if settingClient == nil {
-			return ErrInvalidSettingClient
-		}
+	if len(settingFields) > 0 && settingClient != nil {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -134,12 +128,12 @@ func getFields(v reflect.Value, tag string) ([]string, []string) {
 	return fields, required
 }
 
-// HasValue wraps around method GetValue,
-type HasValue interface {
+// hasValue wraps around method GetValue,
+type hasValue interface {
 	GetValue() string
 }
 
-func setFields[V HasValue](v reflect.Value, values map[string]V, tag string) error {
+func setFields[V hasValue](v reflect.Value, values map[string]V, tag string) error {
 	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		if !v.Field(i).CanSet() {

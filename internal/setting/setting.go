@@ -3,7 +3,6 @@ package setting
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -65,7 +64,9 @@ func NewClient(appConfiguration string, cred auth.Credential, options ...ClientO
 		option(c)
 	}
 	if c.c == nil {
-		c.c = httpr.NewClient()
+		c.c = httpr.NewClient(
+			httpr.WithTimeout(c.timeout),
+		)
 	}
 	return c
 }
@@ -179,7 +180,7 @@ func (c Client) getSettings(ctx context.Context, keys []string, options ...Optio
 					}
 					sr := settingResult{key: key}
 					setting, err := c.Get(ctx, key, options...)
-					if err != nil && !isSettingError(err, http.StatusNotFound) {
+					if err != nil && !isSettingNotFound(err) {
 						sr.err = err
 						srCh <- sr
 						return
@@ -227,41 +228,4 @@ func WithLabel(label string) Option {
 	return func(o *Options) {
 		o.Label = label
 	}
-}
-
-// settingError represents an error returned from the App Configuration
-// REST API.
-type settingError struct {
-	Type       string `json:"type"`
-	Title      string `json:"title"`
-	Name       string `json:"name"`
-	Detail     string `json:"detail"`
-	Status     int    `json:"status"`
-	StatusCode int
-}
-
-// Error returns the detail from the settingError.
-func (e settingError) Error() string {
-	return e.Detail
-}
-
-// isSettingError checks if the provided error is a settingError.
-// If the optional statusCodes is provided it further
-// requires that they should match that with the
-// provided error.
-func isSettingError(err error, statusCodes ...int) bool {
-	var settingErr settingError
-	if errors.As(err, &settingErr) {
-		if len(statusCodes) == 0 {
-			return true
-		} else {
-			for _, statusCode := range statusCodes {
-				if settingErr.StatusCode == statusCode {
-					return true
-				}
-			}
-		}
-
-	}
-	return false
 }

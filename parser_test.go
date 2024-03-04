@@ -2,7 +2,9 @@ package azcfg
 
 import (
 	"context"
-	"os"
+	"crypto/rsa"
+	"crypto/x509"
+	"errors"
 	"testing"
 	"time"
 
@@ -26,24 +28,68 @@ func TestNewParser(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name: "defaults (and settings from environment)",
+			name: "setting up secret and setting client",
 			input: struct {
 				options []Option
 				envs    map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_KEYVAULT_NAME":         "vault",
-					"AZCFG_APPCONFIGURATION_NAME": "appconfig",
-					"AZCFG_TENANT_ID":             "1111",
-					"AZCFG_CLIENT_ID":             "2222",
-					"AZCFG_CLIENT_SECRET":         "3333",
+					azcfgKeyVaultName:         "vault",
+					azcfgAppConfigurationName: "appconfig",
+					azcfgTenantID:             "1111",
+					azcfgClientID:             "2222",
+					azcfgClientSecret:         "3333",
 				},
 			},
 			want: &parser{
 				secretClient:  &secret.Client{},
 				settingClient: &setting.Client{},
 				cred: mockCredential{
-					t: "sp",
+					t: "client-secret-credential",
+				},
+				timeout:     time.Second * 10,
+				concurrency: 10,
+			},
+		},
+		{
+			name: "setting up secret client",
+			input: struct {
+				options []Option
+				envs    map[string]string
+			}{
+				envs: map[string]string{
+					azcfgKeyVaultName: "vault",
+					azcfgTenantID:     "1111",
+					azcfgClientID:     "2222",
+					azcfgClientSecret: "3333",
+				},
+			},
+			want: &parser{
+				secretClient: &secret.Client{},
+				cred: mockCredential{
+					t: "client-secret-credential",
+				},
+				timeout:     time.Second * 10,
+				concurrency: 10,
+			},
+		},
+		{
+			name: "setting up setting client",
+			input: struct {
+				options []Option
+				envs    map[string]string
+			}{
+				envs: map[string]string{
+					azcfgAppConfigurationName: "appconfig",
+					azcfgTenantID:             "1111",
+					azcfgClientID:             "2222",
+					azcfgClientSecret:         "3333",
+				},
+			},
+			want: &parser{
+				settingClient: &setting.Client{},
+				cred: mockCredential{
+					t: "client-secret-credential",
 				},
 				timeout:     time.Second * 10,
 				concurrency: 10,
@@ -67,7 +113,7 @@ func TestNewParser(t *testing.T) {
 				secretClient:  &secret.Client{},
 				settingClient: &setting.Client{},
 				cred: mockCredential{
-					t: "sp",
+					t: "client-secret-credential",
 				},
 				timeout:     time.Second * 10,
 				concurrency: 20,
@@ -80,11 +126,11 @@ func TestNewParser(t *testing.T) {
 				envs    map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_KEYVAULT_NAME":         "vault",
-					"AZCFG_APPCONFIGURATION_NAME": "appconfig",
-					"AZCFG_TENANT_ID":             "1111",
-					"AZCFG_CLIENT_ID":             "2222",
-					"AZCFG_CLIENT_SECRET":         "3333",
+					azcfgKeyVaultName:         "vault",
+					azcfgAppConfigurationName: "appconfig",
+					azcfgTenantID:             "1111",
+					azcfgClientID:             "2222",
+					azcfgClientSecret:         "3333",
 				},
 			},
 			want:    nil,
@@ -149,12 +195,20 @@ func TestNewParser(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			newClientCredential = func(tenantID, clientID, clientSecret string) (auth.Credential, error) {
+			newClientSecretCredential = func(tenantID, clientID, clientSecret string) (auth.Credential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
 				return mockCredential{
-					t: "sp",
+					t: "client-secret-credential",
+				}, nil
+			}
+			newClientCertificateCredential = func(tenantID, clientID string, certificate []*x509.Certificate, key *rsa.PrivateKey) (auth.Credential, error) {
+				if test.wantErr != nil {
+					return nil, test.wantErr
+				}
+				return mockCredential{
+					t: "client-certificate-credential",
 				}, nil
 			}
 			newManagedIdentityCredential = func(clientID string) (auth.Credential, error) {
@@ -162,12 +216,13 @@ func TestNewParser(t *testing.T) {
 					return nil, test.wantErr
 				}
 				return mockCredential{
-					t: "mi",
+					t: "managed-identity",
 				}, nil
 			}
 
-			setEnvVars(test.input.envs)
-			defer unsetEnvVars(test.input.envs)
+			for k, v := range test.input.envs {
+				t.Setenv(k, v)
+			}
 
 			got, gotErr := NewParser(test.input.options...)
 
@@ -193,33 +248,81 @@ func TestSetupCredential(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name: "credential settings from environment (client credential)",
+			name: "credential settings from environment (client secret credential)",
 			input: struct {
 				options Options
 				envs    map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_TENANT_ID":     "1111",
-					"AZCFG_CLIENT_ID":     "2222",
-					"AZCFG_CLIENT_SECRET": "3333",
+					azcfgTenantID:     "1111",
+					azcfgClientID:     "2222",
+					azcfgClientSecret: "3333",
 				},
 			},
 			want: mockCredential{
-				t: "sp",
+				t: "client-secret-credential",
 			},
 		},
 		{
-			name: "credential settings from envionment (managed identity)",
+			name: "credential settings from environment (client certificate credential from base64)",
+			input: struct {
+				options Options
+				envs    map[string]string
+			}{
+				envs: map[string]string{
+					azcfgTenantID:          "1111",
+					azcfgClientID:          "2222",
+					azcfgClientCertificate: "certificate",
+				},
+			},
+			want: mockCredential{
+				t: "client-certificate-credential",
+			},
+		},
+		{
+			name: "credential settings from environment (client certificate credential from file)",
+			input: struct {
+				options Options
+				envs    map[string]string
+			}{
+				envs: map[string]string{
+					azcfgTenantID:              "1111",
+					azcfgClientID:              "2222",
+					azcfgClientCertificatePath: "certificate",
+				},
+			},
+			want: mockCredential{
+				t: "client-certificate-credential",
+			},
+		},
+		{
+			name: "credential settings from environment (managed identity)",
 			input: struct {
 				options Options
 				envs    map[string]string
 			}{},
 			want: mockCredential{
-				t: "mi",
+				t: "managed-identity",
 			},
 		},
 		{
-			name: "credential settings from options (client credential)",
+			name: "credential settings from options (provided credential)",
+			input: struct {
+				options Options
+				envs    map[string]string
+			}{
+				options: Options{
+					Credential: mockCredential{
+						t: "custom",
+					},
+				},
+			},
+			want: mockCredential{
+				t: "custom",
+			},
+		},
+		{
+			name: "credential settings from options (client secret credential)",
 			input: struct {
 				options Options
 				envs    map[string]string
@@ -231,7 +334,24 @@ func TestSetupCredential(t *testing.T) {
 				},
 			},
 			want: mockCredential{
-				t: "sp",
+				t: "client-secret-credential",
+			},
+		},
+		{
+			name: "credential settings from options (client certificate credential)",
+			input: struct {
+				options Options
+				envs    map[string]string
+			}{
+				options: Options{
+					TenantID:     "1111",
+					ClientID:     "2222",
+					Certificates: []*x509.Certificate{{}},
+					PrivateKey:   &rsa.PrivateKey{},
+				},
+			},
+			want: mockCredential{
+				t: "client-certificate-credential",
 			},
 		},
 		{
@@ -243,32 +363,73 @@ func TestSetupCredential(t *testing.T) {
 				options: Options{UseManagedIdentity: true},
 			},
 			want: mockCredential{
-				t: "mi",
+				t: "managed-identity",
 			},
+		},
+		{
+			name: "error setting up client certificate credential",
+			input: struct {
+				options Options
+				envs    map[string]string
+			}{
+				envs: map[string]string{
+					azcfgTenantID:              "1111",
+					azcfgClientID:              "2222",
+					azcfgClientCertificatePath: "certificate",
+				},
+			},
+			wantErr: errors.New("invalid path"),
+		},
+		{
+			name: "error missing client ID",
+			input: struct {
+				options Options
+				envs    map[string]string
+			}{
+				envs: map[string]string{
+					azcfgTenantID: "1111",
+				},
+			},
+			wantErr: ErrMissingClientID,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			newClientCredential = func(tenantID, clientID, clientSecret string) (auth.Credential, error) {
+			newClientSecretCredential = func(_, _, _ string) (auth.Credential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
 				return mockCredential{
-					t: "sp",
+					t: "client-secret-credential",
 				}, nil
 			}
-			newManagedIdentityCredential = func(clientID string) (auth.Credential, error) {
+			newClientCertificateCredential = func(_, _ string, _ []*x509.Certificate, _ *rsa.PrivateKey) (auth.Credential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
 				return mockCredential{
-					t: "mi",
+					t: "client-certificate-credential",
 				}, nil
+			}
+			newManagedIdentityCredential = func(_ string) (auth.Credential, error) {
+				if test.wantErr != nil {
+					return nil, test.wantErr
+				}
+				return mockCredential{
+					t: "managed-identity",
+				}, nil
+			}
+			certificateAndKey = func(_, _ string) ([]*x509.Certificate, *rsa.PrivateKey, error) {
+				if test.wantErr != nil {
+					return nil, nil, test.wantErr
+				}
+				return []*x509.Certificate{{}}, &rsa.PrivateKey{}, nil
 			}
 
-			setEnvVars(test.input.envs)
-			defer unsetEnvVars(test.input.envs)
+			for k, v := range test.input.envs {
+				t.Setenv(k, v)
+			}
 
 			got, gotErr := setupCredential(test.input.options)
 
@@ -299,7 +460,7 @@ func TestSetupKeyVault(t *testing.T) {
 				envs  map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_KEYVAULT_NAME": "vault",
+					azcfgKeyVaultName: "vault",
 				},
 			},
 			want: "vault",
@@ -322,7 +483,7 @@ func TestSetupKeyVault(t *testing.T) {
 			}{
 				vault: "vault1",
 				envs: map[string]string{
-					"AZCFG_KEYVAULT_NAME": "vault2",
+					azcfgKeyVaultName: "vault2",
 				},
 			},
 			want: "vault1",
@@ -331,8 +492,9 @@ func TestSetupKeyVault(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			setEnvVars(test.input.envs)
-			defer unsetEnvVars(test.input.envs)
+			for k, v := range test.input.envs {
+				t.Setenv(k, v)
+			}
 
 			got := setupKeyVault(test.input.vault)
 
@@ -362,7 +524,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 				envs      map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_APPCONFIGURATION_NAME": "appconfig",
+					azcfgAppConfigurationName: "appconfig",
 				},
 			},
 			wantAppConfig: "appconfig",
@@ -387,7 +549,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 			}{
 				appConfig: "appconfig1",
 				envs: map[string]string{
-					"AZCFG_APPCONFIGURATION_NAME": "appconfig2",
+					azcfgAppConfigurationName: "appconfig2",
 				},
 			},
 			wantAppConfig: "appconfig1",
@@ -400,7 +562,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 				envs      map[string]string
 			}{
 				envs: map[string]string{
-					"AZCFG_APPCONFIGURATION_LABEL": "label",
+					azcfgAppConfigurationLabel: "label",
 				},
 			},
 			wantLabel: "label",
@@ -425,7 +587,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 			}{
 				label: "label1",
 				envs: map[string]string{
-					"AZCFG_APPCONFIGURATION_LABEL": "label2",
+					azcfgAppConfigurationLabel: "label2",
 				},
 			},
 			wantLabel: "label1",
@@ -434,8 +596,9 @@ func TestSetupAppConfiguration(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			setEnvVars(test.input.envs)
-			defer unsetEnvVars(test.input.envs)
+			for k, v := range test.input.envs {
+				t.Setenv(k, v)
+			}
 
 			gotAppConfig, gotLabel := setupAppConfiguration(test.input.appConfig, test.input.label)
 
@@ -450,16 +613,54 @@ func TestSetupAppConfiguration(t *testing.T) {
 	}
 }
 
-func setEnvVars(envs map[string]string) {
-	os.Clearenv()
-	for k, v := range envs {
-		os.Setenv(k, v)
+func TestCoalesceString(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input struct {
+			x, y string
+		}
+		want string
+	}{
+		{
+			name: "x is not empty",
+			input: struct {
+				x, y string
+			}{
+				x: "x",
+				y: "y",
+			},
+			want: "x",
+		},
+		{
+			name: "x is empty",
+			input: struct {
+				x, y string
+			}{
+				x: "",
+				y: "y",
+			},
+			want: "y",
+		},
+		{
+			name: "x and y are empty",
+			input: struct {
+				x, y string
+			}{
+				x: "",
+				y: "",
+			},
+			want: "",
+		},
 	}
-}
 
-func unsetEnvVars(envs map[string]string) {
-	for k := range envs {
-		os.Unsetenv(k)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := coalesceString(test.input.x, test.input.y)
+
+			if test.want != got {
+				t.Errorf("coalesceString() = unexpected result, want: %s, got: %s\n", test.want, got)
+			}
+		})
 	}
 }
 

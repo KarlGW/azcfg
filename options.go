@@ -1,6 +1,8 @@
 package azcfg
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
@@ -29,6 +31,10 @@ type Options struct {
 	ClientID string
 	// ClientSecret of the Service Principal with access to target Key Vault.
 	ClientSecret string
+	// Certificates for the Service Principal with access to target Key Vault.
+	Certificates []*x509.Certificate
+	// PrivateKey to be used with the certificates for the Service Principal with access to target Key Vault.
+	PrivateKey *rsa.PrivateKey
 	// Concurrency is the amount of secrets that will be retrieved concurrently.
 	// Defaults to 10.
 	Concurrency int
@@ -87,14 +93,25 @@ func WithClientSecretCredential(tenantID, clientID, clientSecret string) Option 
 	}
 }
 
+// WithClientCertificateCredential sets the parser to use client credential with
+// a certificate (client certificate credential) for the Key Vault.
+func WithClientCertificateCredential(tenantID, clientID string, certificates []*x509.Certificate, key *rsa.PrivateKey) Option {
+	return func(o *Options) {
+		o.TenantID = tenantID
+		o.ClientID = clientID
+		o.Certificates = certificates
+		o.PrivateKey = key
+	}
+}
+
 // WithManagedIdentity sets the parser to use a managed identity
 // for credentials for the Key Vault.
 func WithManagedIdentity(clientID ...string) Option {
 	return func(o *Options) {
+		o.UseManagedIdentity = true
 		if len(clientID) > 0 {
 			o.ClientID = clientID[0]
 		}
-		o.UseManagedIdentity = true
 	}
 }
 

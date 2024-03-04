@@ -1,6 +1,9 @@
 package identity
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+
 	"github.com/KarlGW/azcfg/internal/request"
 )
 
@@ -9,15 +12,18 @@ import (
 type CredentialOptions struct {
 	// httpClient is a user provided client to override the default client.
 	httpClient request.Client
+	// key for a client credential with a certificate (client certificate credential).
+	key *rsa.PrivateKey
 	// clientID is the client ID of the client credential or
 	// user assigned identity.
 	clientID string
-	// clientSecret is the secret of a client credential with a shared
-	// secret (client secret credential).
-	clientSecret string
+	// secret for a client credential with a secret (client secret credential).
+	secret string
 	// resourceID of the user assigned identity, use this or clientID
 	// to target a specific user assigned identity.
 	resourceID string
+	// certificates for a client credential with a certificate (client certificate credential).
+	certificates []*x509.Certificate
 }
 
 // CredentialOption is a function to set *CredentialOptions.
@@ -40,7 +46,15 @@ func WithResourceID(id string) CredentialOption {
 // WithSecret sets the client secret.
 func WithSecret(secret string) CredentialOption {
 	return func(o *CredentialOptions) {
-		o.clientSecret = secret
+		o.secret = secret
+	}
+}
+
+// WithCertificate sets the certificate and private key.
+func WithCertificate(certs []*x509.Certificate, privateKey *rsa.PrivateKey) CredentialOption {
+	return func(o *CredentialOptions) {
+		o.certificates = certs
+		o.key = privateKey
 	}
 }
 

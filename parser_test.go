@@ -270,9 +270,9 @@ func TestSetupCredential(t *testing.T) {
 				envs    map[string]string
 			}{
 				envs: map[string]string{
-					azcfgTenantID:    "1111",
-					azcfgClientID:    "2222",
-					azcfgCertificate: "certificate",
+					azcfgTenantID:          "1111",
+					azcfgClientID:          "2222",
+					azcfgClientCertificate: "certificate",
 				},
 			},
 			want: mockCredential{
@@ -286,9 +286,9 @@ func TestSetupCredential(t *testing.T) {
 				envs    map[string]string
 			}{
 				envs: map[string]string{
-					azcfgTenantID:        "1111",
-					azcfgClientID:        "2222",
-					azcfgCertificatePath: "certificate",
+					azcfgTenantID:              "1111",
+					azcfgClientID:              "2222",
+					azcfgClientCertificatePath: "certificate",
 				},
 			},
 			want: mockCredential{
@@ -373,9 +373,9 @@ func TestSetupCredential(t *testing.T) {
 				envs    map[string]string
 			}{
 				envs: map[string]string{
-					azcfgTenantID:        "1111",
-					azcfgClientID:        "2222",
-					azcfgCertificatePath: "certificate",
+					azcfgTenantID:              "1111",
+					azcfgClientID:              "2222",
+					azcfgClientCertificatePath: "certificate",
 				},
 			},
 			wantErr: errors.New("invalid path"),

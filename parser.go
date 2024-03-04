@@ -30,10 +30,10 @@ const (
 	azcfgClientID = "AZCFG_CLIENT_ID"
 	// azcfgClientSecret is the environment variable for the client secret.
 	azcfgClientSecret = "AZCFG_CLIENT_SECRET"
-	// azcfgCertificate is the environment variable for the client certificate.
-	azcfgCertificate = "AZCFG_CLIENT_CERTIFICATE"
-	// azcfgCertificatePath is the environment variable for the path to the client certificate.
-	azcfgCertificatePath = "AZCFG_CLIENT_CERTIFICATE_PATH"
+	// azcfgClientCertificate is the environment variable for the client certificate.
+	azcfgClientCertificate = "AZCFG_CLIENT_CERTIFICATE"
+	// azcfgClientCertificatePath is the environment variable for the path to the client certificate.
+	azcfgClientCertificatePath = "AZCFG_CLIENT_CERTIFICATE_PATH"
 	// azcfgKeyVaultName is the environment variable for the Key Vault name.
 	azcfgKeyVaultName = "AZCFG_KEYVAULT_NAME"
 	// azcfgAppConfigurationName is the environment variable for the App Configuration name.
@@ -153,7 +153,7 @@ func setupCredential(options Options) (auth.Credential, error) {
 	if len(options.Certificates) > 0 && options.PrivateKey != nil {
 		certs, key = options.Certificates, options.PrivateKey
 	} else {
-		certificate, certificatePath := os.Getenv(azcfgCertificate), os.Getenv(azcfgCertificatePath)
+		certificate, certificatePath := os.Getenv(azcfgClientCertificate), os.Getenv(azcfgClientCertificatePath)
 		var err error
 		certs, key, err = certificateAndKey(certificate, certificatePath)
 		if err != nil {

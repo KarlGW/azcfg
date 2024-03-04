@@ -22,7 +22,7 @@ func (e secretError) Error() string {
 }
 
 // isSecretNotFound checks if the provided error is a secretError with
-// the error coode SecretNotFound.
+// the error code SecretNotFound.
 func isSecretNotFound(err error) bool {
 	var secretErr secretError
 	if errors.As(err, &secretErr) {

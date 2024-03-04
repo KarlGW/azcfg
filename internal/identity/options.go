@@ -17,7 +17,7 @@ type CredentialOptions struct {
 	// clientID is the client ID of the client credential or
 	// user assigned identity.
 	clientID string
-	// secret for a client credential with a shared secret (client secret credential).
+	// secret for a client credential with a secret (client secret credential).
 	secret string
 	// resourceID of the user assigned identity, use this or clientID
 	// to target a specific user assigned identity.

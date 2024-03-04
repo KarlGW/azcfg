@@ -197,8 +197,8 @@ func coalesceString(x, y string) string {
 	return y
 }
 
-// CertificateAndKeyFromPEM extracts the x509 certificates and private key from the given PEM.
-var CertificateAndKeyFromPEM = identity.CertificateAndKeyFromPEM
+// certificatesAndKeyFromPEM extracts the x509 certificates and private key from the given PEM.
+var certificatesAndKeyFromPEM = identity.CertificatesAndKeyFromPEM
 
 // certificateAndKey gets the certificates and keys from the provided certificate or certificate path.
 var certificateAndKey = func(certificate, certificatePath string) ([]*x509.Certificate, *rsa.PrivateKey, error) {
@@ -215,7 +215,7 @@ var certificateAndKey = func(certificate, certificatePath string) ([]*x509.Certi
 		return nil, nil, err
 	}
 
-	return CertificateAndKeyFromPEM(pem)
+	return certificatesAndKeyFromPEM(pem)
 }
 
 var newClientSecretCredential = func(tenantID, clientID, clientSecret string) (auth.Credential, error) {

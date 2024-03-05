@@ -41,6 +41,7 @@ func (s Secret) GetValue() string {
 type Client struct {
 	c           request.Client
 	cred        auth.Credential
+	retryPolicy httpr.RetryPolicy
 	baseURL     string
 	userAgent   string
 	concurrency int
@@ -65,6 +66,7 @@ func NewClient(keyVault string, cred auth.Credential, options ...ClientOption) *
 	if c.c == nil {
 		c.c = httpr.NewClient(
 			httpr.WithTimeout(c.timeout),
+			httpr.WithRetryPolicy(c.retryPolicy),
 		)
 	}
 	return c
@@ -192,18 +194,4 @@ func (c Client) getSecrets(ctx context.Context, names []string, options ...Optio
 		secrets[sr.name] = sr.secret
 	}
 	return secrets, nil
-}
-
-// WithConcurrency sets the concurrency for secret retrieval.
-func WithConcurrency(n int) ClientOption {
-	return func(c *Client) {
-		c.concurrency = n
-	}
-}
-
-// WithTimeout sets timeout for secret retreival.
-func WithTimeout(d time.Duration) ClientOption {
-	return func(c *Client) {
-		c.timeout = d
-	}
 }

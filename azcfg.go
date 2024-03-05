@@ -39,6 +39,7 @@ func parse(d any, secretClient secretClient, settingClient settingClient, label 
 	}
 
 	errCh := make(chan error, 2)
+	mu := sync.RWMutex{}
 	var wg sync.WaitGroup
 
 	secretFields, requiredSecrets := getFields(v, secretTag)
@@ -51,6 +52,9 @@ func parse(d any, secretClient secretClient, settingClient settingClient, label 
 				errCh <- err
 				return
 			}
+
+			mu.Lock()
+			defer mu.Unlock()
 
 			if err := setFields(v, secrets, secretTag); err != nil {
 				if errors.Is(err, errRequired) {
@@ -73,6 +77,10 @@ func parse(d any, secretClient secretClient, settingClient settingClient, label 
 				errCh <- err
 				return
 			}
+
+			mu.Lock()
+			defer mu.Unlock()
+
 			if err := setFields(v, settings, settingTag); err != nil {
 				if errors.Is(err, errRequired) {
 					errCh <- requiredSettingsError{message: requiredErrorMessage(settings, requiredSettings, "setting")}

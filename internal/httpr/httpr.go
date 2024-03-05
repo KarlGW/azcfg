@@ -51,7 +51,6 @@ func NewClient(options ...Option) *Client {
 
 // Do sends an HTTP request and returns an HTTP response.
 func (c Client) Do(r *http.Request) (*http.Response, error) {
-
 	if r.Body != nil && r.GetBody == nil {
 		if err := bufferRequestBody(r); err != nil {
 			return nil, err

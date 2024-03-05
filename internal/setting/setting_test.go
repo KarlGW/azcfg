@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/secret"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -132,6 +133,156 @@ func TestClient_GetSettings(t *testing.T) {
 	}
 }
 
+func TestClient_getSecret(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input struct {
+			secretClient secretClient
+			secrets      map[string]secret.Secret
+			uri          string
+			err          error
+		}
+		want    secret.Secret
+		wantErr error
+	}{
+		{
+			name: "get secret from uri",
+			input: struct {
+				secretClient secretClient
+				secrets      map[string]secret.Secret
+				uri          string
+				err          error
+			}{
+				secrets: map[string]secret.Secret{
+					"secretname": {Value: "secret"},
+				},
+				uri: "https://testvault.vault.azure.net/secrets/secretname",
+			},
+			want: secret.Secret{Value: "secret"},
+		},
+		{
+			name: "get secret from uri (existing client)",
+			input: struct {
+				secretClient secretClient
+				secrets      map[string]secret.Secret
+				uri          string
+				err          error
+			}{
+				secretClient: func() *mockSecretClient {
+					return &mockSecretClient{
+						secrets: map[string]secret.Secret{
+							"secretname": {Value: "secret"},
+						},
+					}
+				}(),
+				uri: "https://testvault.vault.azure.net/secrets/secretname",
+			},
+			want: secret.Secret{Value: "secret"},
+		},
+		{
+			name: "get secret - not found",
+			input: struct {
+				secretClient secretClient
+				secrets      map[string]secret.Secret
+				uri          string
+				err          error
+			}{
+				secrets: map[string]secret.Secret{},
+				uri:     "https://testvault.vault.azure.net/secrets/secretname",
+			},
+			want: secret.Secret{Value: ""},
+		},
+		{
+			name: "get secret from uri - error",
+			input: struct {
+				secretClient secretClient
+				secrets      map[string]secret.Secret
+				uri          string
+				err          error
+			}{
+				secrets: map[string]secret.Secret{
+					"secretname": {Value: "secret"},
+				},
+				uri: "https://testvault.vault.azure.net/secrets/secretname",
+				err: errGetSecret,
+			},
+			wantErr: errGetSecret,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			newSecretClient = func(_ string, _ auth.Credential, _ ...secret.ClientOption) secretClient {
+				return &mockSecretClient{
+					secrets: test.input.secrets,
+					err:     test.input.err,
+				}
+			}
+
+			client := NewClient("config", mockCredential{}, func(c *Client) {
+				c.c = mockHttpClient{}
+				c.timeout = time.Millisecond * 10
+				c.sc = test.input.secretClient
+			})
+
+			got, gotErr := client.getSecret(context.Background(), test.input.uri)
+
+			if diff := cmp.Diff(test.want, got); diff != "" {
+				t.Errorf("getSecret() = unexpected result (-want +got)\n%s\n", diff)
+			}
+
+			if diff := cmp.Diff(test.wantErr, gotErr, cmpopts.EquateErrors()); diff != "" {
+				t.Errorf("getSecret() = unexpected error (-want +got)\n%s\n", diff)
+			}
+		})
+	}
+}
+
+func TestClient_vaultAndSecret(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input string
+		want  struct {
+			vault, secret string
+		}
+	}{
+		{
+			name:  "vault and secret",
+			input: "https://testvault.vault.azure.net/secrets/secretname",
+			want: struct {
+				vault, secret string
+			}{
+				vault:  "testvault",
+				secret: "secretname",
+			},
+		},
+		{
+			name:  "vault and secret (with version)",
+			input: "https://testvault.vault.azure.net/secrets/secretname/12345",
+			want: struct {
+				vault, secret string
+			}{
+				vault:  "testvault",
+				secret: "secretname/12345",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			gotVault, gotSecret := vaultAndSecret(test.input)
+
+			if test.want.vault != gotVault {
+				t.Errorf("vaultAndSecret() = unexpected vault, want: %s, got: %s\n", test.want.vault, gotVault)
+			}
+
+			if test.want.secret != gotSecret {
+				t.Errorf("vaultAndSecret() = unexpected secret, want: %s, got: %s\n", test.want.secret, gotSecret)
+			}
+		})
+	}
+}
+
 type mockCredential struct {
 	err error
 }
@@ -173,3 +324,32 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 		Body:       io.NopCloser(bytes.NewBuffer(b)),
 	}, nil
 }
+
+type mockSecretClient struct {
+	err     error
+	secrets map[string]secret.Secret
+	vault   string
+}
+
+func (c mockSecretClient) Vault() string {
+	return c.vault
+}
+
+func (c *mockSecretClient) SetVault(vault string) {
+	c.vault = vault
+}
+
+func (c mockSecretClient) Get(ctx context.Context, name string, options ...secret.Option) (secret.Secret, error) {
+	if c.err != nil {
+		return secret.Secret{}, c.err
+	}
+	s, ok := c.secrets[name]
+	if !ok {
+		return secret.Secret{}, nil
+	}
+	return s, nil
+}
+
+var (
+	errGetSecret = errors.New("error getting secret")
+)

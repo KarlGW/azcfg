@@ -64,6 +64,7 @@ type Client struct {
 	retryPolicy httpr.RetryPolicy
 	concurrency int
 	timeout     time.Duration
+	mu          sync.RWMutex
 }
 
 // ClientOption is a function that sets options to *Client.
@@ -99,7 +100,7 @@ type Options struct {
 type Option func(o *Options)
 
 // GetSettings get settings (key-values) by keys.
-func (c Client) GetSettings(keys []string, options ...Option) (map[string]Setting, error) {
+func (c *Client) GetSettings(keys []string, options ...Option) (map[string]Setting, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
@@ -180,6 +181,9 @@ func (c *Client) Get(ctx context.Context, key string, options ...Option) (Settin
 
 // getSecret gets a secret from the provided URI.
 func (c *Client) getSecret(ctx context.Context, uri string) (secret.Secret, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	v, s := vaultAndSecret(uri)
 	if c.sc == nil {
 		c.sc = newSecretClient(v, c.cred,
@@ -209,7 +213,7 @@ type settingResult struct {
 
 // getSettings gets settings by the provided keys and returns them as a map[string]Setting
 // where setting key is the key.
-func (c Client) getSettings(ctx context.Context, keys []string, options ...Option) (map[string]Setting, error) {
+func (c *Client) getSettings(ctx context.Context, keys []string, options ...Option) (map[string]Setting, error) {
 	keysCh := make(chan string)
 	srCh := make(chan settingResult)
 
@@ -283,6 +287,6 @@ func vaultAndSecret(url string) (string, string) {
 	return vault, secret
 }
 
-var newSecretClient = func(vault string, cred auth.Credential, options ...secret.ClientOption) *secret.Client {
+var newSecretClient = func(vault string, cred auth.Credential, options ...secret.ClientOption) secretClient {
 	return secret.NewClient(vault, cred, options...)
 }

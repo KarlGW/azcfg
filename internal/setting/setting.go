@@ -42,9 +42,9 @@ func (s Setting) GetValue() string {
 type Client struct {
 	c           request.Client
 	cred        auth.Credential
-	retryPolicy httpr.RetryPolicy
 	baseURL     string
 	userAgent   string
+	retryPolicy httpr.RetryPolicy
 	concurrency int
 	timeout     time.Duration
 }

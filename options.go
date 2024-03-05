@@ -17,8 +17,6 @@ type Options struct {
 	SecretClient secretClient
 	// SettingClient is a client used to retrieve settings.
 	SettingClient settingClient
-	// RetryPolicy is the retry policy for the clients of the parser.
-	RetryPolicy RetryPolicy
 	// KeyVault is the name of the Key Vault containing secrets. Used to override the
 	// default method of aquiring target Key Vault.
 	KeyVault string
@@ -37,6 +35,8 @@ type Options struct {
 	Certificates []*x509.Certificate
 	// PrivateKey to be used with the certificates for the Service Principal with access to target Key Vault.
 	PrivateKey *rsa.PrivateKey
+	// RetryPolicy is the retry policy for the clients of the parser.
+	RetryPolicy RetryPolicy
 	// Concurrency is the amount of secrets that will be retrieved concurrently.
 	// Defaults to 10.
 	Concurrency int

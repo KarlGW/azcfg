@@ -28,6 +28,7 @@ func TestClient_GetSettings(t *testing.T) {
 			keys    []string
 			options []Option
 			bodies  map[string][]byte
+			secrets map[string]secret.Secret
 			err     error
 		}
 		want    map[string]Setting
@@ -39,6 +40,7 @@ func TestClient_GetSettings(t *testing.T) {
 				keys    []string
 				options []Option
 				bodies  map[string][]byte
+				secrets map[string]secret.Secret
 				err     error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
@@ -56,11 +58,38 @@ func TestClient_GetSettings(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "get settings with key vault references",
+			input: struct {
+				keys    []string
+				options []Option
+				bodies  map[string][]byte
+				secrets map[string]secret.Secret
+				err     error
+			}{
+				keys: []string{"setting-a", "setting-b", "setting-c"},
+				bodies: map[string][]byte{
+					"setting-a": []byte(`{"content_type":"` + keyVaultReferenceContentType + `","value":"{\"uri\":\"https://testvault.vault.azure.net/secrets/secret-1\"}"}`),
+					"setting-b": []byte(`{"value":"b"}`),
+					"setting-c": []byte(`{"value":"c"}`),
+				},
+				secrets: map[string]secret.Secret{
+					"secret-1": {Value: "1"},
+				},
+			},
+			want: map[string]Setting{
+				"setting-a": {ContentType: keyVaultReferenceContentType, Value: "1"},
+				"setting-b": {Value: "b"},
+				"setting-c": {Value: "c"},
+			},
+			wantErr: nil,
+		},
+		{
 			name: "setting not found",
 			input: struct {
 				keys    []string
 				options []Option
 				bodies  map[string][]byte
+				secrets map[string]secret.Secret
 				err     error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
@@ -77,11 +106,35 @@ func TestClient_GetSettings(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "setting not found (key vault reference)",
+			input: struct {
+				keys    []string
+				options []Option
+				bodies  map[string][]byte
+				secrets map[string]secret.Secret
+				err     error
+			}{
+				keys: []string{"setting-a", "setting-b", "setting-c"},
+				bodies: map[string][]byte{
+					"setting-a": []byte(`{"content_type":"` + keyVaultReferenceContentType + `","value":"{\"uri\":\"https://testvault.vault.azure.net/secrets/secret-1\"}"}`),
+					"setting-b": []byte(`{"value":"b"}`),
+					"setting-c": []byte(`{"value":"c"}`),
+				},
+			},
+			want: map[string]Setting{
+				"setting-a": {ContentType: keyVaultReferenceContentType, Value: ""},
+				"setting-b": {Value: "b"},
+				"setting-c": {Value: "c"},
+			},
+			wantErr: nil,
+		},
+		{
 			name: "server error",
 			input: struct {
 				keys    []string
 				options []Option
 				bodies  map[string][]byte
+				secrets map[string]secret.Secret
 				err     error
 			}{
 				keys: []string{"setting-a"},
@@ -100,6 +153,7 @@ func TestClient_GetSettings(t *testing.T) {
 				keys    []string
 				options []Option
 				bodies  map[string][]byte
+				secrets map[string]secret.Secret
 				err     error
 			}{
 				keys: []string{"setting-a"},
@@ -107,6 +161,26 @@ func TestClient_GetSettings(t *testing.T) {
 			},
 			want:    nil,
 			wantErr: errRequest,
+		},
+		{
+			name: "get secret error",
+			input: struct {
+				keys    []string
+				options []Option
+				bodies  map[string][]byte
+				secrets map[string]secret.Secret
+				err     error
+			}{
+				keys: []string{"setting-a", "setting-b", "setting-c"},
+				bodies: map[string][]byte{
+					"setting-a": []byte(`{"content_type":"` + keyVaultReferenceContentType + `","value":"{\"uri\":\"https://testvault.vault.azure.net/secrets/secret-1\"}"}`),
+				},
+				secrets: map[string]secret.Secret{
+					"secret-1": {Value: "1"},
+				},
+				err: errGetSecret,
+			},
+			wantErr: errGetSecret,
 		},
 	}
 
@@ -116,6 +190,10 @@ func TestClient_GetSettings(t *testing.T) {
 				c.c = mockHttpClient{
 					bodies: test.input.bodies,
 					err:    test.input.err,
+				}
+				c.sc = &mockSecretClient{
+					secrets: test.input.secrets,
+					err:     test.input.err,
 				}
 				c.timeout = time.Millisecond * 10
 			})
@@ -221,8 +299,8 @@ func TestClient_getSecret(t *testing.T) {
 
 			client := NewClient("config", mockCredential{}, func(c *Client) {
 				c.c = mockHttpClient{}
-				c.timeout = time.Millisecond * 10
 				c.sc = test.input.secretClient
+				c.timeout = time.Millisecond * 10
 			})
 
 			got, gotErr := client.getSecret(context.Background(), test.input.uri)
@@ -288,7 +366,7 @@ type mockCredential struct {
 }
 
 func (c mockCredential) Token(ctx context.Context, options ...auth.TokenOption) (auth.Token, error) {
-	if c.err != nil {
+	if c.err != nil && !errors.Is(c.err, errGetSecret) {
 		return auth.Token{}, c.err
 	}
 	return auth.Token{AccessToken: "ey1235"}, nil
@@ -300,7 +378,7 @@ type mockHttpClient struct {
 }
 
 func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
-	if c.err != nil {
+	if c.err != nil && !errors.Is(c.err, errGetSecret) {
 		if errors.Is(c.err, errServer) {
 			return &http.Response{
 				StatusCode: http.StatusBadRequest,
@@ -340,7 +418,7 @@ func (c *mockSecretClient) SetVault(vault string) {
 }
 
 func (c mockSecretClient) Get(ctx context.Context, name string, options ...secret.Option) (secret.Secret, error) {
-	if c.err != nil {
+	if c.err != nil && errors.Is(c.err, errGetSecret) {
 		return secret.Secret{}, c.err
 	}
 	s, ok := c.secrets[name]

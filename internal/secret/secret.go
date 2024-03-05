@@ -42,6 +42,7 @@ type Client struct {
 	c           request.Client
 	cred        auth.Credential
 	baseURL     string
+	vault       string
 	userAgent   string
 	retryPolicy httpr.RetryPolicy
 	concurrency int
@@ -52,10 +53,11 @@ type Client struct {
 type ClientOption func(c *Client)
 
 // NewClient creates and returns a new Client.
-func NewClient(keyVault string, cred auth.Credential, options ...ClientOption) *Client {
+func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Client {
 	c := &Client{
 		cred:        cred,
-		baseURL:     strings.Replace(baseURL, "{vault}", keyVault, 1),
+		baseURL:     strings.Replace(baseURL, "{vault}", vault, 1),
+		vault:       vault,
 		userAgent:   "azcfg/" + version.Version(),
 		concurrency: defaultConcurrency,
 		timeout:     defaultTimeout,
@@ -126,6 +128,17 @@ func (c Client) Get(ctx context.Context, name string, options ...Option) (Secret
 	}
 
 	return secret, nil
+}
+
+// Vault returns the vault for the client.
+func (c Client) Vault() string {
+	return c.vault
+}
+
+// SetVault sets the vault for the client.
+func (c *Client) SetVault(vault string) {
+	c.baseURL = strings.Replace(c.baseURL, c.vault, vault, 1)
+	c.vault = vault
 }
 
 // secretResults contains results from retreiving secrets. Should

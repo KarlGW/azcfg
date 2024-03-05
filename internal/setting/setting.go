@@ -1,6 +1,7 @@
 package setting
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"github.com/KarlGW/azcfg/auth"
 	"github.com/KarlGW/azcfg/internal/httpr"
 	"github.com/KarlGW/azcfg/internal/request"
+	"github.com/KarlGW/azcfg/internal/secret"
 	"github.com/KarlGW/azcfg/version"
 )
 
@@ -26,10 +28,16 @@ const (
 	defaultTimeout = time.Second * 10
 )
 
+const (
+	// keyVaultReferenceContentType is the content type for a key vault reference.
+	keyVaultReferenceContentType = "application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8"
+)
+
 // Setting represents a setting as returned from the App Config REST API.
 type Setting struct {
-	Value string `json:"value"`
-	Label string `json:"label"`
+	ContentType string `json:"content_type"`
+	Value       string `json:"value"`
+	Label       string `json:"label"`
 }
 
 // GetValue returns the Value of the Setting.
@@ -37,11 +45,20 @@ func (s Setting) GetValue() string {
 	return s.Value
 }
 
+// secretClient is the interface that wraps around method Get, Vault and
+// SetVault.
+type secretClient interface {
+	Get(ctx context.Context, name string, options ...secret.Option) (secret.Secret, error)
+	Vault() string
+	SetVault(vault string)
+}
+
 // Client contains methods to call the Azure App Config REST API and
 // base settings for handling the requests.
 type Client struct {
 	c           request.Client
 	cred        auth.Credential
+	sc          secretClient
 	baseURL     string
 	userAgent   string
 	retryPolicy httpr.RetryPolicy
@@ -90,7 +107,7 @@ func (c Client) GetSettings(keys []string, options ...Option) (map[string]Settin
 }
 
 // Get a setting.
-func (c Client) Get(ctx context.Context, key string, options ...Option) (Setting, error) {
+func (c *Client) Get(ctx context.Context, key string, options ...Option) (Setting, error) {
 	opts := Options{}
 	for _, option := range options {
 		option(&opts)
@@ -140,7 +157,46 @@ func (c Client) Get(ctx context.Context, key string, options ...Option) (Setting
 		return setting, err
 	}
 
+	if setting.ContentType != keyVaultReferenceContentType {
+		return setting, nil
+	}
+
+	var reference struct {
+		URI string `json:"uri"`
+	}
+	if err := json.Unmarshal([]byte(setting.Value), &reference); err != nil {
+		return setting, err
+	}
+
+	secret, err := c.getSecret(ctx, reference.URI)
+	if err != nil {
+		return Setting{}, err
+	}
+
+	setting.Value = secret.Value
+
 	return setting, nil
+}
+
+// getSecret gets a secret from the provided URI.
+func (c *Client) getSecret(ctx context.Context, uri string) (secret.Secret, error) {
+	v, s := vaultAndSecret(uri)
+	if c.sc == nil {
+		c.sc = newSecretClient(v, c.cred,
+			secret.WithConcurrency(c.concurrency),
+			secret.WithTimeout(c.timeout),
+			secret.WithRetryPolicy(c.retryPolicy),
+		)
+	} else {
+		if c.sc.Vault() != v {
+			c.sc.SetVault(v)
+		}
+	}
+	sec, err := c.sc.Get(ctx, s)
+	if err != nil {
+		return secret.Secret{}, err
+	}
+	return sec, nil
 }
 
 // settingResult contains result from retreiving settings. Should
@@ -209,4 +265,24 @@ func (c Client) getSettings(ctx context.Context, keys []string, options ...Optio
 		settings[sr.key] = sr.setting
 	}
 	return settings, nil
+}
+
+// vaultAndSecret returns the vault and secret from the provided URL.
+func vaultAndSecret(url string) (string, string) {
+	b := []byte(url)[8:]
+	i := bytes.Index(b, []byte("."))
+	vault := string(b[:i])
+	parts := bytes.Split(b[i+1:], []byte("/"))
+
+	var secret string
+	if len(parts) > 3 {
+		secret = string(bytes.Join(parts[2:], []byte("/")))
+	} else {
+		secret = string(parts[2])
+	}
+	return vault, secret
+}
+
+var newSecretClient = func(vault string, cred auth.Credential, options ...secret.ClientOption) *secret.Client {
+	return secret.NewClient(vault, cred, options...)
 }

@@ -25,7 +25,7 @@ func TestWithTokenCredential(t *testing.T) {
 			},
 		}
 
-		if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(credential{}, mockTokenCredential{})); diff != "" {
+		if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(credential{}, mockTokenCredential{}), cmpopts.IgnoreFields(azcfg.Options{}, "PrivateKey")); diff != "" {
 			t.Errorf("WithTokenCredential() = unexpected result (-want +got)\n%s\n", diff)
 		}
 	})

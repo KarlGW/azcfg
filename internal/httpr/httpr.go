@@ -30,8 +30,7 @@ type Option func(c *Client)
 // provided options.
 func NewClient(options ...Option) *Client {
 	c := &Client{
-		timeout:     defaultTimeout,
-		retryPolicy: defaultRetryPolicy(),
+		timeout: defaultTimeout,
 	}
 	for _, option := range options {
 		option(c)
@@ -43,6 +42,9 @@ func NewClient(options ...Option) *Client {
 		if c.transport != nil {
 			c.cl.Transport = c.transport
 		}
+	}
+	if c.retryPolicy.isZero() {
+		c.retryPolicy = defaultRetryPolicy()
 	}
 	return c
 }
@@ -133,6 +135,11 @@ type RetryPolicy struct {
 	MinDelay   time.Duration
 	MaxDelay   time.Duration
 	MaxRetries int
+}
+
+// isZero returns true if the RetryPolicy is the zero value.
+func (r RetryPolicy) isZero() bool {
+	return r.Retry == nil && r.Backoff == nil && r.MinDelay == 0 && r.MaxDelay == 0 && r.MaxRetries == 0
 }
 
 // retry is a function that takes an *http.Response and an error

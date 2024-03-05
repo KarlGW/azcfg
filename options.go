@@ -35,6 +35,8 @@ type Options struct {
 	Certificates []*x509.Certificate
 	// PrivateKey to be used with the certificates for the Service Principal with access to target Key Vault.
 	PrivateKey *rsa.PrivateKey
+	// RetryPolicy is the retry policy for the clients of the parser.
+	RetryPolicy RetryPolicy
 	// Concurrency is the amount of secrets that will be retrieved concurrently.
 	// Defaults to 10.
 	Concurrency int
@@ -133,5 +135,12 @@ func WithSecretClient(c secretClient) Option {
 func WithSettingClient(c settingClient) Option {
 	return func(o *Options) {
 		o.SettingClient = c
+	}
+}
+
+// WithRetryPolicy sets the retry policy for the parser.
+func WithRetryPolicy(r RetryPolicy) Option {
+	return func(o *Options) {
+		o.RetryPolicy = r
 	}
 }

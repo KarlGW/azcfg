@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/internal/httpr"
 	"github.com/KarlGW/azcfg/internal/identity"
 	"github.com/KarlGW/azcfg/internal/secret"
 	"github.com/KarlGW/azcfg/internal/setting"
@@ -51,6 +52,9 @@ type secretClient interface {
 type settingClient interface {
 	GetSettings(keys []string, options ...setting.Option) (map[string]setting.Setting, error)
 }
+
+// RetryPolicy contains rules for retries.
+type RetryPolicy = httpr.RetryPolicy
 
 // parser contains all the necessary values and settings for calls to Parse.
 type parser struct {
@@ -95,6 +99,7 @@ func NewParser(options ...Option) (*parser, error) {
 			p.cred,
 			secret.WithTimeout(p.timeout),
 			secret.WithConcurrency(p.concurrency),
+			secret.WithRetryPolicy(opts.RetryPolicy),
 		)
 	} else {
 		p.secretClient = opts.SecretClient
@@ -114,6 +119,7 @@ func NewParser(options ...Option) (*parser, error) {
 			p.cred,
 			setting.WithTimeout(p.timeout),
 			setting.WithConcurrency(p.concurrency),
+			setting.WithRetryPolicy(opts.RetryPolicy),
 		)
 	} else {
 		p.settingClient = opts.SettingClient

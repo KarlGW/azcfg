@@ -44,6 +44,7 @@ type Client struct {
 	cred        auth.Credential
 	baseURL     string
 	userAgent   string
+	retryPolicy httpr.RetryPolicy
 	concurrency int
 	timeout     time.Duration
 }
@@ -66,6 +67,7 @@ func NewClient(appConfiguration string, cred auth.Credential, options ...ClientO
 	if c.c == nil {
 		c.c = httpr.NewClient(
 			httpr.WithTimeout(c.timeout),
+			httpr.WithRetryPolicy(c.retryPolicy),
 		)
 	}
 	return c
@@ -207,25 +209,4 @@ func (c Client) getSettings(ctx context.Context, keys []string, options ...Optio
 		settings[sr.key] = sr.setting
 	}
 	return settings, nil
-}
-
-// WithConcurrency sets the concurrency for secret retrieval.
-func WithConcurrency(n int) ClientOption {
-	return func(c *Client) {
-		c.concurrency = n
-	}
-}
-
-// WithTimeout sets timeout for secret retreival.
-func WithTimeout(d time.Duration) ClientOption {
-	return func(c *Client) {
-		c.timeout = d
-	}
-}
-
-// WithLabel sets label on the on a setting request.
-func WithLabel(label string) Option {
-	return func(o *Options) {
-		o.Label = label
-	}
 }

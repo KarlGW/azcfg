@@ -17,6 +17,8 @@ type Options struct {
 	SecretClient secretClient
 	// SettingClient is a client used to retrieve settings.
 	SettingClient settingClient
+	// RetryPolicy is the retry policy for the clients of the parser.
+	RetryPolicy RetryPolicy
 	// KeyVault is the name of the Key Vault containing secrets. Used to override the
 	// default method of aquiring target Key Vault.
 	KeyVault string
@@ -133,5 +135,12 @@ func WithSecretClient(c secretClient) Option {
 func WithSettingClient(c settingClient) Option {
 	return func(o *Options) {
 		o.SettingClient = c
+	}
+}
+
+// WithRetryPolicy sets the retry policy for the parser.
+func WithRetryPolicy(r RetryPolicy) Option {
+	return func(o *Options) {
+		o.RetryPolicy = r
 	}
 }

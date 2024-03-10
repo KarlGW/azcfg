@@ -272,7 +272,7 @@ Settings in App Configuration can have labels associated with them. To target a 
 
 The module supports several ways of authenticating to Azure and get secrets from the target Key Vault and settings from the target App Configuration.
 
-1. Built-in credentials that supports Service Principal (Client Credentials with secret) and managed identity (system and user assigned)
+1. Built-in credentials that supports Service Principal (Client Credentials with secret, certificate or an assertion) and managed identity (system and user assigned)
 2. Credentials from [`azidentity`](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity) with the submodule [`authopts`](./authopts/)
 3. Custom credential handling by implementing the `auth.Credential` interface.
 
@@ -302,6 +302,10 @@ For all authentication scenarios the following environment variables are used:
 * `AZCFG_CLIENT_ID` - Client ID (also called Application ID) of the service principal/application registration.
 * `AZCFG_CLIENT_CERTIFICATE` - Base64 encoded certificate (PEM).
 * `AZCFG_CLIENT_CERTIFICATE_PATH` - Path to certificate (PEM).
+
+**Service Principal (client assertion/federated credential)**
+
+* Use the option `WithClientAssertionCredential` with a function that returns a JWT from another identity provider.
 
 **Managed identity**
 

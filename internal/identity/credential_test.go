@@ -62,7 +62,7 @@ func TestTokenFromAuthResult(t *testing.T) {
 	}
 }
 
-func setupHTTPClient(target string, err error) request.Client {
+func setupHTTPClient(target string, _ error) request.Client {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,

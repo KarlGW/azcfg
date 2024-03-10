@@ -14,8 +14,8 @@ import (
 	"time"
 )
 
-// newClientAssertionJWT creates a new assertion jwt for a client credential.
-func newClientAssertionJWT(tenantID, clientID string, cert certificate) (jwt, error) {
+// newCertificateAssertion creates a new assertion jwt for a client certificate credential.
+func newCertificateAssertion(tenantID, clientID string, cert certificate) (jwt, error) {
 	header := header{
 		ALG: "RS256",
 		TYP: "JWT",

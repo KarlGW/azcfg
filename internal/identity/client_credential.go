@@ -35,6 +35,7 @@ var (
 type ClientCredential struct {
 	c           request.Client
 	tokens      map[auth.Scope]*auth.Token
+	assertion   func() (string, error)
 	endpoint    string
 	userAgent   string
 	tenantID    string
@@ -66,10 +67,10 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 	for _, option := range options {
 		option(&opts)
 	}
-
 	if opts.httpClient != nil {
 		c.c = opts.httpClient
 	}
+
 	if len(opts.secret) > 0 {
 		c.secret = opts.secret
 	}
@@ -79,6 +80,9 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 			return nil, err
 		}
 		c.certificate = cert
+	}
+	if opts.assertion != nil {
+		c.assertion = opts.assertion
 	}
 
 	return c, nil
@@ -105,6 +109,15 @@ func NewClientCertificateCredential(tenantID, clientID string, certificates []*x
 	}
 
 	return NewClientCredential(tenantID, clientID, WithCertificate(certificates, key))
+}
+
+// NewClientAssertionCredential creates and returns a new *ClientCredential with
+// a client assertion function (client assertion credential).
+func NewClientAssertionCredential(tenantID, clientID string, assertion func() (string, error)) (*ClientCredential, error) {
+	if assertion == nil {
+		return nil, errors.New("client assertion function invalid")
+	}
+	return NewClientCredential(tenantID, clientID, WithAssertion(assertion))
 }
 
 // Token returns a new auth.Token for requests to the Azure REST API.
@@ -142,12 +155,20 @@ func (c *ClientCredential) tokenRequest(ctx context.Context, scope string) (auth
 	if len(c.secret) != 0 {
 		data.Add("client_secret", c.secret)
 	} else if !c.certificate.isZero() {
-		assertion, err := newClientAssertionJWT(c.tenantID, c.clientID, c.certificate)
+		assertion, err := newCertificateAssertion(c.tenantID, c.clientID, c.certificate)
 		if err != nil {
 			return auth.Token{}, err
 		}
 		data.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 		data.Add("client_assertion", assertion.Encode())
+	} else if c.assertion != nil {
+		assertion, err := c.assertion()
+		if err != nil {
+			return auth.Token{}, err
+		}
+		data.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+		data.Add("client_assertion", assertion)
+
 	} else {
 		return auth.Token{}, ErrMissingCredentials
 	}

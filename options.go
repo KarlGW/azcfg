@@ -33,6 +33,8 @@ type Options struct {
 	ClientSecret string
 	// Certificates for the Service Principal with access to target Key Vault.
 	Certificates []*x509.Certificate
+	// Assertion is an assertion function for a client assertion credential.
+	Assertion func() (string, error)
 	// PrivateKey to be used with the certificates for the Service Principal with access to target Key Vault.
 	PrivateKey *rsa.PrivateKey
 	// RetryPolicy is the retry policy for the clients of the parser.
@@ -103,6 +105,16 @@ func WithClientCertificateCredential(tenantID, clientID string, certificates []*
 		o.ClientID = clientID
 		o.Certificates = certificates
 		o.PrivateKey = key
+	}
+}
+
+// WithClientAssertionCredential sets the parser to use client credential with an assertion.
+// The assertion should be a function that returns a JWT from an identity provider.
+func WithClientAssertionCredential(tenantID, clientID string, assertion func() (string, error)) Option {
+	return func(o *Options) {
+		o.TenantID = tenantID
+		o.ClientID = clientID
+		o.Assertion = assertion
 	}
 }
 

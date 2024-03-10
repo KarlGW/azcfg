@@ -14,8 +14,8 @@ type CredentialOptions struct {
 	httpClient request.Client
 	// key for a client credential with a certificate (client certificate credential).
 	key *rsa.PrivateKey
-	// assertionFn is a function for getting a client assertion for a client credential.
-	assertionFn func() (string, error)
+	// assertion is a function for getting a client assertion for a client credential.
+	assertion func() (string, error)
 	// clientID is the client ID of the client credential or
 	// user assigned identity.
 	clientID string
@@ -69,8 +69,8 @@ func WithHTTPClient(c request.Client) CredentialOption {
 
 // WithAssertion sets the assertion function for the client credential. The provided
 // function should return a JWT from an identity provider.
-func WithAssertion(fn func() (string, error)) CredentialOption {
+func WithAssertion(assertion func() (string, error)) CredentialOption {
 	return func(o *CredentialOptions) {
-		o.assertionFn = fn
+		o.assertion = assertion
 	}
 }

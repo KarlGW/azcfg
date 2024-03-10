@@ -166,6 +166,11 @@ func setupCredential(options Options) (auth.Credential, error) {
 			return nil, err
 		}
 	}
+
+	if options.Assertion != nil {
+		return newClientAssertionCredential(tenantID, clientID, options.Assertion)
+	}
+
 	if len(certs) > 0 && key != nil {
 		return newClientCertificateCredential(tenantID, clientID, certs, key)
 	}
@@ -230,6 +235,10 @@ var newClientSecretCredential = func(tenantID, clientID, clientSecret string) (a
 
 var newClientCertificateCredential = func(tenantID, clientID string, certificates []*x509.Certificate, key *rsa.PrivateKey) (auth.Credential, error) {
 	return identity.NewClientCertificateCredential(tenantID, clientID, certificates, key)
+}
+
+var newClientAssertionCredential = func(tenantID, clientID string, assertion func() (string, error)) (auth.Credential, error) {
+	return identity.NewClientAssertionCredential(tenantID, clientID, assertion)
 }
 
 var newManagedIdentityCredential = func(clientID string) (auth.Credential, error) {

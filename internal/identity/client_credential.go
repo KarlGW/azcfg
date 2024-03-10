@@ -155,7 +155,7 @@ func (c *ClientCredential) tokenRequest(ctx context.Context, scope string) (auth
 	if len(c.secret) != 0 {
 		data.Add("client_secret", c.secret)
 	} else if !c.certificate.isZero() {
-		assertion, err := newClientAssertionJWT(c.tenantID, c.clientID, c.certificate)
+		assertion, err := newCertificateAssertion(c.tenantID, c.clientID, c.certificate)
 		if err != nil {
 			return auth.Token{}, err
 		}

@@ -35,6 +35,7 @@ var (
 type ClientCredential struct {
 	c           request.Client
 	tokens      map[auth.Scope]*auth.Token
+	assertionFn func() (string, error)
 	endpoint    string
 	userAgent   string
 	tenantID    string
@@ -66,10 +67,10 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 	for _, option := range options {
 		option(&opts)
 	}
-
 	if opts.httpClient != nil {
 		c.c = opts.httpClient
 	}
+
 	if len(opts.secret) > 0 {
 		c.secret = opts.secret
 	}
@@ -79,6 +80,9 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 			return nil, err
 		}
 		c.certificate = cert
+	}
+	if opts.assertionFn != nil {
+		c.assertionFn = opts.assertionFn
 	}
 
 	return c, nil
@@ -105,6 +109,15 @@ func NewClientCertificateCredential(tenantID, clientID string, certificates []*x
 	}
 
 	return NewClientCredential(tenantID, clientID, WithCertificate(certificates, key))
+}
+
+// NewClientAssertionCredential creates and returns a new *ClientCredential with
+// a client assertion function (client assertion credential).
+func NewClientAssertionCredential(tenantID, clientID string, assertionFn func() (string, error)) (*ClientCredential, error) {
+	if assertionFn == nil {
+		return nil, errors.New("client assertion function invalid")
+	}
+	return NewClientCredential(tenantID, clientID, WithAssertion(assertionFn))
 }
 
 // Token returns a new auth.Token for requests to the Azure REST API.
@@ -148,6 +161,14 @@ func (c *ClientCredential) tokenRequest(ctx context.Context, scope string) (auth
 		}
 		data.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 		data.Add("client_assertion", assertion.Encode())
+	} else if c.assertionFn != nil {
+		assertion, err := c.assertionFn()
+		if err != nil {
+			return auth.Token{}, err
+		}
+		data.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+		data.Add("client_assertion", assertion)
+
 	} else {
 		return auth.Token{}, ErrMissingCredentials
 	}

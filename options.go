@@ -1,6 +1,7 @@
 package azcfg
 
 import (
+	"context"
 	"crypto/rsa"
 	"crypto/x509"
 	"time"
@@ -47,6 +48,8 @@ type Options struct {
 	// UseManagedIdentity set to use a managed identity. To use a user assigned managed identity, use
 	// together with ClientID.
 	UseManagedIdentity bool
+	// Context for the parser. By default a context is created based on the timeout set on the parser.
+	Context context.Context
 }
 
 // Option is a function that sets Options.
@@ -154,5 +157,12 @@ func WithSettingClient(c settingClient) Option {
 func WithRetryPolicy(r RetryPolicy) Option {
 	return func(o *Options) {
 		o.RetryPolicy = r
+	}
+}
+
+// WithContext sets the context for the parser.
+func WithContext(ctx context.Context) Option {
+	return func(o *Options) {
+		o.Context = ctx
 	}
 }

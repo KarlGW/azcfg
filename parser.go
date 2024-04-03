@@ -130,6 +130,9 @@ func NewParser(options ...Option) (*parser, error) {
 }
 
 // Parse secrets from an Azure Key Vault into a struct.
+//
+// The only valid option is context, the other options on the
+// parser remain unaffected.
 func (p *parser) Parse(v any, options ...Option) error {
 	opts := Options{}
 	for _, option := range options {

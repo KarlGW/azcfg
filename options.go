@@ -18,6 +18,9 @@ type Options struct {
 	SecretClient secretClient
 	// SettingClient is a client used to retrieve settings.
 	SettingClient settingClient
+	// Context for the parser. By default a context is created based on the timeout set on the parser.
+	// Only applies when used together with the Parse function or parser Parse method.
+	Context context.Context
 	// KeyVault is the name of the Key Vault containing secrets. Used to override the
 	// default method of aquiring target Key Vault.
 	KeyVault string
@@ -48,8 +51,6 @@ type Options struct {
 	// UseManagedIdentity set to use a managed identity. To use a user assigned managed identity, use
 	// together with ClientID.
 	UseManagedIdentity bool
-	// Context for the parser. By default a context is created based on the timeout set on the parser.
-	Context context.Context
 }
 
 // Option is a function that sets Options.

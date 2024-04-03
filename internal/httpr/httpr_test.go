@@ -237,7 +237,7 @@ func setupClient(target string, rp RetryPolicy, err error) *Client {
 			return net.Dial("tcp", target)
 		},
 	}
-	return NewClient(WithTransport(tr), WithRetryPolicy(rp), WithTimeout(time.Millisecond*1))
+	return NewClient(WithTransport(tr), WithRetryPolicy(rp), WithTimeout(time.Millisecond*5))
 }
 
 var errTestClient = errors.New("client error")

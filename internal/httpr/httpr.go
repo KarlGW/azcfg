@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"math"
 	"net/http"
 	"time"
 )
@@ -37,13 +36,13 @@ func NewClient(options ...Option) *Client {
 	}
 	if c.cl == nil {
 		c.cl = &http.Client{
-			Timeout: defaultTimeout,
+			Timeout: c.timeout,
 		}
 		if c.transport != nil {
 			c.cl.Transport = c.transport
 		}
 	}
-	if c.retryPolicy.isZero() {
+	if c.retryPolicy.IsZero() {
 		c.retryPolicy = defaultRetryPolicy()
 	}
 	return c
@@ -126,60 +125,6 @@ func drainResponse(r *http.Response) error {
 		return err
 	}
 	return nil
-}
-
-// RetryPolicy contains rules for retries.
-type RetryPolicy struct {
-	Retry      retry
-	Backoff    backoff
-	MinDelay   time.Duration
-	MaxDelay   time.Duration
-	MaxRetries int
-}
-
-// isZero returns true if the RetryPolicy is the zero value.
-func (r RetryPolicy) isZero() bool {
-	return r.Retry == nil && r.Backoff == nil && r.MinDelay == 0 && r.MaxDelay == 0 && r.MaxRetries == 0
-}
-
-// retry is a function that takes an *http.Response and an error
-// and evaluates if a retry should be done.
-type retry func(r *http.Response, err error) bool
-
-// defaultRetry is the default implementation of retry.
-func defaultRetry(r *http.Response, err error) bool {
-	if err != nil {
-		return true
-	}
-	switch r.StatusCode {
-	case 0, http.StatusInternalServerError:
-		return true
-	}
-	return false
-}
-
-// backoff provides delays between retries with backoff.
-type backoff func(delay, maxDelay time.Duration, retry int) time.Duration
-
-// exponentialBackoff provides backoff with an increasing delay from min delay,
-// to max delay.
-func exponentialBackoff(delay, maxDelay time.Duration, retry int) time.Duration {
-	d := delay * time.Duration(math.Pow(2, float64(retry)))
-	if d >= maxDelay {
-		d = maxDelay
-	}
-	return d
-}
-
-// defaultRetryPolicy creates and returns a default policy.
-func defaultRetryPolicy() RetryPolicy {
-	return RetryPolicy{
-		MinDelay:   time.Millisecond * 500,
-		MaxDelay:   time.Second * 5,
-		MaxRetries: 3,
-		Retry:      defaultRetry,
-		Backoff:    exponentialBackoff,
-	}
 }
 
 // NewRequest makes use of http.NewRequestWithContext and takes a []byte instead

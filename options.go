@@ -18,7 +18,7 @@ type Options struct {
 	SecretClient secretClient
 	// SettingClient is a client used to retrieve settings.
 	SettingClient settingClient
-	// Context for the parser. By default a context is created based on the timeout set on the parser.
+	// Context for parsing. By default a context is created based on the timeout set on the parser.
 	// Only applies when used together with the Parse function or parser Parse method.
 	Context context.Context
 	// KeyVault is the name of the Key Vault containing secrets. Used to override the

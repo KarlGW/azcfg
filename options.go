@@ -161,7 +161,7 @@ func WithRetryPolicy(r RetryPolicy) Option {
 	}
 }
 
-// WithContext sets the context for the parser.
+// WithContext sets the context for the call to Parse.
 func WithContext(ctx context.Context) Option {
 	return func(o *Options) {
 		o.Context = ctx

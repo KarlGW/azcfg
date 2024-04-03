@@ -100,10 +100,7 @@ type Options struct {
 type Option func(o *Options)
 
 // GetSettings get settings (key-values) by keys.
-func (c *Client) GetSettings(keys []string, options ...Option) (map[string]Setting, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
-	defer cancel()
-
+func (c *Client) GetSettings(ctx context.Context, keys []string, options ...Option) (map[string]Setting, error) {
 	return c.getSettings(ctx, keys, options...)
 }
 

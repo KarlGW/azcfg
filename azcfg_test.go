@@ -1,6 +1,7 @@
 package azcfg
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"strconv"
@@ -185,7 +186,7 @@ func TestParse(t *testing.T) {
 			secretClient := mockSecretClient{err: test.wantErr}
 			settingClient := mockSettingClient{err: test.wantErr}
 
-			gotErr := parse(&test.input, secretClient, settingClient, "")
+			gotErr := parse(context.Background(), &test.input, secretClient, settingClient, "")
 			if diff := cmp.Diff(test.want, test.input, cmp.AllowUnexported(Struct{})); diff != "" {
 				t.Errorf("parse() = unexpected result, (-want, +got)\n%s\n", diff)
 			}
@@ -220,7 +221,7 @@ func TestParseRequired(t *testing.T) {
 			secretClient := mockSecretClient{}
 			settingClient := mockSettingClient{}
 
-			gotErr := parse(&test.input, secretClient, settingClient, "")
+			gotErr := parse(context.Background(), &test.input, secretClient, settingClient, "")
 			if test.wantErr != nil && gotErr == nil {
 				t.Errorf("Unexpected result, should return error\n")
 			}
@@ -394,7 +395,7 @@ type mockSecretClient struct {
 	err error
 }
 
-func (c mockSecretClient) GetSecrets(names []string, options ...secret.Option) (map[string]secret.Secret, error) {
+func (c mockSecretClient) GetSecrets(ctx context.Context, names []string, options ...secret.Option) (map[string]secret.Secret, error) {
 	if c.err != nil {
 		return nil, errors.New("could not get secrets")
 	}
@@ -426,7 +427,7 @@ type mockSettingClient struct {
 	err error
 }
 
-func (c mockSettingClient) GetSettings(keys []string, options ...setting.Option) (map[string]setting.Setting, error) {
+func (c mockSettingClient) GetSettings(ctx context.Context, keys []string, options ...setting.Option) (map[string]setting.Setting, error) {
 	time.Sleep(time.Millisecond * 10)
 	if c.err != nil {
 		return nil, errors.New("could not get settings")

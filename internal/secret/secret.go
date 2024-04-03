@@ -81,10 +81,7 @@ type Options struct{}
 type Option func(o *Options)
 
 // GetSecrets gets secrets by names.
-func (c Client) GetSecrets(names []string, options ...Option) (map[string]Secret, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
-	defer cancel()
-
+func (c Client) GetSecrets(ctx context.Context, names []string, options ...Option) (map[string]Secret, error) {
 	return c.getSecrets(ctx, names, options...)
 }
 

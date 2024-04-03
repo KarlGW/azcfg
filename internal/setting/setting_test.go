@@ -198,7 +198,7 @@ func TestClient_GetSettings(t *testing.T) {
 				c.timeout = time.Millisecond * 10
 			})
 
-			got, gotErr := client.GetSettings(test.input.keys, test.input.options...)
+			got, gotErr := client.GetSettings(context.Background(), test.input.keys, test.input.options...)
 
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("GetSettings() = unexpected result (-want +got)\n%s\n", diff)

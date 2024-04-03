@@ -119,7 +119,7 @@ func TestClient_GetSecrets(t *testing.T) {
 				c.timeout = time.Millisecond * 10
 			})
 
-			got, gotErr := client.GetSecrets(test.input.names)
+			got, gotErr := client.GetSecrets(context.Background(), test.input.names)
 
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("GetSecrets() = unexpected result (-want +got)\n%s\n", diff)

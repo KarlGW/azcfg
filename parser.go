@@ -1,6 +1,7 @@
 package azcfg
 
 import (
+	"context"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
@@ -45,12 +46,12 @@ const (
 
 // secretClient is the interface that wraps around method GetSecrets.
 type secretClient interface {
-	GetSecrets(names []string, options ...secret.Option) (map[string]secret.Secret, error)
+	GetSecrets(ctx context.Context, names []string, options ...secret.Option) (map[string]secret.Secret, error)
 }
 
 // settingClient is the interface that wraps around method GetSettings.
 type settingClient interface {
-	GetSettings(keys []string, options ...setting.Option) (map[string]setting.Setting, error)
+	GetSettings(ctx context.Context, keys []string, options ...setting.Option) (map[string]setting.Setting, error)
 }
 
 // RetryPolicy contains rules for retries.
@@ -129,8 +130,25 @@ func NewParser(options ...Option) (*parser, error) {
 }
 
 // Parse secrets from an Azure Key Vault into a struct.
-func (p *parser) Parse(v any) error {
-	return parse(v, p.secretClient, p.settingClient, p.label)
+//
+// The only valid option is context, the other options on the
+// parser remain unaffected.
+func (p *parser) Parse(v any, options ...Option) error {
+	opts := Options{}
+	for _, option := range options {
+		option(&opts)
+	}
+
+	var ctx context.Context
+	if opts.Context == nil {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(context.Background(), p.timeout)
+		defer cancel()
+	} else {
+		ctx = opts.Context
+	}
+
+	return parse(ctx, v, p.secretClient, p.settingClient, p.label)
 }
 
 // setupCredential configures credential based on the provided

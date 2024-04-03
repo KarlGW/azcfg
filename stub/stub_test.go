@@ -1,6 +1,7 @@
 package stub
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -79,7 +80,7 @@ func TestSecretClient_GetSecrets(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			cl := NewSecretClient(test.input.secrets, test.input.err)
-			got, gotErr := cl.GetSecrets(test.input.names)
+			got, gotErr := cl.GetSecrets(context.Background(), test.input.names)
 
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("GetSecrets() = unexpected result (-want +got)\n%s\n", diff)
@@ -161,7 +162,7 @@ func TestSettingClient_GetSettings(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			cl := NewSettingClient(test.input.settings, test.input.err)
-			got, gotErr := cl.GetSettings(test.input.keys)
+			got, gotErr := cl.GetSettings(context.Background(), test.input.keys)
 
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("GetSettings() = unexpected result (-want +got)\n%s\n", diff)

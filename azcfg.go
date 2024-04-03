@@ -1,6 +1,7 @@
 package azcfg
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -24,11 +25,11 @@ func Parse(v any, options ...Option) error {
 	if err != nil {
 		return err
 	}
-	return parser.Parse(v)
+	return parser.Parse(v, options...)
 }
 
 // Parse secrets into the configuration.
-func parse(d any, secretClient secretClient, settingClient settingClient, label string) error {
+func parse(ctx context.Context, d any, secretClient secretClient, settingClient settingClient, label string) error {
 	v := reflect.ValueOf(d)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("must provide a pointer to a struct")
@@ -47,7 +48,7 @@ func parse(d any, secretClient secretClient, settingClient settingClient, label 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			secrets, err := secretClient.GetSecrets(secretFields)
+			secrets, err := secretClient.GetSecrets(ctx, secretFields)
 			if err != nil {
 				errCh <- err
 				return
@@ -72,7 +73,7 @@ func parse(d any, secretClient secretClient, settingClient settingClient, label 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			settings, err := settingClient.GetSettings(settingFields, setting.WithLabel(label))
+			settings, err := settingClient.GetSettings(ctx, settingFields, setting.WithLabel(label))
 			if err != nil {
 				errCh <- err
 				return

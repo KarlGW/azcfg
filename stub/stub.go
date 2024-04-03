@@ -1,6 +1,8 @@
 package stub
 
 import (
+	"context"
+
 	"github.com/KarlGW/azcfg/internal/secret"
 	"github.com/KarlGW/azcfg/internal/setting"
 )
@@ -29,7 +31,7 @@ func NewSecretClient(secrets map[string]string, err error) SecretClient {
 }
 
 // Get secrets set to the stub client.
-func (c SecretClient) GetSecrets(names []string, options ...secret.Option) (map[string]secret.Secret, error) {
+func (c SecretClient) GetSecrets(ctx context.Context, names []string, options ...secret.Option) (map[string]secret.Secret, error) {
 	if c.err != nil {
 		return nil, c.err
 	}
@@ -60,7 +62,7 @@ func NewSettingClient(settings map[string]string, err error) SettingClient {
 }
 
 // Get settings set to the stub client.
-func (c SettingClient) GetSettings(keys []string, options ...setting.Option) (map[string]setting.Setting, error) {
+func (c SettingClient) GetSettings(ctx context.Context, keys []string, options ...setting.Option) (map[string]setting.Setting, error) {
 	if c.err != nil {
 		return nil, c.err
 	}

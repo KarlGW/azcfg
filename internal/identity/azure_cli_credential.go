@@ -56,7 +56,7 @@ func (c *AzureCLICredential) Token(ctx context.Context, options ...auth.TokenOpt
 		return *c.tokens[opts.Scope], nil
 	}
 
-	token, err := c.tokenRequest(ctx, string(opts.Scope))
+	token, err := getCLIToken(ctx, string(opts.Scope))
 	if err != nil {
 		return auth.Token{}, err
 	}
@@ -64,9 +64,9 @@ func (c *AzureCLICredential) Token(ctx context.Context, options ...auth.TokenOpt
 	return *c.tokens[opts.Scope], nil
 }
 
-// tokenRequest requests a token after creating the request body
+// getCLIToken requests a token after creating the request body
 // based on the settings of the ClientCredential.
-func (c *AzureCLICredential) tokenRequest(ctx context.Context, scope string) (auth.Token, error) {
+func getCLIToken(ctx context.Context, scope string) (auth.Token, error) {
 	var command, flag, dir string
 	if runtime.GOOS == "windows" {
 		dir = os.Getenv("SYSTEMROOT")

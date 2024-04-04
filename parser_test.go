@@ -360,7 +360,7 @@ func TestSetupCredential(t *testing.T) {
 				options Options
 				envs    map[string]string
 			}{
-				options: Options{UseManagedIdentity: true},
+				options: Options{ManagedIdentity: true},
 			},
 			want: mockCredential{
 				t: "managed-identity",

@@ -12,7 +12,6 @@ import (
 // Options contains options for the Parser.
 type Options struct {
 	// Credential is the credential to be used with the Client.
-	// Used to override the default method of aquiring credentials.
 	Credential auth.Credential
 	// SecretClient is a client used to retrieve secrets.
 	SecretClient secretClient
@@ -54,10 +53,10 @@ type Options struct {
 	// Timeout is the total timeout for retrieval of secrets.
 	// Defaults to 10 seconds.
 	Timeout time.Duration
-	// ManagedIdentity set to use a managed identity. To use a user assigned
+	// ManagedIdentity sets the use of a managed identity. To use a user assigned
 	// managed identity, use together with ClientID.
 	ManagedIdentity bool
-	// AzureCLICredential set to use Azure CLI credential.
+	// AzureCLICredential sets the use of Azure CLI credentials.
 	AzureCLICredential bool
 }
 

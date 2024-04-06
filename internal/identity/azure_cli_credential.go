@@ -65,8 +65,7 @@ func (c *AzureCLICredential) Token(ctx context.Context, options ...auth.TokenOpt
 	return *c.tokens[opts.Scope], nil
 }
 
-// cliToken requests a token after creating the request body
-// based on the settings of the ClientCredential.
+// cliToken retreives a token from the Azure CLI.
 var cliToken = func(ctx context.Context, scope string) (auth.Token, error) {
 	var command, flag, dir string
 	if runtime.GOOS == "windows" {

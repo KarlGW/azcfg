@@ -422,9 +422,6 @@ az login
 az account set --subscription <subscription-id>
 ```
 
-````
-
-
 ##### Options
 
 If more control is needed, such as custom environment variables or other means of getting the necessary values, options can be used.

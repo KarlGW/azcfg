@@ -60,6 +60,7 @@ func (c *AzureCLICredential) Token(ctx context.Context, options ...auth.TokenOpt
 	if err != nil {
 		return auth.Token{}, err
 	}
+
 	c.tokens[opts.Scope] = &token
 	return *c.tokens[opts.Scope], nil
 }
@@ -99,12 +100,12 @@ var cliToken = func(ctx context.Context, scope string) (auth.Token, error) {
 
 	return auth.Token{
 		AccessToken: r.AccessToken,
-		ExpiresOn:   time.Now().Add(time.Duration(r.ExpiresIn) * time.Second),
+		ExpiresOn:   time.Unix(int64(r.ExpiresOn), 0),
 	}, nil
 }
 
 // cliAuthResult represents a token response from the Azure CLI.
 type cliAuthResult struct {
 	AccessToken string  `json:"accessToken"`
-	ExpiresIn   float64 `json:"expires_on"`
+	ExpiresOn   float64 `json:"expires_on"`
 }

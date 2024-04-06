@@ -47,7 +47,7 @@ type Options struct {
 	PrivateKey *rsa.PrivateKey
 	// RetryPolicy is the retry policy for the clients of the parser.
 	RetryPolicy RetryPolicy
-	// Concurrency is the amount of secrets that will be retrieved
+	// Concurrency is the amount of secrets/settings that will be retrieved
 	// concurrently. Defaults to 10.
 	Concurrency int
 	// Timeout is the total timeout for retrieval of secrets.

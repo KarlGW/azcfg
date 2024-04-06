@@ -411,6 +411,20 @@ For all authentication scenarios the following environment variables are used:
 
 **Azure CLI**
 
+* `AZCFG_AZURE_CLI_CREDENTIAL`
+
+Requires Azure CLI to be installed, and being logged in.
+
+```sh
+# Login to Azure.
+az login
+# Set subscription where Key Vault is provisioned.
+az account set --subscription <subscription-id>
+```
+
+````
+
+
 ##### Options
 
 If more control is needed, such as custom environment variables or other means of getting the necessary values, options can be used.

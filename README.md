@@ -369,7 +369,8 @@ Settings in App Configuration can have labels associated with them. To target a 
 
 The module supports several ways of authenticating to Azure and get secrets from the target Key Vault and settings from the target App Configuration.
 
-1. Built-in credentials that supports Service Principal (Client Credentials with secret, certificate or an assertion) and managed identity (system and user assigned)
+1. Built-in credentials that supports Service Principal (Client Credentials with secret, certificate or an assertion),
+managed identity (system and user assigned) and Azure CLI.
 2. Credentials from [`azidentity`](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity) with the submodule [`authopts`](./authopts/)
 3. Custom credential handling by implementing the `auth.Credential` interface.
 
@@ -408,6 +409,7 @@ For all authentication scenarios the following environment variables are used:
 
 * `AZCFG_CLIENT_ID` - (Optional) Client ID (also called Application ID) of the Managed Identity. Set if using a user assigned managed identity.
 
+**Azure CLI**
 
 ##### Options
 
@@ -416,10 +418,27 @@ If more control is needed, such as custom environment variables or other means o
 **Service Principal**
 
 ```go
+// Client Secret.
 azcfg.Parse(
     &cfg,
     azcfg.WithClientSecretCredential(tenantID, clientID, clientSecret),
-    WithKeyVault(vault),
+    azcfg.WithKeyVault(vault),
+)
+
+// Client certificate.
+azcfg.Parse(
+    &cfg,
+    azcfg.WithClientCertificateCredential(tenantID, clientID, certificates, key),
+    azcfg.WithKeyVault(vault),
+)
+
+// Client assertion.
+azcfg.Parse(
+    &cfg,
+    func() (string, error) {
+        // Return assertion.
+    },
+    azcfg.WithKeyVault(vault),
 )
 ```
 
@@ -427,13 +446,19 @@ azcfg.Parse(
 
 ```go
 // System assigned identity.
-azcfg.Parse(&cfg, WithManagedIdentity(), azcfg.WithKeyVault(vault))
+azcfg.Parse(&cfg, azcfg.WithManagedIdentity(), azcfg.WithKeyVault(vault))
 // User assigned identity.
-azcfg.Parse(&cfg, WithManagedIdentity(clientID), azcfg.WithKeyVault(vault))
+azcfg.Parse(&cfg, azcfg.WithManagedIdentity(clientID), azcfg.WithKeyVault(vault))
 ```
 
 To use a credential provided from elsewhere, such as the `azidentity` module see the section about
 [Credentials](#credentials).
+
+**Azure CLI**
+
+```go
+azcfg.Parse(&cfg, azcfg.WithAzureCLICredential(), azcfg.WithKeyVault(vault))
+```
 
 ### Credentials
 

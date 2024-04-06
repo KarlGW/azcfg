@@ -26,7 +26,7 @@ type AzureCLICredential struct {
 	mu     sync.RWMutex
 }
 
-// NewAzureCLICredential creates and returns a new *CLICredential.
+// NewAzureCLICredential creates and returns a new *AzureCLICredential.
 func NewAzureCLICredential(options ...CredentialOption) (*AzureCLICredential, error) {
 	c := &AzureCLICredential{
 		tokens: make(map[auth.Scope]*auth.Token),

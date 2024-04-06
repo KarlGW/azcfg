@@ -11,46 +11,53 @@ import (
 
 // Options contains options for the Parser.
 type Options struct {
-	// Credential is the credential to be used with the Client. Used to override
-	// the default method of aquiring credentials.
+	// Credential is the credential to be used with the Client.
 	Credential auth.Credential
 	// SecretClient is a client used to retrieve secrets.
 	SecretClient secretClient
 	// SettingClient is a client used to retrieve settings.
 	SettingClient settingClient
-	// Context for parsing. By default a context is created based on the timeout set on the parser.
-	// Only applies when used together with the Parse function or parser Parse method.
+	// Context for parsing. By default a context is created based on
+	// the timeout set on the parser. Only applies when used together
+	// with the Parse function or parser Parse method.
 	Context context.Context
-	// KeyVault is the name of the Key Vault containing secrets. Used to override the
-	// default method of aquiring target Key Vault.
+	// KeyVault is the name of the Key Vault containing secrets.
 	KeyVault string
-	// AppConfiguration is the name of the App Configuration containing settibgs. Used to override the
-	// default method of aquiring target App Configuration.
+	// AppConfiguration is the name of the App Configuration containing
+	// settings.
 	AppConfiguration string
 	// Label for setting in an Azure App Configuration.
 	Label string
-	// TenantID of the Service Principal with access to target Key Vault.
+	// TenantID of the Service Principal with access to target
+	// Key Vault and/or App Configuration.
 	TenantID string
-	// ClientID of the Service Principal or user assigned managed identity with access to target Key Vault.
+	// ClientID of the Service Principal or user assigned managed identity
+	// with access to target Key Vault and/or App Configuration.
 	ClientID string
-	// ClientSecret of the Service Principal with access to target Key Vault.
+	// ClientSecret of the Service Principal with access to target Key Vault
+	// and/or App Configuration.
 	ClientSecret string
-	// Certificates for the Service Principal with access to target Key Vault.
+	// Certificates for the Service Principal with access to target Key Vault
+	// and/or App Configuration.
 	Certificates []*x509.Certificate
 	// Assertion is an assertion function for a client assertion credential.
 	Assertion func() (string, error)
-	// PrivateKey to be used with the certificates for the Service Principal with access to target Key Vault.
+	// PrivateKey to be used with the certificates for the Service Principal
+	// with access to target Key Vault and/or App Configuration.
 	PrivateKey *rsa.PrivateKey
 	// RetryPolicy is the retry policy for the clients of the parser.
 	RetryPolicy RetryPolicy
-	// Concurrency is the amount of secrets that will be retrieved concurrently.
-	// Defaults to 10.
+	// Concurrency is the amount of secrets/settings that will be retrieved
+	// concurrently. Defaults to 10.
 	Concurrency int
-	// Timeout is the total timeout for retrieval of secrets. Defaults to 10 seconds.
+	// Timeout is the total timeout for retrieval of secrets.
+	// Defaults to 10 seconds.
 	Timeout time.Duration
-	// UseManagedIdentity set to use a managed identity. To use a user assigned managed identity, use
-	// together with ClientID.
-	UseManagedIdentity bool
+	// ManagedIdentity sets the use of a managed identity. To use a user assigned
+	// managed identity, use together with ClientID.
+	ManagedIdentity bool
+	// AzureCLICredential sets the use of Azure CLI credentials.
+	AzureCLICredential bool
 }
 
 // Option is a function that sets Options.
@@ -92,7 +99,7 @@ func WithTimeout(d time.Duration) Option {
 }
 
 // WithClientSecretCredential sets the parser to use client credential with
-// a secret (client secret credential) for the Key Vault.
+// a secret (client secret credential).
 func WithClientSecretCredential(tenantID, clientID, clientSecret string) Option {
 	return func(o *Options) {
 		o.TenantID = tenantID
@@ -102,7 +109,7 @@ func WithClientSecretCredential(tenantID, clientID, clientSecret string) Option 
 }
 
 // WithClientCertificateCredential sets the parser to use client credential with
-// a certificate (client certificate credential) for the Key Vault.
+// a certificate (client certificate credential).
 func WithClientCertificateCredential(tenantID, clientID string, certificates []*x509.Certificate, key *rsa.PrivateKey) Option {
 	return func(o *Options) {
 		o.TenantID = tenantID
@@ -122,14 +129,20 @@ func WithClientAssertionCredential(tenantID, clientID string, assertion func() (
 	}
 }
 
-// WithManagedIdentity sets the parser to use a managed identity
-// for credentials for the Key Vault.
+// WithManagedIdentity sets the parser to use a managed identity.
 func WithManagedIdentity(clientID ...string) Option {
 	return func(o *Options) {
-		o.UseManagedIdentity = true
+		o.ManagedIdentity = true
 		if len(clientID) > 0 {
 			o.ClientID = clientID[0]
 		}
+	}
+}
+
+// WithAzureCLICredential sets the parser to use Azure CLI credential.
+func WithAzureCLICredential() Option {
+	return func(o *Options) {
+		o.AzureCLICredential = true
 	}
 }
 

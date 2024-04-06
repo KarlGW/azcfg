@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
@@ -30,18 +31,26 @@ const (
 	azcfgTenantID = "AZCFG_TENANT_ID"
 	// azcfgClientID is the environment variable for the client ID.
 	azcfgClientID = "AZCFG_CLIENT_ID"
-	// azcfgClientSecret is the environment variable for the client secret.
+	// azcfgClientSecret is the environment variable for the client
+	// secret.
 	azcfgClientSecret = "AZCFG_CLIENT_SECRET"
-	// azcfgClientCertificate is the environment variable for the client certificate.
+	// azcfgClientCertificate is the environment variable for the client
+	// certificate.
 	azcfgClientCertificate = "AZCFG_CLIENT_CERTIFICATE"
-	// azcfgClientCertificatePath is the environment variable for the path to the client certificate.
+	// azcfgClientCertificatePath is the environment variable for the path
+	// to the client certificate.
 	azcfgClientCertificatePath = "AZCFG_CLIENT_CERTIFICATE_PATH"
 	// azcfgKeyVaultName is the environment variable for the Key Vault name.
 	azcfgKeyVaultName = "AZCFG_KEYVAULT_NAME"
-	// azcfgAppConfigurationName is the environment variable for the App Configuration name.
+	// azcfgAppConfigurationName is the environment variable for the App
+	// Configuration name.
 	azcfgAppConfigurationName = "AZCFG_APPCONFIGURATION_NAME"
-	// azcfgAppConfigurationLabel is the environment variable for the App Configuration label.
+	// azcfgAppConfigurationLabel is the environment variable for the App
+	// Configuration label.
 	azcfgAppConfigurationLabel = "AZCFG_APPCONFIGURATION_LABEL"
+	// azcfgAzureCLICredential is the environment variable for the Azure CLI
+	// credential.
+	azcfgAzureCLICredential = "AZCFG_AZURE_CLI_CREDENTIAL"
 )
 
 // secretClient is the interface that wraps around method GetSecrets.
@@ -57,7 +66,8 @@ type settingClient interface {
 // RetryPolicy contains rules for retries.
 type RetryPolicy = httpr.RetryPolicy
 
-// parser contains all the necessary values and settings for calls to Parse.
+// parser contains all the necessary values and settings for calls to
+// Parse.
 type parser struct {
 	secretClient  secretClient
 	settingClient settingClient
@@ -158,9 +168,13 @@ func setupCredential(options Options) (auth.Credential, error) {
 		return options.Credential, nil
 	}
 
+	if coalesceBool(options.AzureCLICredential, parseBool(os.Getenv(azcfgAzureCLICredential))) {
+		return newAzureCLICredential()
+	}
+
 	tenantID := coalesceString(options.TenantID, os.Getenv(azcfgTenantID))
 	clientID := coalesceString(options.ClientID, os.Getenv(azcfgClientID))
-	if len(tenantID) == 0 || options.UseManagedIdentity {
+	if len(tenantID) == 0 || options.ManagedIdentity {
 		return newManagedIdentityCredential(clientID)
 	}
 	if len(clientID) == 0 {
@@ -226,6 +240,24 @@ func coalesceString(x, y string) string {
 	return y
 }
 
+// parseBool returns the boolean represented by the string.
+// If the string cannot be parsed, it returns false.
+func parseBool(s string) bool {
+	b, err := strconv.ParseBool(s)
+	if err != nil {
+		return false
+	}
+	return b
+}
+
+// coalesceBool returns the first non-false boolean (if any).
+func coalesceBool(x, y bool) bool {
+	if x {
+		return x
+	}
+	return y
+}
+
 // certificatesAndKeyFromPEM extracts the x509 certificates and private key from the given PEM.
 var certificatesAndKeyFromPEM = identity.CertificatesAndKeyFromPEM
 
@@ -261,4 +293,8 @@ var newClientAssertionCredential = func(tenantID, clientID string, assertion fun
 
 var newManagedIdentityCredential = func(clientID string) (auth.Credential, error) {
 	return identity.NewManagedIdentityCredential(identity.WithClientID(clientID))
+}
+
+var newAzureCLICredential = func() (auth.Credential, error) {
+	return identity.NewAzureCLICredential()
 }

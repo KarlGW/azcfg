@@ -63,8 +63,8 @@ func TestOptions(t *testing.T) {
 			name:  "WithManagedIdentity",
 			input: WithManagedIdentity("2222"),
 			want: Options{
-				ClientID:           "2222",
-				UseManagedIdentity: true,
+				ClientID:        "2222",
+				ManagedIdentity: true,
 			},
 		},
 		{

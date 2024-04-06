@@ -12,6 +12,8 @@
   * [Options](#options)
   * [Required](#required)
   * [Parser](#parser)
+  * [Pre-populated struct and default values](#pre-populated-struct-and-default-values)
+  * [Timeout and context](#timeout-and-context)
   * [App Configuration setting labels](#app-configuration-setting-labels)
   * [Authentication](#authentication)
   * [Credentials](#credentials)
@@ -130,7 +132,7 @@ type credential struct {
 }
 
 func main() {
-    cfg := config{}
+    var cfg config
     if err := azcfg.Parse(&cfg); err != nil {
         // Handle error.
     }
@@ -167,7 +169,7 @@ type credential struct {
 }
 
 func main() {
-    cfg := config{}
+    var cfg config
     if err := azcfg.Parse(&cfg); err != nil {
         // Handle error.
     }
@@ -203,7 +205,7 @@ import (
 )
 
 func main() {
-    cfg := config{}
+    var cfg config
     if err := azcfg.Parse(&cfg, func(o *Options) {
         o.Credential = cred
         o.KeyVault = "vault"
@@ -251,7 +253,7 @@ func main() {
         // Handle error.
     }
 
-    cfg := config{}
+    var cfg config
     if err := parser.Parse(&cfg); err != nil {
         // Handle error.
     }
@@ -260,6 +262,101 @@ func main() {
 
 The constructor function `NewParser` supports the same options as the module level `Parse` function.
 For supported options see [`Options`](https://pkg.go.dev/github.com/KarlGW/azcfg#Options) struct or list of function options in the [Options](#options) section.
+
+### Pre-populated struct and default values
+
+A struct can be set with values prior to parsing. This is useful if not all fields should be handled by the parser, or default values should
+be set on the struct (in this case tag `,required` should not be set on the field).
+
+If the values for fields that are tagged are retrived, they will overwrite the current values.
+
+```go
+package main
+
+import (
+    "github.com/KarlGW/azcfg"
+)
+
+type config struct {
+    Host string
+    Port int
+
+    Username string `secret:"username"`
+    Password string `secret:"password"`
+
+    Credential credential
+}
+
+type credential struct {
+    Key int `secret:"key"`
+}
+
+func main() {
+    cfg := config{
+        Host: "localhost",
+        Port: 8080
+        Username: os.Getenv("USERNAME")
+        Password: os.Getenv("PASSWORD")
+    }
+
+
+    if err := azcfg.Parse(&cfg); err != nil {
+        // Handle error.
+    }
+
+    fmt.Printf("%+v\n", cfg)
+}
+```
+
+### Timeout and context
+
+By default the `Parse` function and `Parse` method on `Parser` creates a `context` with the configured (or default) timeout.
+For those cases that a custom `context` is desired, it can be passed with an option to `Parse`:
+
+#### With `Parse`
+
+```go
+package main
+
+import (
+    "github.com/KarlGW/azcfg"
+)
+
+func main() {
+    ctx, cancel := context.WithTimeout(context.Background(), time.Second * 30)
+    defer cancel()
+
+    var cfg Config
+    if err := azcfg.Parse(&cfg, azcfg.WithContext(ctx)); err != nil {
+        // Handle error.
+    }
+}
+```
+
+#### With `Parser`
+
+```go
+package main
+
+import (
+    "github.com/KarlGW/azcfg"
+)
+
+func main() {
+    parser, err := azcfg.NewParser()
+    if err != nil {
+        // Handle error.
+    }
+
+    ctx, cancel := context.WithTimeout(context.Background(), time.Second * 30)
+    defer cancel()
+
+    var cfg Config
+    if err := parser.Parse(&cfg, azcfg.WithContext(ctx)); err != nil {
+        // Handle error.
+    }
+}
+```
 
 ### App Configuration setting labels
 
@@ -272,7 +369,8 @@ Settings in App Configuration can have labels associated with them. To target a 
 
 The module supports several ways of authenticating to Azure and get secrets from the target Key Vault and settings from the target App Configuration.
 
-1. Built-in credentials that supports Service Principal (Client Credentials with secret, certificate or an assertion) and managed identity (system and user assigned)
+1. Built-in credentials that supports Service Principal (Client Credentials with secret, certificate or an assertion),
+managed identity (system and user assigned) and Azure CLI.
 2. Credentials from [`azidentity`](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity) with the submodule [`authopts`](./authopts/)
 3. Custom credential handling by implementing the `auth.Credential` interface.
 
@@ -311,6 +409,21 @@ For all authentication scenarios the following environment variables are used:
 
 * `AZCFG_CLIENT_ID` - (Optional) Client ID (also called Application ID) of the Managed Identity. Set if using a user assigned managed identity.
 
+**Azure CLI**
+
+* `AZCFG_AZURE_CLI_CREDENTIAL`
+
+Requires Azure CLI to be installed, and being logged in.
+
+```sh
+# Login to Azure.
+az login
+# Set subscription where Key Vault is provisioned.
+az account set --subscription <subscription-id>
+```
+
+````
+
 
 ##### Options
 
@@ -319,10 +432,27 @@ If more control is needed, such as custom environment variables or other means o
 **Service Principal**
 
 ```go
+// Client Secret.
 azcfg.Parse(
     &cfg,
     azcfg.WithClientSecretCredential(tenantID, clientID, clientSecret),
-    WithKeyVault(vault),
+    azcfg.WithKeyVault(vault),
+)
+
+// Client certificate.
+azcfg.Parse(
+    &cfg,
+    azcfg.WithClientCertificateCredential(tenantID, clientID, certificates, key),
+    azcfg.WithKeyVault(vault),
+)
+
+// Client assertion.
+azcfg.Parse(
+    &cfg,
+    func() (string, error) {
+        // Return assertion.
+    },
+    azcfg.WithKeyVault(vault),
 )
 ```
 
@@ -330,13 +460,19 @@ azcfg.Parse(
 
 ```go
 // System assigned identity.
-azcfg.Parse(&cfg, WithManagedIdentity(), azcfg.WithKeyVault(vault))
+azcfg.Parse(&cfg, azcfg.WithManagedIdentity(), azcfg.WithKeyVault(vault))
 // User assigned identity.
-azcfg.Parse(&cfg, WithManagedIdentity(clientID), azcfg.WithKeyVault(vault))
+azcfg.Parse(&cfg, azcfg.WithManagedIdentity(clientID), azcfg.WithKeyVault(vault))
 ```
 
 To use a credential provided from elsewhere, such as the `azidentity` module see the section about
 [Credentials](#credentials).
+
+**Azure CLI**
+
+```go
+azcfg.Parse(&cfg, azcfg.WithAzureCLICredential(), azcfg.WithKeyVault(vault))
+```
 
 ### Credentials
 
@@ -372,7 +508,7 @@ func main() {
         // Handle error.
     }
 
-    cfg := Config{}
+    var cfg config
     if err := azcfg.Parse(&cfg, authopts.WithTokenCredential(cred)); err != nil {
         // Handle error.
     }

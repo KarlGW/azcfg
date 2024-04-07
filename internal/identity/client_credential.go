@@ -97,7 +97,7 @@ func NewClientSecretCredential(tenantID, clientID, secret string, options ...Cre
 
 // NewClientCertificateCredential creates and returns a new *ClientCredential with
 // a certificate and private key (client certificate credential).
-func NewClientCertificateCredential(tenantID, clientID string, certificates []*x509.Certificate, key *rsa.PrivateKey) (*ClientCredential, error) {
+func NewClientCertificateCredential(tenantID, clientID string, certificates []*x509.Certificate, key *rsa.PrivateKey, options ...CredentialOption) (*ClientCredential, error) {
 	if len(certificates) == 0 {
 		return nil, errors.New("client certificate invalid")
 	}
@@ -105,16 +105,16 @@ func NewClientCertificateCredential(tenantID, clientID string, certificates []*x
 		return nil, errors.New("client certificate key invalid")
 	}
 
-	return NewClientCredential(tenantID, clientID, WithCertificate(certificates, key))
+	return NewClientCredential(tenantID, clientID, append(options, WithCertificate(certificates, key))...)
 }
 
 // NewClientAssertionCredential creates and returns a new *ClientCredential with
 // a client assertion function (client assertion credential).
-func NewClientAssertionCredential(tenantID, clientID string, assertion func() (string, error)) (*ClientCredential, error) {
+func NewClientAssertionCredential(tenantID, clientID string, assertion func() (string, error), options ...CredentialOption) (*ClientCredential, error) {
 	if assertion == nil {
 		return nil, errors.New("client assertion function invalid")
 	}
-	return NewClientCredential(tenantID, clientID, WithAssertion(assertion))
+	return NewClientCredential(tenantID, clientID, append(options, WithAssertion(assertion))...)
 }
 
 // Token returns a new auth.Token for requests to the Azure REST API.

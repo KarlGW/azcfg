@@ -198,7 +198,7 @@ func TestNewParser(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			os.Clearenv()
 
-			newClientSecretCredential = func(tenantID, clientID, clientSecret string) (auth.Credential, error) {
+			newClientSecretCredential = func(tenantID, clientID, clientSecret string, options ...identity.CredentialOption) (auth.Credential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
@@ -206,7 +206,7 @@ func TestNewParser(t *testing.T) {
 					t: "client-secret-credential",
 				}, nil
 			}
-			newClientCertificateCredential = func(tenantID, clientID string, certificate []*x509.Certificate, key *rsa.PrivateKey) (auth.Credential, error) {
+			newClientCertificateCredential = func(tenantID, clientID string, certificate []*x509.Certificate, key *rsa.PrivateKey, options ...identity.CredentialOption) (auth.Credential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
@@ -214,7 +214,7 @@ func TestNewParser(t *testing.T) {
 					t: "client-certificate-credential",
 				}, nil
 			}
-			newManagedIdentityCredential = func(clientID string) (auth.Credential, error) {
+			newManagedIdentityCredential = func(clientID string, options ...identity.CredentialOption) (auth.Credential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
@@ -401,7 +401,7 @@ func TestSetupCredential(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			os.Clearenv()
 
-			newClientSecretCredential = func(_, _, _ string) (auth.Credential, error) {
+			newClientSecretCredential = func(_, _, _ string, _ ...identity.CredentialOption) (auth.Credential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
@@ -409,7 +409,7 @@ func TestSetupCredential(t *testing.T) {
 					t: "client-secret-credential",
 				}, nil
 			}
-			newClientCertificateCredential = func(_, _ string, _ []*x509.Certificate, _ *rsa.PrivateKey) (auth.Credential, error) {
+			newClientCertificateCredential = func(_, _ string, _ []*x509.Certificate, _ *rsa.PrivateKey, _ ...identity.CredentialOption) (auth.Credential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
@@ -417,7 +417,7 @@ func TestSetupCredential(t *testing.T) {
 					t: "client-certificate-credential",
 				}, nil
 			}
-			newManagedIdentityCredential = func(_ string) (auth.Credential, error) {
+			newManagedIdentityCredential = func(_ string, _ ...identity.CredentialOption) (auth.Credential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}

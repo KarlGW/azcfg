@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/azure/cloud"
 )
 
 // Options contains options for the Parser.
@@ -28,6 +29,8 @@ type Options struct {
 	AppConfiguration string
 	// Label for setting in an Azure App Configuration.
 	Label string
+	// Cloud is the Azure cloud to make requests to.
+	Cloud cloud.Cloud
 	// TenantID of the Service Principal with access to target
 	// Key Vault and/or App Configuration.
 	TenantID string
@@ -165,6 +168,14 @@ func WithSettingClient(c settingClient) Option {
 	return func(o *Options) {
 		o.SettingClient = c
 	}
+}
+
+// WithCloud sets the Azure cloud to make requests to.
+// AzurePublic (Azure), AzureGovernment (Azure Government)
+// and AzureChina (Azure China) are supported.
+// AzurePublic is used by default.
+func WithCloud(cloud cloud.Cloud) Option {
+	return func(o *Options) {}
 }
 
 // WithRetryPolicy sets the retry policy for the parser.

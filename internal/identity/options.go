@@ -4,6 +4,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 
+	"github.com/KarlGW/azcfg/azure/cloud"
 	"github.com/KarlGW/azcfg/internal/request"
 )
 
@@ -16,6 +17,8 @@ type CredentialOptions struct {
 	key *rsa.PrivateKey
 	// assertion is a function for getting a client assertion for a client credential.
 	assertion func() (string, error)
+	// cloud is the Azure cloud to authenticate against.
+	cloud cloud.Cloud
 	// clientID is the client ID of the client credential or
 	// user assigned identity.
 	clientID string
@@ -72,5 +75,12 @@ func WithHTTPClient(c request.Client) CredentialOption {
 func WithAssertion(assertion func() (string, error)) CredentialOption {
 	return func(o *CredentialOptions) {
 		o.assertion = assertion
+	}
+}
+
+// WithCloud sets the Azure cloud to authenticate against.
+func WithCloud(cloud cloud.Cloud) CredentialOption {
+	return func(o *CredentialOptions) {
+		o.cloud = cloud
 	}
 }

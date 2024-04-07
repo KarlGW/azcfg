@@ -5,19 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/azure/cloud"
 	"github.com/KarlGW/azcfg/internal/httpr"
 	"github.com/KarlGW/azcfg/internal/request"
 	"github.com/KarlGW/azcfg/version"
 )
 
 const (
-	// baseURL is the base URL for Azure Key Vault in the Azure Public Cloud.
-	baseURL = "https://{vault}.vault.azure.net/secrets"
 	// apiVersion is the API version of the Key Vault REST API endpoint.
 	apiVersion = "7.4"
 	// defaultConcurrency is the default concurrency set on the client.
@@ -41,6 +41,8 @@ func (s Secret) GetValue() string {
 type Client struct {
 	c           request.Client
 	cred        auth.Credential
+	cloud       cloud.Cloud
+	scope       string
 	baseURL     string
 	vault       string
 	userAgent   string
@@ -56,7 +58,7 @@ type ClientOption func(c *Client)
 func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Client {
 	c := &Client{
 		cred:        cred,
-		baseURL:     strings.Replace(baseURL, "{vault}", vault, 1),
+		cloud:       cloud.AzurePublic,
 		vault:       vault,
 		userAgent:   "azcfg/" + version.Version(),
 		concurrency: defaultConcurrency,
@@ -65,6 +67,15 @@ func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Cli
 	for _, option := range options {
 		option(c)
 	}
+
+	if len(c.baseURL) == 0 {
+		c.baseURL = endpoint(c.cloud, vault)
+	}
+
+	if len(c.scope) == 0 {
+		c.scope = scope(c.cloud)
+	}
+
 	if c.c == nil {
 		c.c = httpr.NewClient(
 			httpr.WithTimeout(c.timeout),
@@ -93,7 +104,7 @@ func (c Client) Get(ctx context.Context, name string, options ...Option) (Secret
 	}
 
 	u := fmt.Sprintf("%s/%s?api-version=%s", c.baseURL, name, apiVersion)
-	token, err := c.cred.Token(ctx, auth.WithScope(auth.ScopeKeyVault))
+	token, err := c.cred.Token(ctx, auth.WithScope(c.scope))
 	if err != nil {
 		return Secret{}, err
 	}
@@ -204,4 +215,28 @@ func (c Client) getSecrets(ctx context.Context, names []string, options ...Optio
 		secrets[sr.name] = sr.secret
 	}
 	return secrets, nil
+}
+
+// uri returns the base URI for the provided cloud.
+func uri(c cloud.Cloud) string {
+	switch c {
+	case cloud.AzurePublic:
+		return "vault.azure.net"
+	case cloud.AzureGovernment:
+		return "vault.usgovcloudapi.net"
+	case cloud.AzureChina:
+		return "vault.azure.cn"
+	}
+	return ""
+}
+
+// endpoint returns the base endpoint for the provided cloud.
+func endpoint(cloud cloud.Cloud, vault string) string {
+	endpoint, _ := url.JoinPath("https://", vault, uri(cloud), "secrets")
+	return endpoint
+}
+
+// scope returns the scope for the provided cloud.
+func scope(cloud cloud.Cloud) string {
+	return "https://" + uri(cloud) + "/.default"
 }

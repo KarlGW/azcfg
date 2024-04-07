@@ -8,20 +8,14 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/azure/cloud"
 	"github.com/KarlGW/azcfg/internal/httpr"
 	"github.com/KarlGW/azcfg/internal/request"
 	"github.com/KarlGW/azcfg/version"
-)
-
-const (
-	// clientCredentialBaseURL contains the base URL for client credential
-	// authentication.
-	authEndpoint = "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"
 )
 
 var (
@@ -34,8 +28,9 @@ var (
 // to perform token requests.
 type ClientCredential struct {
 	c           request.Client
-	tokens      map[auth.Scope]*auth.Token
+	tokens      map[string]*auth.Token
 	assertion   func() (string, error)
+	cloud       cloud.Cloud
 	endpoint    string
 	userAgent   string
 	tenantID    string
@@ -56,9 +51,9 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 
 	c := &ClientCredential{
 		c:         httpr.NewClient(),
-		tokens:    make(map[auth.Scope]*auth.Token),
+		tokens:    make(map[string]*auth.Token),
+		cloud:     cloud.AzurePublic,
 		userAgent: "azcfg/" + version.Version(),
-		endpoint:  strings.Replace(authEndpoint, "{tenant}", tenantID, 1),
 		tenantID:  tenantID,
 		clientID:  clientID,
 	}
@@ -67,6 +62,8 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 	for _, option := range options {
 		option(&opts)
 	}
+	c.endpoint = endpoint(c.cloud, tenantID)
+
 	if opts.httpClient != nil {
 		c.c = opts.httpClient
 	}
@@ -125,9 +122,7 @@ func (c *ClientCredential) Token(ctx context.Context, options ...auth.TokenOptio
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	opts := auth.TokenOptions{
-		Scope: auth.ScopeResourceManager,
-	}
+	opts := auth.TokenOptions{}
 	for _, option := range options {
 		option(&opts)
 	}
@@ -136,7 +131,7 @@ func (c *ClientCredential) Token(ctx context.Context, options ...auth.TokenOptio
 		return *c.tokens[opts.Scope], nil
 	}
 
-	token, err := c.tokenRequest(ctx, string(opts.Scope))
+	token, err := c.tokenRequest(ctx, opts.Scope)
 	if err != nil {
 		return auth.Token{}, err
 	}
@@ -155,7 +150,7 @@ func (c *ClientCredential) tokenRequest(ctx context.Context, scope string) (auth
 	if len(c.secret) != 0 {
 		data.Add("client_secret", c.secret)
 	} else if !c.certificate.isZero() {
-		assertion, err := newCertificateAssertion(c.tenantID, c.clientID, c.certificate)
+		assertion, err := newCertificateAssertion(c.endpoint, c.clientID, c.certificate)
 		if err != nil {
 			return auth.Token{}, err
 		}
@@ -197,4 +192,19 @@ func (c *ClientCredential) tokenRequest(ctx context.Context, scope string) (auth
 	}
 
 	return tokenFromAuthResult(r), nil
+}
+
+// endpoint returns the base endpoint for the provided cloud.
+func endpoint(c cloud.Cloud, tenantID string) string {
+	var uri string
+	switch c {
+	case cloud.AzurePublic:
+		uri = "login.microsoftonline.com"
+	case cloud.AzureGovernment:
+		uri = "login.microsoftonline.us"
+	case cloud.AzureChina:
+		uri = "login.chinacloudapi.cn"
+	}
+	endpoint, _ := url.JoinPath("https://"+uri, tenantID, "oauth2/v2.0/token")
+	return endpoint
 }

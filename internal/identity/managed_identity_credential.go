@@ -56,7 +56,7 @@ const (
 type ManagedIdentityCredential struct {
 	c          request.Client
 	headers    http.Header
-	tokens     map[auth.Scope]*auth.Token
+	tokens     map[string]*auth.Token
 	endpoint   string
 	userAgent  string
 	apiVersion string
@@ -70,7 +70,7 @@ func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentity
 	c := &ManagedIdentityCredential{
 		c:         httpr.NewClient(),
 		headers:   http.Header{},
-		tokens:    make(map[auth.Scope]*auth.Token),
+		tokens:    make(map[string]*auth.Token),
 		userAgent: "azcfg/" + version.Version(),
 	}
 	opts := CredentialOptions{}
@@ -116,9 +116,7 @@ func (c *ManagedIdentityCredential) Token(ctx context.Context, options ...auth.T
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	opts := auth.TokenOptions{
-		Scope: auth.ScopeResourceManager,
-	}
+	opts := auth.TokenOptions{}
 	for _, option := range options {
 		option(&opts)
 	}
@@ -127,7 +125,7 @@ func (c *ManagedIdentityCredential) Token(ctx context.Context, options ...auth.T
 		return *c.tokens[opts.Scope], nil
 	}
 
-	token, err := c.tokenRequest(ctx, string(opts.Scope))
+	token, err := c.tokenRequest(ctx, opts.Scope)
 	if err != nil {
 		return auth.Token{}, err
 	}

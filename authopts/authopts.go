@@ -17,7 +17,7 @@ func WithTokenCredential(c azcore.TokenCredential) azcfg.Option {
 	return func(o *azcfg.Options) {
 		o.Credential = &credential{
 			TokenCredential: c,
-			tokens:          make(map[auth.Scope]*auth.Token),
+			tokens:          make(map[string]*auth.Token),
 		}
 	}
 }
@@ -25,7 +25,7 @@ func WithTokenCredential(c azcore.TokenCredential) azcfg.Option {
 // credential is a wrapper around the azcore.TokenCredential.
 type credential struct {
 	azcore.TokenCredential
-	tokens map[auth.Scope]*auth.Token
+	tokens map[string]*auth.Token
 	mu     sync.RWMutex
 }
 
@@ -34,9 +34,7 @@ func (c *credential) Token(ctx context.Context, options ...auth.TokenOption) (au
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	opts := auth.TokenOptions{
-		Scope: auth.ScopeResourceManager,
-	}
+	opts := auth.TokenOptions{}
 	for _, option := range options {
 		option(&opts)
 	}
@@ -46,7 +44,7 @@ func (c *credential) Token(ctx context.Context, options ...auth.TokenOption) (au
 	}
 
 	token, err := c.TokenCredential.GetToken(ctx, policy.TokenRequestOptions{
-		Scopes: []string{string(opts.Scope)},
+		Scopes: []string{opts.Scope},
 	})
 	if err != nil {
 		return auth.Token{}, err

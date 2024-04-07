@@ -3,6 +3,7 @@ package setting
 import (
 	"time"
 
+	"github.com/KarlGW/azcfg/azure/cloud"
 	"github.com/KarlGW/azcfg/internal/httpr"
 )
 
@@ -31,5 +32,12 @@ func WithLabel(label string) Option {
 func WithRetryPolicy(r httpr.RetryPolicy) ClientOption {
 	return func(c *Client) {
 		c.retryPolicy = r
+	}
+}
+
+// WithCloud sets the Azure cloud for setting retrieval.
+func WithCloud(cloud cloud.Cloud) ClientOption {
+	return func(c *Client) {
+		c.cloud = cloud
 	}
 }

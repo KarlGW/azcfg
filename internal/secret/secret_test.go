@@ -16,11 +16,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-var (
-	errRequest = errors.New("request error")
-	errServer  = fmt.Errorf("internal server error")
-)
-
 func TestClient_GetSecrets(t *testing.T) {
 	var tests = []struct {
 		name  string
@@ -173,3 +168,8 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 		Body:       io.NopCloser(bytes.NewBuffer(b)),
 	}, nil
 }
+
+var (
+	errRequest = errors.New("request error")
+	errServer  = fmt.Errorf("internal server error")
+)

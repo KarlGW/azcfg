@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"sync"
 	"time"
 
@@ -155,7 +154,13 @@ func (c *Client) Get(ctx context.Context, key string, options ...Option) (Settin
 				return Setting{}, err
 			}
 		}
-		settingErr.StatusCode = resp.StatusCode
+
+		if len(settingErr.Detail) == 0 {
+			settingErr = newSettingError(key, resp.StatusCode)
+		} else {
+			settingErr.StatusCode = resp.StatusCode
+		}
+
 		return Setting{}, settingErr
 	}
 
@@ -312,8 +317,7 @@ func uri(c cloud.Cloud) string {
 
 // endpoint returns the base endpoint for the provided cloud.
 func endpoint(cloud cloud.Cloud, appConfiguration string) string {
-	endpoint, _ := url.JoinPath("https://", appConfiguration, uri(cloud))
-	return endpoint
+	return "https://" + appConfiguration + "." + uri(cloud)
 }
 
 // scope returns the scope for the provided cloud.

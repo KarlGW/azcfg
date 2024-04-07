@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"errors"
+	"os"
 	"testing"
 	"time"
 
@@ -195,6 +196,8 @@ func TestNewParser(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			os.Clearenv()
+
 			newClientSecretCredential = func(tenantID, clientID, clientSecret string) (auth.Credential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
@@ -396,6 +399,8 @@ func TestSetupCredential(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			os.Clearenv()
+
 			newClientSecretCredential = func(_, _, _ string) (auth.Credential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
@@ -492,6 +497,7 @@ func TestSetupKeyVault(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			os.Clearenv()
 			for k, v := range test.input.envs {
 				t.Setenv(k, v)
 			}
@@ -596,6 +602,8 @@ func TestSetupAppConfiguration(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			os.Clearenv()
+
 			for k, v := range test.input.envs {
 				t.Setenv(k, v)
 			}

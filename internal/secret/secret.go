@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -232,8 +231,7 @@ func uri(c cloud.Cloud) string {
 
 // endpoint returns the base endpoint for the provided cloud.
 func endpoint(cloud cloud.Cloud, vault string) string {
-	endpoint, _ := url.JoinPath("https://", vault, uri(cloud), "secrets")
-	return endpoint
+	return "https://" + vault + "." + uri(cloud) + "/secrets"
 }
 
 // scope returns the scope for the provided cloud.

@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"sync"
@@ -205,6 +206,6 @@ func endpoint(c cloud.Cloud, tenantID string) string {
 	case cloud.AzureChina:
 		uri = "login.chinacloudapi.cn"
 	}
-	endpoint, _ := url.JoinPath("https://"+uri, tenantID, "oauth2/v2.0/token")
-	return endpoint
+	return fmt.Sprintf("https://%s/%s/oauth2/v2.0/token", uri, tenantID)
+
 }

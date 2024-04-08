@@ -231,10 +231,10 @@ func uri(c cloud.Cloud) string {
 
 // endpoint returns the base endpoint for the provided cloud.
 func endpoint(cloud cloud.Cloud, vault string) string {
-	return "https://" + vault + "." + uri(cloud) + "/secrets"
+	return fmt.Sprintf("https://%s.%s/secrets", vault, uri(cloud))
 }
 
 // scope returns the scope for the provided cloud.
 func scope(cloud cloud.Cloud) string {
-	return "https://" + uri(cloud) + "/.default"
+	return fmt.Sprintf("https://%s/.default", uri(cloud))
 }

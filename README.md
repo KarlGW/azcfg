@@ -462,14 +462,20 @@ azcfg.Parse(&cfg, azcfg.WithManagedIdentity(), azcfg.WithKeyVault(vault))
 azcfg.Parse(&cfg, azcfg.WithManagedIdentity(clientID), azcfg.WithKeyVault(vault))
 ```
 
-To use a credential provided from elsewhere, such as the `azidentity` module see the section about
-[Credentials](#credentials).
-
 **Azure CLI**
 
 ```go
 azcfg.Parse(&cfg, azcfg.WithAzureCLICredential(), azcfg.WithKeyVault(vault))
 ```
+
+**Note**: Azure CLI credentials are best suited for development.
+
+
+**Other**
+
+To use a credential provided from elsewhere, such as the `azidentity` module see the section about
+[Credentials](#credentials).
+
 
 ### Credentials
 

@@ -16,11 +16,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-var (
-	errRequest = errors.New("request error")
-	errServer  = errors.New("internal server error")
-)
-
 func TestClient_GetSettings(t *testing.T) {
 	var tests = []struct {
 		name  string
@@ -104,6 +99,23 @@ func TestClient_GetSettings(t *testing.T) {
 				"setting-c": {Value: "c"},
 			},
 			wantErr: nil,
+		},
+		{
+			name: "setting forbidden",
+			input: struct {
+				keys    []string
+				options []Option
+				bodies  map[string][]byte
+				secrets map[string]secret.Secret
+				err     error
+			}{
+				keys: []string{"setting-a"},
+				err:  errForbidden,
+			},
+			wantErr: settingError{
+				StatusCode: http.StatusForbidden,
+				Detail:     "access to key setting-a is forbidden",
+			},
 		},
 		{
 			name: "setting not found (key vault reference)",
@@ -323,6 +335,7 @@ func TestClient_vaultAndSecret(t *testing.T) {
 		want  struct {
 			vault, secret string
 		}
+		wantErr error
 	}{
 		{
 			name:  "vault and secret",
@@ -344,11 +357,16 @@ func TestClient_vaultAndSecret(t *testing.T) {
 				secret: "secretname/12345",
 			},
 		},
+		{
+			name:    "faulty URL",
+			input:   "not-a-url",
+			wantErr: ErrParseSecretURL,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gotVault, gotSecret := vaultAndSecret(test.input)
+			gotVault, gotSecret, gotErr := vaultAndSecret(test.input)
 
 			if test.want.vault != gotVault {
 				t.Errorf("vaultAndSecret() = unexpected vault, want: %s, got: %s\n", test.want.vault, gotVault)
@@ -356,6 +374,10 @@ func TestClient_vaultAndSecret(t *testing.T) {
 
 			if test.want.secret != gotSecret {
 				t.Errorf("vaultAndSecret() = unexpected secret, want: %s, got: %s\n", test.want.secret, gotSecret)
+			}
+
+			if diff := cmp.Diff(test.wantErr, gotErr, cmpopts.EquateErrors()); diff != "" {
+				t.Errorf("vaultAndSecret() = unexpected error (-want +got)\n%s\n", diff)
 			}
 		})
 	}
@@ -383,6 +405,12 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 			return &http.Response{
 				StatusCode: http.StatusBadRequest,
 				Body:       io.NopCloser(bytes.NewBuffer([]byte(`{"detail":"bad request","status":400}`))),
+			}, nil
+		}
+		if errors.Is(c.err, errForbidden) {
+			return &http.Response{
+				StatusCode: http.StatusForbidden,
+				Body:       io.NopCloser(bytes.NewBuffer([]byte(``))),
 			}, nil
 		}
 		return nil, c.err
@@ -429,5 +457,8 @@ func (c mockSecretClient) Get(ctx context.Context, name string, options ...secre
 }
 
 var (
+	errRequest   = errors.New("request error")
+	errForbidden = errors.New("forbidden")
+	errServer    = errors.New("internal server error")
 	errGetSecret = errors.New("error getting secret")
 )

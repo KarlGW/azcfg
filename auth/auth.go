@@ -13,7 +13,7 @@ type Token struct {
 
 // TokenOptions contains options for a token request.
 type TokenOptions struct {
-	Scope Scope
+	Scope string
 }
 
 // TokenOption is a function that sets options for a token request.
@@ -24,20 +24,8 @@ type Credential interface {
 	Token(ctx context.Context, options ...TokenOption) (Token, error)
 }
 
-// Scope represents a scope for a token.
-type Scope string
-
-const (
-	// ScopeResourceManager is the scope needed for tokens to be used with Azure Resource Manager.
-	ScopeResourceManager Scope = "https://management.azure.com/.default"
-	// ScopeKeyVault is the scope needed for tokens to be used with Azure Key Vault.
-	ScopeKeyVault Scope = "https://vault.azure.net/.default"
-	// ScopeAppConfig is the scope needed for tokens to be used with Azure App Config.
-	ScopeAppConfig Scope = "https://azconfig.io/.default"
-)
-
 // WithScope sets the scope of the token request.
-func WithScope(scope Scope) TokenOption {
+func WithScope(scope string) TokenOption {
 	return func(o *TokenOptions) {
 		o.Scope = scope
 	}

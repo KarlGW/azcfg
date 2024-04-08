@@ -1,16 +1,17 @@
 package setting
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/azure/cloud"
 	"github.com/KarlGW/azcfg/internal/httpr"
 	"github.com/KarlGW/azcfg/internal/request"
 	"github.com/KarlGW/azcfg/internal/secret"
@@ -18,8 +19,6 @@ import (
 )
 
 const (
-	// baseURL is the base URL for Azure App Config in the Azure Public Cloud.
-	baseURL = "https://{config}.azconfig.io"
 	// apiVersion is the API version for the App Config REST API endpoint.
 	apiVersion = "1.0"
 	// defaultConcurrency is the default concurrency set on the client.
@@ -59,6 +58,8 @@ type Client struct {
 	c           request.Client
 	cred        auth.Credential
 	sc          secretClient
+	cloud       cloud.Cloud
+	scope       string
 	baseURL     string
 	userAgent   string
 	retryPolicy httpr.RetryPolicy
@@ -74,7 +75,7 @@ type ClientOption func(c *Client)
 func NewClient(appConfiguration string, cred auth.Credential, options ...ClientOption) *Client {
 	c := &Client{
 		cred:        cred,
-		baseURL:     strings.Replace(baseURL, "{config}", appConfiguration, 1),
+		cloud:       cloud.AzurePublic,
 		userAgent:   "azcfg/" + version.Version(),
 		concurrency: defaultConcurrency,
 		timeout:     defaultTimeout,
@@ -82,6 +83,14 @@ func NewClient(appConfiguration string, cred auth.Credential, options ...ClientO
 	for _, option := range options {
 		option(c)
 	}
+
+	if len(c.baseURL) == 0 {
+		c.baseURL = endpoint(c.cloud, appConfiguration)
+	}
+	if len(c.scope) == 0 {
+		c.scope = scope(c.cloud)
+	}
+
 	if c.c == nil {
 		c.c = httpr.NewClient(
 			httpr.WithTimeout(c.timeout),
@@ -118,7 +127,7 @@ func (c *Client) Get(ctx context.Context, key string, options ...Option) (Settin
 
 	var authHeader string
 	if c.cred != nil {
-		token, err := c.cred.Token(ctx, auth.WithScope(auth.ScopeAppConfig))
+		token, err := c.cred.Token(ctx, auth.WithScope(c.scope))
 		if err != nil {
 			return Setting{}, err
 		}
@@ -146,7 +155,13 @@ func (c *Client) Get(ctx context.Context, key string, options ...Option) (Settin
 				return Setting{}, err
 			}
 		}
-		settingErr.StatusCode = resp.StatusCode
+
+		if len(settingErr.Detail) == 0 {
+			settingErr = newSettingError(key, resp.StatusCode)
+		} else {
+			settingErr.StatusCode = resp.StatusCode
+		}
+
 		return Setting{}, settingErr
 	}
 
@@ -181,7 +196,10 @@ func (c *Client) getSecret(ctx context.Context, uri string) (secret.Secret, erro
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	v, s := vaultAndSecret(uri)
+	v, s, err := vaultAndSecret(uri)
+	if err != nil {
+		return secret.Secret{}, err
+	}
 	if c.sc == nil {
 		c.sc = newSecretClient(v, c.cred,
 			secret.WithConcurrency(c.concurrency),
@@ -269,21 +287,41 @@ func (c *Client) getSettings(ctx context.Context, keys []string, options ...Opti
 }
 
 // vaultAndSecret returns the vault and secret from the provided URL.
-func vaultAndSecret(url string) (string, string) {
-	b := []byte(url)[8:]
-	i := bytes.Index(b, []byte("."))
-	vault := string(b[:i])
-	parts := bytes.Split(b[i+1:], []byte("/"))
-
-	var secret string
-	if len(parts) > 3 {
-		secret = string(bytes.Join(parts[2:], []byte("/")))
-	} else {
-		secret = string(parts[2])
+func vaultAndSecret(rawURL string) (string, string, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil || len(u.Scheme) == 0 {
+		return "", "", ErrParseSecretURL
 	}
-	return vault, secret
+
+	vault := strings.Split(u.Hostname(), ".")[0]
+	secret := strings.TrimPrefix(u.Path, "/secrets/")
+
+	return vault, secret, nil
 }
 
 var newSecretClient = func(vault string, cred auth.Credential, options ...secret.ClientOption) secretClient {
 	return secret.NewClient(vault, cred, options...)
+}
+
+// uri returns the base URI for the provided cloud.
+func uri(c cloud.Cloud) string {
+	switch c {
+	case cloud.AzurePublic:
+		return "azconfig.io"
+	case cloud.AzureGovernment:
+		return "azconfig.azure.us"
+	case cloud.AzureChina:
+		return "azconfig.azure.cn"
+	}
+	return ""
+}
+
+// endpoint returns the base endpoint for the provided cloud.
+func endpoint(cloud cloud.Cloud, appConfiguration string) string {
+	return fmt.Sprintf("https://%s.%s", appConfiguration, uri(cloud))
+}
+
+// scope returns the scope for the provided cloud.
+func scope(cloud cloud.Cloud) string {
+	return fmt.Sprintf("https://%s/.default", uri(cloud))
 }

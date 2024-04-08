@@ -59,7 +59,7 @@ func TestCredential_Token(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			cred := credential{TokenCredential: &test.input, tokens: map[auth.Scope]*auth.Token{}}
+			cred := credential{TokenCredential: &test.input, tokens: map[string]*auth.Token{}}
 			got, gotErr := cred.Token(context.Background())
 
 			if diff := cmp.Diff(test.want, got); diff != "" {

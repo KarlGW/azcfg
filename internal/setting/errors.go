@@ -5,8 +5,15 @@ import (
 )
 
 const (
+	// SettingForbidden is the status code returned when a setting is forbidden.
+	SettingForbidden = 403
 	// SettingNotFound is the status code returned when a setting is not found.
 	SettingNotFound = 404
+)
+
+var (
+	// ErrParseSecretURL is returned when a secret URL cannot be parsed.
+	ErrParseSecretURL = errors.New("failed to parse secret URL")
 )
 
 // settingError represents an error returned from the App Configuration
@@ -23,6 +30,19 @@ type settingError struct {
 // Error returns the detail from the settingError.
 func (e settingError) Error() string {
 	return e.Detail
+}
+
+// newSettingError creates a new settingError with the provided key and status code.
+func newSettingError(key string, statusCode int) settingError {
+	var detail string
+	switch statusCode {
+	case SettingForbidden:
+		detail = "access to key " + key + " is forbidden"
+	}
+	return settingError{
+		Detail:     detail,
+		StatusCode: statusCode,
+	}
 }
 
 // isSettingNotFound checks if the provided error is a settingError with

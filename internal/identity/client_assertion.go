@@ -15,7 +15,7 @@ import (
 )
 
 // newCertificateAssertion creates a new assertion jwt for a client certificate credential.
-func newCertificateAssertion(tenantID, clientID string, cert certificate) (jwt, error) {
+func newCertificateAssertion(endpoint, clientID string, cert certificate) (jwt, error) {
 	header := header{
 		ALG: "RS256",
 		TYP: "JWT",
@@ -31,7 +31,7 @@ func newCertificateAssertion(tenantID, clientID string, cert certificate) (jwt, 
 	}
 
 	claims := claims{
-		AUD: "https://login.microsoftonline.com/" + tenantID + "/oauth2/v2.0/token",
+		AUD: endpoint,
 		EXP: time.Now().Add(time.Minute * 5).Unix(),
 		ISS: clientID,
 		JTI: uuid,

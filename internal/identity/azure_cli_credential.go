@@ -22,14 +22,14 @@ var (
 // AzureCLICredential represent credentials handled by the Azure CLI. It
 // contains all the necessary settings to perform token requests.
 type AzureCLICredential struct {
-	tokens map[auth.Scope]*auth.Token
+	tokens map[string]*auth.Token
 	mu     sync.RWMutex
 }
 
 // NewAzureCLICredential creates and returns a new *AzureCLICredential.
 func NewAzureCLICredential(options ...CredentialOption) (*AzureCLICredential, error) {
 	c := &AzureCLICredential{
-		tokens: make(map[auth.Scope]*auth.Token),
+		tokens: make(map[string]*auth.Token),
 	}
 
 	opts := CredentialOptions{}
@@ -45,9 +45,7 @@ func (c *AzureCLICredential) Token(ctx context.Context, options ...auth.TokenOpt
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	opts := auth.TokenOptions{
-		Scope: auth.ScopeResourceManager,
-	}
+	opts := auth.TokenOptions{}
 	for _, option := range options {
 		option(&opts)
 	}
@@ -56,7 +54,7 @@ func (c *AzureCLICredential) Token(ctx context.Context, options ...auth.TokenOpt
 		return *c.tokens[opts.Scope], nil
 	}
 
-	token, err := cliToken(ctx, string(opts.Scope))
+	token, err := cliToken(ctx, opts.Scope)
 	if err != nil {
 		return auth.Token{}, err
 	}

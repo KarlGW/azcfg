@@ -11,6 +11,11 @@ const (
 	SettingNotFound = 404
 )
 
+var (
+	// ErrParseSecretURL is returned when a secret URL cannot be parsed.
+	ErrParseSecretURL = errors.New("failed to parse secret URL")
+)
+
 // settingError represents an error returned from the App Configuration
 // REST API.
 type settingError struct {

@@ -335,6 +335,7 @@ func TestClient_vaultAndSecret(t *testing.T) {
 		want  struct {
 			vault, secret string
 		}
+		wantErr error
 	}{
 		{
 			name:  "vault and secret",
@@ -356,11 +357,16 @@ func TestClient_vaultAndSecret(t *testing.T) {
 				secret: "secretname/12345",
 			},
 		},
+		{
+			name:    "faulty URL",
+			input:   "not-a-url",
+			wantErr: ErrParseSecretURL,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gotVault, gotSecret := vaultAndSecret(test.input)
+			gotVault, gotSecret, gotErr := vaultAndSecret(test.input)
 
 			if test.want.vault != gotVault {
 				t.Errorf("vaultAndSecret() = unexpected vault, want: %s, got: %s\n", test.want.vault, gotVault)
@@ -368,6 +374,10 @@ func TestClient_vaultAndSecret(t *testing.T) {
 
 			if test.want.secret != gotSecret {
 				t.Errorf("vaultAndSecret() = unexpected secret, want: %s, got: %s\n", test.want.secret, gotSecret)
+			}
+
+			if diff := cmp.Diff(test.wantErr, gotErr, cmpopts.EquateErrors()); diff != "" {
+				t.Errorf("vaultAndSecret() = unexpected error (-want +got)\n%s\n", diff)
 			}
 		})
 	}

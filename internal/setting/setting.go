@@ -1,11 +1,12 @@
 package setting
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -195,7 +196,10 @@ func (c *Client) getSecret(ctx context.Context, uri string) (secret.Secret, erro
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	v, s := vaultAndSecret(uri)
+	v, s, err := vaultAndSecret(uri)
+	if err != nil {
+		return secret.Secret{}, err
+	}
 	if c.sc == nil {
 		c.sc = newSecretClient(v, c.cred,
 			secret.WithConcurrency(c.concurrency),
@@ -283,19 +287,16 @@ func (c *Client) getSettings(ctx context.Context, keys []string, options ...Opti
 }
 
 // vaultAndSecret returns the vault and secret from the provided URL.
-func vaultAndSecret(url string) (string, string) {
-	b := []byte(url)[8:]
-	i := bytes.Index(b, []byte("."))
-	vault := string(b[:i])
-	parts := bytes.Split(b[i+1:], []byte("/"))
-
-	var secret string
-	if len(parts) > 3 {
-		secret = string(bytes.Join(parts[2:], []byte("/")))
-	} else {
-		secret = string(parts[2])
+func vaultAndSecret(rawURL string) (string, string, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil || len(u.Scheme) == 0 {
+		return "", "", ErrParseSecretURL
 	}
-	return vault, secret
+
+	vault := strings.Split(u.Hostname(), ".")[0]
+	secret := strings.TrimPrefix(u.Path, "/secrets/")
+
+	return vault, secret, nil
 }
 
 var newSecretClient = func(vault string, cred auth.Credential, options ...secret.ClientOption) secretClient {

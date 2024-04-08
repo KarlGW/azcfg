@@ -3,6 +3,15 @@ package cloud
 // Cloud represents an Azure cloud.
 type Cloud string
 
+// Valid returns true if the cloud is a valid Azure cloud.
+func (c Cloud) Valid() bool {
+	switch c {
+	case AzurePublic, AzureGovernment, AzureChina:
+		return true
+	}
+	return false
+}
+
 const (
 	// AzurePublic is the public Azure cloud.
 	AzurePublic Cloud = "AzurePublic"

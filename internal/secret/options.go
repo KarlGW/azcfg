@@ -29,8 +29,12 @@ func WithRetryPolicy(r httpr.RetryPolicy) ClientOption {
 }
 
 // WithCloud sets the Azure cloud for secret retrieval.
-func WithCloud(cloud cloud.Cloud) ClientOption {
+func WithCloud(c cloud.Cloud) ClientOption {
+	cl := c
 	return func(c *Client) {
-		c.cloud = cloud
+		if !cl.Valid() {
+			cl = cloud.AzurePublic
+		}
+		c.cloud = cl
 	}
 }

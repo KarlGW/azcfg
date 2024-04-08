@@ -174,8 +174,13 @@ func WithSettingClient(c settingClient) Option {
 // AzurePublic (Azure), AzureGovernment (Azure Government)
 // and AzureChina (Azure China) are supported.
 // AzurePublic is used by default.
-func WithCloud(cloud cloud.Cloud) Option {
-	return func(o *Options) {}
+func WithCloud(c cloud.Cloud) Option {
+	return func(o *Options) {
+		if !c.Valid() {
+			c = cloud.AzurePublic
+		}
+		o.Cloud = c
+	}
 }
 
 // WithRetryPolicy sets the retry policy for the parser.

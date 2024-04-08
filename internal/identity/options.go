@@ -79,8 +79,11 @@ func WithAssertion(assertion func() (string, error)) CredentialOption {
 }
 
 // WithCloud sets the Azure cloud to authenticate against.
-func WithCloud(cloud cloud.Cloud) CredentialOption {
+func WithCloud(c cloud.Cloud) CredentialOption {
 	return func(o *CredentialOptions) {
-		o.cloud = cloud
+		if !c.Valid() {
+			c = cloud.AzurePublic
+		}
+		o.cloud = c
 	}
 }

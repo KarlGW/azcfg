@@ -3,6 +3,7 @@ package identity
 import (
 	"crypto/rsa"
 	"crypto/x509"
+	"time"
 
 	"github.com/KarlGW/azcfg/azure/cloud"
 	"github.com/KarlGW/azcfg/internal/request"
@@ -29,6 +30,8 @@ type CredentialOptions struct {
 	resourceID string
 	// certificates for a client credential with a certificate (client certificate credential).
 	certificates []*x509.Certificate
+	// dialTimeout is the timeout for the dialer for the IMDS endpoint.
+	dialTimeout time.Duration
 }
 
 // CredentialOption is a function to set *CredentialOptions.
@@ -85,5 +88,14 @@ func WithCloud(c cloud.Cloud) CredentialOption {
 			c = cloud.AzurePublic
 		}
 		o.cloud = c
+	}
+}
+
+// WithIMDSDialTimeout sets the dial timeout for the IMDS endpoint.
+func WithIMDSDialTimeout(d time.Duration) CredentialOption {
+	return func(o *CredentialOptions) {
+		if d > 0 {
+			o.dialTimeout = d
+		}
 	}
 }

@@ -45,11 +45,9 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  &secret.Client{},
 				settingClient: &setting.Client{},
-				cred: mockCredential{
-					t: "client-secret-credential",
-				},
-				timeout:     time.Second * 10,
-				concurrency: 10,
+				cred:          &identity.ClientCredential{},
+				timeout:       time.Second * 10,
+				concurrency:   10,
 			},
 		},
 		{
@@ -67,11 +65,9 @@ func TestNewParser(t *testing.T) {
 			},
 			want: &parser{
 				secretClient: &secret.Client{},
-				cred: mockCredential{
-					t: "client-secret-credential",
-				},
-				timeout:     time.Second * 10,
-				concurrency: 10,
+				cred:         &identity.ClientCredential{},
+				timeout:      time.Second * 10,
+				concurrency:  10,
 			},
 		},
 		{
@@ -89,11 +85,9 @@ func TestNewParser(t *testing.T) {
 			},
 			want: &parser{
 				settingClient: &setting.Client{},
-				cred: mockCredential{
-					t: "client-secret-credential",
-				},
-				timeout:     time.Second * 10,
-				concurrency: 10,
+				cred:          &identity.ClientCredential{},
+				timeout:       time.Second * 10,
+				concurrency:   10,
 			},
 		},
 		{
@@ -113,11 +107,9 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  &secret.Client{},
 				settingClient: &setting.Client{},
-				cred: mockCredential{
-					t: "client-secret-credential",
-				},
-				timeout:     time.Second * 10,
-				concurrency: 20,
+				cred:          &identity.ClientCredential{},
+				timeout:       time.Second * 10,
+				concurrency:   20,
 			},
 		},
 		{
@@ -198,29 +190,23 @@ func TestNewParser(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			os.Clearenv()
 
-			newClientSecretCredential = func(tenantID, clientID, clientSecret string, options ...identity.CredentialOption) (auth.Credential, error) {
+			newClientSecretCredential = func(tenantID, clientID, clientSecret string, options ...identity.CredentialOption) (*identity.ClientCredential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
-				return mockCredential{
-					t: "client-secret-credential",
-				}, nil
+				return &identity.ClientCredential{}, nil
 			}
-			newClientCertificateCredential = func(tenantID, clientID string, certificate []*x509.Certificate, key *rsa.PrivateKey, options ...identity.CredentialOption) (auth.Credential, error) {
+			newClientCertificateCredential = func(tenantID, clientID string, certificate []*x509.Certificate, key *rsa.PrivateKey, options ...identity.CredentialOption) (*identity.ClientCredential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
-				return mockCredential{
-					t: "client-certificate-credential",
-				}, nil
+				return &identity.ClientCredential{}, nil
 			}
-			newManagedIdentityCredential = func(clientID string, options ...identity.CredentialOption) (auth.Credential, error) {
+			newManagedIdentityCredential = func(clientID string, options ...identity.CredentialOption) (*identity.ManagedIdentityCredential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
-				return mockCredential{
-					t: "managed-identity",
-				}, nil
+				return &identity.ManagedIdentityCredential{}, nil
 			}
 
 			for k, v := range test.input.envs {
@@ -229,7 +215,7 @@ func TestNewParser(t *testing.T) {
 
 			got, gotErr := NewParser(test.input.options...)
 
-			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(parser{}, mockCredential{}), cmpopts.IgnoreUnexported(secret.Client{}, stub.SecretClient{}, setting.Client{}, stub.SettingClient{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(parser{}, mockCredential{}), cmpopts.IgnoreUnexported(secret.Client{}, stub.SecretClient{}, setting.Client{}, stub.SettingClient{}, identity.ClientCredential{}, identity.ManagedIdentityCredential{})); diff != "" {
 				t.Errorf("NewParser() = unexpected result (-want +got)\n%s\n", diff)
 			}
 
@@ -262,9 +248,7 @@ func TestSetupCredential(t *testing.T) {
 					azcfgClientSecret: "3333",
 				},
 			},
-			want: mockCredential{
-				t: "client-secret-credential",
-			},
+			want: &identity.ClientCredential{},
 		},
 		{
 			name: "credential settings from environment (client certificate credential from base64)",
@@ -278,9 +262,7 @@ func TestSetupCredential(t *testing.T) {
 					azcfgClientCertificate: "certificate",
 				},
 			},
-			want: mockCredential{
-				t: "client-certificate-credential",
-			},
+			want: &identity.ClientCredential{},
 		},
 		{
 			name: "credential settings from environment (client certificate credential from file)",
@@ -294,9 +276,7 @@ func TestSetupCredential(t *testing.T) {
 					azcfgClientCertificatePath: "certificate",
 				},
 			},
-			want: mockCredential{
-				t: "client-certificate-credential",
-			},
+			want: &identity.ClientCredential{},
 		},
 		{
 			name: "credential settings from environment (managed identity)",
@@ -304,9 +284,7 @@ func TestSetupCredential(t *testing.T) {
 				options Options
 				envs    map[string]string
 			}{},
-			want: mockCredential{
-				t: "managed-identity",
-			},
+			want: &identity.ManagedIdentityCredential{},
 		},
 		{
 			name: "credential settings from options (provided credential)",
@@ -336,9 +314,7 @@ func TestSetupCredential(t *testing.T) {
 					ClientSecret: "3333",
 				},
 			},
-			want: mockCredential{
-				t: "client-secret-credential",
-			},
+			want: &identity.ClientCredential{},
 		},
 		{
 			name: "credential settings from options (client certificate credential)",
@@ -353,9 +329,7 @@ func TestSetupCredential(t *testing.T) {
 					PrivateKey:   &rsa.PrivateKey{},
 				},
 			},
-			want: mockCredential{
-				t: "client-certificate-credential",
-			},
+			want: &identity.ClientCredential{},
 		},
 		{
 			name: "credential settings from options (managed identity)",
@@ -365,9 +339,7 @@ func TestSetupCredential(t *testing.T) {
 			}{
 				options: Options{ManagedIdentity: true},
 			},
-			want: mockCredential{
-				t: "managed-identity",
-			},
+			want: &identity.ManagedIdentityCredential{},
 		},
 		{
 			name: "error setting up client certificate credential",
@@ -401,29 +373,23 @@ func TestSetupCredential(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			os.Clearenv()
 
-			newClientSecretCredential = func(_, _, _ string, _ ...identity.CredentialOption) (auth.Credential, error) {
+			newClientSecretCredential = func(_, _, _ string, _ ...identity.CredentialOption) (*identity.ClientCredential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
-				return mockCredential{
-					t: "client-secret-credential",
-				}, nil
+				return &identity.ClientCredential{}, nil
 			}
-			newClientCertificateCredential = func(_, _ string, _ []*x509.Certificate, _ *rsa.PrivateKey, _ ...identity.CredentialOption) (auth.Credential, error) {
+			newClientCertificateCredential = func(_, _ string, _ []*x509.Certificate, _ *rsa.PrivateKey, _ ...identity.CredentialOption) (*identity.ClientCredential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
-				return mockCredential{
-					t: "client-certificate-credential",
-				}, nil
+				return &identity.ClientCredential{}, nil
 			}
-			newManagedIdentityCredential = func(_ string, _ ...identity.CredentialOption) (auth.Credential, error) {
+			newManagedIdentityCredential = func(_ string, _ ...identity.CredentialOption) (*identity.ManagedIdentityCredential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
-				return mockCredential{
-					t: "managed-identity",
-				}, nil
+				return &identity.ManagedIdentityCredential{}, nil
 			}
 			certificateAndKey = func(_, _ string) ([]*x509.Certificate, *rsa.PrivateKey, error) {
 				if test.wantErr != nil {
@@ -438,7 +404,7 @@ func TestSetupCredential(t *testing.T) {
 
 			got, gotErr := setupCredential(test.input.options)
 
-			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(mockCredential{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(mockCredential{}), cmpopts.IgnoreUnexported(identity.ClientCredential{}, identity.ManagedIdentityCredential{})); diff != "" {
 				t.Errorf("setupCredential() = unexpected (-want +got)\n%s\n", diff)
 			}
 

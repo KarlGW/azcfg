@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -24,6 +25,8 @@ var (
 	// ErrInvalidManagedIdentityResourceID is returned when an invalid managed
 	// identity resource ID is provided.
 	ErrInvalidManagedIdentityResourceID = errors.New("invalid managed identity resource ID")
+	// ErrIMDSEndpointUnavailable is returned when the IMDS endpoint is unavailable.
+	ErrIMDSEndpointUnavailable = errors.New("IMDS endpoint unavailable")
 )
 
 const (
@@ -106,6 +109,11 @@ func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentity
 	} else {
 		c.endpoint, c.apiVersion = imdsEndpoint, imdsAPIVersion
 		c.headers.Add("Metadata", "true")
+		if opts.dialTimeout > 0 {
+			if ok := testIMDSConnection(opts.dialTimeout); !ok {
+				return nil, ErrIMDSEndpointUnavailable
+			}
+		}
 	}
 
 	return c, nil
@@ -177,4 +185,17 @@ func (c *ManagedIdentityCredential) tokenRequest(ctx context.Context, scope stri
 	}
 
 	return tokenFromAuthResult(r), nil
+}
+
+// testIMDSConnection tests the connection to the IMDS endpoint.
+func testIMDSConnection(timeout time.Duration) bool {
+	if timeout == 0 {
+		timeout = time.Second * 5
+	}
+	conn, err := net.DialTimeout("tcp", "169.254.169.254:80", timeout)
+	if err != nil {
+		return false
+	}
+	conn.Close()
+	return true
 }

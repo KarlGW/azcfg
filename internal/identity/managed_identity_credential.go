@@ -190,7 +190,7 @@ func (c *ManagedIdentityCredential) tokenRequest(ctx context.Context, scope stri
 // testIMDSConnection tests the connection to the IMDS endpoint.
 func testIMDSConnection(timeout time.Duration) bool {
 	if timeout == 0 {
-		timeout = time.Second * 5
+		timeout = time.Second * 3
 	}
 	conn, err := net.DialTimeout("tcp", "169.254.169.254:80", timeout)
 	if err != nil {

@@ -56,6 +56,10 @@ type Options struct {
 	// Timeout is the total timeout for retrieval of secrets.
 	// Defaults to 10 seconds.
 	Timeout time.Duration
+	// ManagedIdentityIMDSDialTimeout sets the dial timeout for the testing the
+	// IMDS endpoint for managed identities that makes use of IMDS
+	// (example Azure Virtual Machines and Container Instances).
+	ManagedIdentityIMDSDialTimeout time.Duration
 	// ManagedIdentity sets the use of a managed identity. To use a user assigned
 	// managed identity, use together with ClientID.
 	ManagedIdentity bool
@@ -138,6 +142,17 @@ func WithManagedIdentity(clientID ...string) Option {
 		o.ManagedIdentity = true
 		if len(clientID) > 0 {
 			o.ClientID = clientID[0]
+		}
+	}
+}
+
+// WithManagedIdentityIMDSDialTimeout sets the dial timeout for testing the
+// IMDS endpoint for managed identities that makes use of IMDS
+// (example Azure Virtual Machines and Container Instances).
+func WithManagedIdentityIMDSDialTimeout(d time.Duration) Option {
+	return func(o *Options) {
+		if d > 0 {
+			o.ManagedIdentityIMDSDialTimeout = d
 		}
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -180,11 +181,20 @@ func setupCredential(options Options) (auth.Credential, error) {
 	tenantID := coalesceString(options.TenantID, os.Getenv(azcfgTenantID))
 	clientID := coalesceString(options.ClientID, os.Getenv(azcfgClientID))
 	if len(tenantID) == 0 || options.ManagedIdentity {
-		return newManagedIdentityCredential(clientID, identity.WithCloud(options.Cloud))
-	}
-
-	if len(clientID) == 0 {
-		return nil, ErrMissingClientID
+		if options.ManagedIdentityIMDSDialTimeout == 0 {
+			options.ManagedIdentityIMDSDialTimeout = time.Second * 3
+		}
+		cred, err := newManagedIdentityCredential(
+			clientID,
+			identity.WithCloud(options.Cloud),
+			identity.WithIMDSDialTimeout(options.ManagedIdentityIMDSDialTimeout),
+		)
+		if err != nil && !errors.Is(err, identity.ErrIMDSEndpointUnavailable) {
+			return nil, err
+		}
+		if cred != nil {
+			return cred, nil
+		}
 	}
 
 	clientSecret := coalesceString(options.ClientSecret, os.Getenv(azcfgClientSecret))
@@ -285,22 +295,22 @@ var certificateAndKey = func(certificate, certificatePath string) ([]*x509.Certi
 	return certificatesAndKeyFromPEM(pem)
 }
 
-var newClientSecretCredential = func(tenantID, clientID, clientSecret string, options ...identity.CredentialOption) (auth.Credential, error) {
+var newClientSecretCredential = func(tenantID, clientID, clientSecret string, options ...identity.CredentialOption) (*identity.ClientCredential, error) {
 	return identity.NewClientSecretCredential(tenantID, clientID, clientSecret, options...)
 }
 
-var newClientCertificateCredential = func(tenantID, clientID string, certificates []*x509.Certificate, key *rsa.PrivateKey, options ...identity.CredentialOption) (auth.Credential, error) {
+var newClientCertificateCredential = func(tenantID, clientID string, certificates []*x509.Certificate, key *rsa.PrivateKey, options ...identity.CredentialOption) (*identity.ClientCredential, error) {
 	return identity.NewClientCertificateCredential(tenantID, clientID, certificates, key, options...)
 }
 
-var newClientAssertionCredential = func(tenantID, clientID string, assertion func() (string, error), options ...identity.CredentialOption) (auth.Credential, error) {
+var newClientAssertionCredential = func(tenantID, clientID string, assertion func() (string, error), options ...identity.CredentialOption) (*identity.ClientCredential, error) {
 	return identity.NewClientAssertionCredential(tenantID, clientID, assertion, options...)
 }
 
-var newManagedIdentityCredential = func(clientID string, options ...identity.CredentialOption) (auth.Credential, error) {
+var newManagedIdentityCredential = func(clientID string, options ...identity.CredentialOption) (*identity.ManagedIdentityCredential, error) {
 	return identity.NewManagedIdentityCredential(append(options, identity.WithClientID(clientID))...)
 }
 
-var newAzureCLICredential = func(options ...identity.CredentialOption) (auth.Credential, error) {
+var newAzureCLICredential = func(options ...identity.CredentialOption) (*identity.AzureCLICredential, error) {
 	return identity.NewAzureCLICredential(options...)
 }

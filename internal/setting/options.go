@@ -28,6 +28,15 @@ func WithLabel(label string) Option {
 	}
 }
 
+// WithLabels sets labels on the setting requests based on the provided
+// map. The key of the map should be the setting name, and the value
+// should be the label.
+func WithLabels(labels map[string]string) Option {
+	return func(o *Options) {
+		o.Labels = labels
+	}
+}
+
 // WithRetryPolicy sets the retry policy for setting retrieval.
 func WithRetryPolicy(r httpr.RetryPolicy) ClientOption {
 	return func(c *Client) {

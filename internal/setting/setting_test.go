@@ -23,6 +23,8 @@ func TestClient_GetSettings(t *testing.T) {
 			keys    []string
 			options []Option
 			bodies  map[string][]byte
+			label   string
+			labels  map[string]string
 			secrets map[string]secret.Secret
 			err     error
 		}
@@ -35,6 +37,8 @@ func TestClient_GetSettings(t *testing.T) {
 				keys    []string
 				options []Option
 				bodies  map[string][]byte
+				label   string
+				labels  map[string]string
 				secrets map[string]secret.Secret
 				err     error
 			}{
@@ -53,11 +57,77 @@ func TestClient_GetSettings(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "get settings with label",
+			input: struct {
+				keys    []string
+				options []Option
+				bodies  map[string][]byte
+				label   string
+				labels  map[string]string
+				secrets map[string]secret.Secret
+				err     error
+			}{
+				keys: []string{"setting-a", "setting-b", "setting-c"},
+				bodies: map[string][]byte{
+					"setting-a": []byte(`{"value":"a"}`),
+					"setting-b": []byte(`{"value":"b"}`),
+					"setting-c": []byte(`{"value":"c"}`),
+				},
+				label: "prod",
+				options: []Option{
+					WithLabel("prod"),
+				},
+			},
+			want: map[string]Setting{
+				"setting-a": {Value: "a"},
+				"setting-b": {Value: "b"},
+				"setting-c": {Value: "c"},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "get settings with labels",
+			input: struct {
+				keys    []string
+				options []Option
+				bodies  map[string][]byte
+				label   string
+				labels  map[string]string
+				secrets map[string]secret.Secret
+				err     error
+			}{
+				keys: []string{"setting-a", "setting-b", "setting-c"},
+				bodies: map[string][]byte{
+					"setting-a": []byte(`{"value":"a"}`),
+					"setting-b": []byte(`{"value":"b"}`),
+					"setting-c": []byte(`{"value":"c"}`),
+				},
+				labels: map[string]string{
+					"setting-a": "prod",
+					"setting-c": "test",
+				},
+				options: []Option{
+					WithLabels(map[string]string{
+						"setting-a": "prod",
+						"setting-c": "test",
+					}),
+				},
+			},
+			want: map[string]Setting{
+				"setting-a": {Value: "a"},
+				"setting-b": {Value: "b"},
+				"setting-c": {Value: "c"},
+			},
+			wantErr: nil,
+		},
+		{
 			name: "get settings with key vault references",
 			input: struct {
 				keys    []string
 				options []Option
 				bodies  map[string][]byte
+				label   string
+				labels  map[string]string
 				secrets map[string]secret.Secret
 				err     error
 			}{
@@ -84,6 +154,8 @@ func TestClient_GetSettings(t *testing.T) {
 				keys    []string
 				options []Option
 				bodies  map[string][]byte
+				label   string
+				labels  map[string]string
 				secrets map[string]secret.Secret
 				err     error
 			}{
@@ -106,6 +178,8 @@ func TestClient_GetSettings(t *testing.T) {
 				keys    []string
 				options []Option
 				bodies  map[string][]byte
+				label   string
+				labels  map[string]string
 				secrets map[string]secret.Secret
 				err     error
 			}{
@@ -123,6 +197,8 @@ func TestClient_GetSettings(t *testing.T) {
 				keys    []string
 				options []Option
 				bodies  map[string][]byte
+				label   string
+				labels  map[string]string
 				secrets map[string]secret.Secret
 				err     error
 			}{
@@ -146,6 +222,8 @@ func TestClient_GetSettings(t *testing.T) {
 				keys    []string
 				options []Option
 				bodies  map[string][]byte
+				label   string
+				labels  map[string]string
 				secrets map[string]secret.Secret
 				err     error
 			}{
@@ -165,6 +243,8 @@ func TestClient_GetSettings(t *testing.T) {
 				keys    []string
 				options []Option
 				bodies  map[string][]byte
+				label   string
+				labels  map[string]string
 				secrets map[string]secret.Secret
 				err     error
 			}{
@@ -180,6 +260,8 @@ func TestClient_GetSettings(t *testing.T) {
 				keys    []string
 				options []Option
 				bodies  map[string][]byte
+				label   string
+				labels  map[string]string
 				secrets map[string]secret.Secret
 				err     error
 			}{
@@ -201,6 +283,8 @@ func TestClient_GetSettings(t *testing.T) {
 			client := NewClient("config", mockCredential{}, func(c *Client) {
 				c.c = mockHttpClient{
 					bodies: test.input.bodies,
+					label:  test.input.label,
+					labels: test.input.labels,
 					err:    test.input.err,
 				}
 				c.sc = &mockSecretClient{
@@ -397,6 +481,8 @@ func (c mockCredential) Token(ctx context.Context, options ...auth.TokenOption) 
 type mockHttpClient struct {
 	err    error
 	bodies map[string][]byte
+	label  string
+	labels map[string]string
 }
 
 func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
@@ -419,6 +505,22 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 	name := path.Base(req.URL.Path)
 	b, ok := c.bodies[name]
 	if !ok {
+		return &http.Response{
+			StatusCode: http.StatusNotFound,
+			Body:       io.NopCloser(bytes.NewBuffer([]byte(`{"error":{}}`))),
+		}, nil
+	}
+
+	label := req.URL.Query().Get("label")
+	if len(c.label) > 0 && label != c.label {
+		return &http.Response{
+			StatusCode: http.StatusNotFound,
+			Body:       io.NopCloser(bytes.NewBuffer([]byte(`{"error":{}}`))),
+		}, nil
+	}
+
+	l, ok := c.labels[name]
+	if ok && len(l) != 0 && l != label {
 		return &http.Response{
 			StatusCode: http.StatusNotFound,
 			Body:       io.NopCloser(bytes.NewBuffer([]byte(`{"error":{}}`))),

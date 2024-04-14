@@ -2,7 +2,7 @@ package version
 
 var (
 	// version contains version of azcfg.
-	version = "0.15.0"
+	version = "0.16.0"
 )
 
 // Version returns the version of azcfg.

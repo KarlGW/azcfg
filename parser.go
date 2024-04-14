@@ -277,10 +277,16 @@ func parseLabels(labels string) map[string]string {
 
 	re := regexp.MustCompile(`\s+`)
 	parts := strings.Split(re.ReplaceAllString(labels, ""), ",")
-	m := make(map[string]string)
+	m := make(map[string]string, len(parts))
 	for i := range parts {
 		p := strings.Split(parts[i], "=")
-		m[p[0]] = p[1]
+		if len(p) == 2 {
+			m[p[0]] = p[1]
+		}
+
+	}
+	if len(m) == 0 {
+		return nil
 	}
 	return m
 }

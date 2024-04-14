@@ -608,9 +608,9 @@ func TestParseLabels(t *testing.T) {
 		},
 		{
 			name:  "with malformed second label",
-			input: "settign1=prod,setting2",
+			input: "setting1=prod,setting2",
 			want: map[string]string{
-				"settign1": "prod",
+				"setting1": "prod",
 			},
 		},
 	}

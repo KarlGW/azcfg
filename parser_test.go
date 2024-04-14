@@ -483,16 +483,19 @@ func TestSetupAppConfiguration(t *testing.T) {
 		input struct {
 			appConfig string
 			label     string
+			labels    map[string]string
 			envs      map[string]string
 		}
 		wantAppConfig string
 		wantLabel     string
+		wantLabels    map[string]string
 	}{
 		{
 			name: "App Configuration from environment",
 			input: struct {
 				appConfig string
 				label     string
+				labels    map[string]string
 				envs      map[string]string
 			}{
 				envs: map[string]string{
@@ -506,6 +509,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 			input: struct {
 				appConfig string
 				label     string
+				labels    map[string]string
 				envs      map[string]string
 			}{
 				appConfig: "appconfig",
@@ -517,6 +521,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 			input: struct {
 				appConfig string
 				label     string
+				labels    map[string]string
 				envs      map[string]string
 			}{
 				appConfig: "appconfig1",
@@ -531,6 +536,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 			input: struct {
 				appConfig string
 				label     string
+				labels    map[string]string
 				envs      map[string]string
 			}{
 				envs: map[string]string{
@@ -544,6 +550,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 			input: struct {
 				appConfig string
 				label     string
+				labels    map[string]string
 				envs      map[string]string
 			}{
 				label: "label",
@@ -555,6 +562,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 			input: struct {
 				appConfig string
 				label     string
+				labels    map[string]string
 				envs      map[string]string
 			}{
 				label: "label1",
@@ -563,6 +571,62 @@ func TestSetupAppConfiguration(t *testing.T) {
 				},
 			},
 			wantLabel: "label1",
+		},
+		{
+			name: "App Configuration labels from environment",
+			input: struct {
+				appConfig string
+				label     string
+				labels    map[string]string
+				envs      map[string]string
+			}{
+				envs: map[string]string{
+					"AZCFG_APPCONFIGURATION_LABELS": "setting1=prod,setting2=test",
+				},
+			},
+			wantLabels: map[string]string{
+				"setting1": "prod",
+				"setting2": "test",
+			},
+		},
+		{
+			name: "App Configuration labels from options",
+			input: struct {
+				appConfig string
+				label     string
+				labels    map[string]string
+				envs      map[string]string
+			}{
+				labels: map[string]string{
+					"setting1": "prod",
+					"setting2": "test",
+				},
+			},
+			wantLabels: map[string]string{
+				"setting1": "prod",
+				"setting2": "test",
+			},
+		},
+		{
+			name: "App Configuration labels from options, override environment",
+			input: struct {
+				appConfig string
+				label     string
+				labels    map[string]string
+				envs      map[string]string
+			}{
+				labels: map[string]string{
+					"setting1": "prod",
+					"setting2": "test",
+				},
+				envs: map[string]string{
+					"AZCFG_APPCONFIGURATION_LABELS": "setting1=test,setting2=prod",
+				},
+			},
+			wantLabels: map[string]string{
+				"setting1": "prod",
+				"setting2": "test",
+			},
 		},
 	}
 
@@ -574,7 +638,7 @@ func TestSetupAppConfiguration(t *testing.T) {
 				t.Setenv(k, v)
 			}
 
-			gotAppConfig, gotLabel := setupAppConfiguration(test.input.appConfig, test.input.label)
+			gotAppConfig, gotLabel, gotLabels := setupAppConfiguration(test.input.appConfig, test.input.label, test.input.labels)
 
 			if test.wantAppConfig != gotAppConfig {
 				t.Errorf("setupAppConfiguration() = unexpected result, want: %s, got: %s\n", test.wantAppConfig, gotAppConfig)
@@ -582,6 +646,10 @@ func TestSetupAppConfiguration(t *testing.T) {
 
 			if test.wantLabel != gotLabel {
 				t.Errorf("setupAppConfiguration() = unexpected result, want: %s, got: %s\n", test.wantLabel, gotLabel)
+			}
+
+			if diff := cmp.Diff(test.wantLabels, gotLabels); diff != "" {
+				t.Errorf("setupAppConfiguration() = unexpected result (-want +got)\n%s\n", diff)
 			}
 		})
 	}
@@ -633,6 +701,45 @@ func TestCoalesceString(t *testing.T) {
 
 			if test.want != got {
 				t.Errorf("coalesceString() = unexpected result, want: %s, got: %s\n", test.want, got)
+			}
+		})
+	}
+}
+
+func TestParseLabels(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input string
+		want  map[string]string
+	}{
+		{
+			name: "empty string",
+			want: nil,
+		},
+		{
+			name:  "with labels",
+			input: "setting1=prod,setting2=test",
+			want: map[string]string{
+				"setting1": "prod",
+				"setting2": "test",
+			},
+		},
+		{
+			name:  "with labels (spaces in string)",
+			input: "setting1 = prod, setting2 = test",
+			want: map[string]string{
+				"setting1": "prod",
+				"setting2": "test",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := parseLabels(test.input)
+
+			if diff := cmp.Diff(test.want, got); diff != "" {
+				t.Errorf("parseLabels() = unexpected result (-want +got)\n%s\n", diff)
 			}
 		})
 	}

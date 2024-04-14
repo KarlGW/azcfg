@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
@@ -50,6 +52,9 @@ const (
 	// azcfgAppConfigurationLabel is the environment variable for the App
 	// Configuration label.
 	azcfgAppConfigurationLabel = "AZCFG_APPCONFIGURATION_LABEL"
+	// azcfgAppConfigurationLabels is the environment variable for the App
+	// Configuration labels.
+	azcfgAppConfigurationLabels = "AZCFG_APPCONFIGURATION_LABELS"
 	// azcfgAzureCLICredential is the environment variable for the Azure CLI
 	// credential.
 	azcfgAzureCLICredential = "AZCFG_AZURE_CLI_CREDENTIAL"
@@ -75,6 +80,7 @@ type parser struct {
 	settingClient settingClient
 	cred          auth.Credential
 	label         string
+	labels        map[string]string
 	timeout       time.Duration
 	concurrency   int
 }
@@ -100,7 +106,7 @@ func NewParser(options ...Option) (*parser, error) {
 	}
 
 	vault := setupKeyVault(opts.KeyVault)
-	appConfiguration, label := setupAppConfiguration(opts.AppConfiguration, opts.Label)
+	appConfiguration, label, labels := setupAppConfiguration(opts.AppConfiguration, opts.Label, opts.Labels)
 	if opts.SecretClient == nil && len(vault) > 0 {
 		if p.cred == nil {
 			var err error
@@ -130,6 +136,7 @@ func NewParser(options ...Option) (*parser, error) {
 		}
 
 		p.label = label
+		p.labels = labels
 		p.settingClient = setting.NewClient(
 			appConfiguration,
 			p.cred,
@@ -168,6 +175,7 @@ func (p *parser) Parse(v any, options ...Option) error {
 		secretClient:  p.secretClient,
 		settingClient: p.settingClient,
 		label:         p.label,
+		labels:        p.labels,
 	})
 }
 
@@ -241,15 +249,18 @@ func setupKeyVault(vault string) string {
 
 // setupAppConfiguration configures target App Configuration based on the provided
 // parameters.
-func setupAppConfiguration(appConfiguration, label string) (string, string) {
+func setupAppConfiguration(appConfiguration, label string, labels map[string]string) (string, string, map[string]string) {
 	if len(appConfiguration) == 0 {
 		appConfiguration = os.Getenv(azcfgAppConfigurationName)
 	}
 	if len(label) == 0 {
 		label = os.Getenv(azcfgAppConfigurationLabel)
 	}
+	if len(labels) == 0 {
+		labels = parseLabels(os.Getenv(azcfgAppConfigurationLabels))
+	}
 
-	return appConfiguration, label
+	return appConfiguration, label, labels
 }
 
 // coelesceString returns the first non-empty string (if any).
@@ -276,6 +287,22 @@ func coalesceBool(x, y bool) bool {
 		return x
 	}
 	return y
+}
+
+// parseLabels from the provided string. Format: setting1=label1,setting2=label2.
+func parseLabels(labels string) map[string]string {
+	if len(labels) == 0 {
+		return nil
+	}
+
+	re := regexp.MustCompile(`\s+`)
+	parts := strings.Split(re.ReplaceAllString(labels, ""), ",")
+	m := make(map[string]string)
+	for i := range parts {
+		p := strings.Split(parts[i], "=")
+		m[p[0]] = p[1]
+	}
+	return m
 }
 
 // certificatesAndKeyFromPEM extracts the x509 certificates and private key from the given PEM.

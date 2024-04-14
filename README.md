@@ -531,7 +531,7 @@ For additional information about how to use `azidentity`, check its [documentati
 
 ### National clouds
 
-By default the standard Azure (Public Cloud) is the target for all requests. By either setting options or environment variables others
+By default the standard Azure (Public Cloud) is the target for all requests. By either setting an option or an environment variable others
 can be used.
 
 The following are supported:

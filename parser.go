@@ -44,6 +44,9 @@ const (
 	// azcfgClientCertificatePath is the environment variable for the path
 	// to the client certificate.
 	azcfgClientCertificatePath = "AZCFG_CLIENT_CERTIFICATE_PATH"
+	// azcfgAzureCLICredential is the environment variable for the Azure CLI
+	// credential.
+	azcfgAzureCLICredential = "AZCFG_AZURE_CLI_CREDENTIAL"
 	// azcfgKeyVaultName is the environment variable for the Key Vault name.
 	azcfgKeyVaultName = "AZCFG_KEYVAULT_NAME"
 	// azcfgAppConfigurationName is the environment variable for the App
@@ -55,9 +58,8 @@ const (
 	// azcfgAppConfigurationLabels is the environment variable for the App
 	// Configuration labels.
 	azcfgAppConfigurationLabels = "AZCFG_APPCONFIGURATION_LABELS"
-	// azcfgAzureCLICredential is the environment variable for the Azure CLI
-	// credential.
-	azcfgAzureCLICredential = "AZCFG_AZURE_CLI_CREDENTIAL"
+	// azcfgCloud is the environment variable for the (azure) cloud.
+	azcfgCloud = "AZCFG_CLOUD"
 )
 
 // secretClient is the interface that wraps around method GetSecrets.
@@ -90,8 +92,9 @@ func NewParser(options ...Option) (*parser, error) {
 		timeout:     defaultTimeout,
 		concurrency: defaultConcurrency,
 	}
+
 	opts := Options{
-		Cloud: cloud.AzurePublic,
+		Cloud: parseCloud(os.Getenv(azcfgCloud)),
 	}
 	for _, option := range options {
 		option(&opts)
@@ -289,6 +292,20 @@ func parseLabels(labels string) map[string]string {
 		return nil
 	}
 	return m
+}
+
+// parseCloud returns the cloud from the provided string.
+func parseCloud(c string) cloud.Cloud {
+	switch strings.ToLower(c) {
+	case "azure", "public", "azurepublic":
+		return cloud.AzurePublic
+	case "government", "azuregovernment":
+		return cloud.AzureGovernment
+	case "china", "azurechina":
+		return cloud.AzureChina
+	default:
+		return cloud.AzurePublic
+	}
 }
 
 // certificatesAndKeyFromPEM extracts the x509 certificates and private key from the given PEM.

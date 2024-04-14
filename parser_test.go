@@ -601,6 +601,18 @@ func TestParseLabels(t *testing.T) {
 				"setting2": "test",
 			},
 		},
+		{
+			name:  "with malformed label",
+			input: "setting1",
+			want:  nil,
+		},
+		{
+			name:  "with malformed second label",
+			input: "settign1=prod,setting2",
+			want: map[string]string{
+				"settign1": "prod",
+			},
+		},
 	}
 
 	for _, test := range tests {

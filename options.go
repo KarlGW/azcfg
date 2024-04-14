@@ -29,6 +29,9 @@ type Options struct {
 	AppConfiguration string
 	// Label for setting in an Azure App Configuration.
 	Label string
+	// Labels for settings in an Azure App Configuration. The key of the map
+	// should be the setting name, and the value should be the label.
+	Labels map[string]string
 	// Cloud is the Azure cloud to make requests to.
 	Cloud cloud.Cloud
 	// TenantID of the Service Principal with access to target
@@ -168,6 +171,15 @@ func WithAzureCLICredential() Option {
 func WithLabel(label string) Option {
 	return func(o *Options) {
 		o.Label = label
+	}
+}
+
+// WithLabels sets labels for settings in an Azure App Configuration.
+// The key of the map should be the setting name, and the value
+// should be the label.
+func WithLabels(labels map[string]string) Option {
+	return func(o *Options) {
+		o.Labels = labels
 	}
 }
 

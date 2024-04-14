@@ -102,7 +102,8 @@ func NewClient(appConfiguration string, cred auth.Credential, options ...ClientO
 
 // Options for client operations.
 type Options struct {
-	Label string
+	Labels map[string]string
+	Label  string
 }
 
 // Option is a function that sets options for client operations.
@@ -120,9 +121,20 @@ func (c *Client) Get(ctx context.Context, key string, options ...Option) (Settin
 		option(&opts)
 	}
 
+	var label string
+	if len(opts.Labels) > 0 {
+		var ok bool
+		label, ok = opts.Labels[key]
+		if !ok {
+			label = opts.Label
+		}
+	} else {
+		label = opts.Label
+	}
+
 	u := fmt.Sprintf("%s/kv/%s?api-version=%s", c.baseURL, key, apiVersion)
-	if len(opts.Label) > 0 {
-		u += "&label=" + opts.Label
+	if len(label) > 0 {
+		u += "&label=" + label
 	}
 
 	var authHeader string

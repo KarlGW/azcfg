@@ -360,10 +360,17 @@ func main() {
 
 ### App Configuration setting labels
 
-Settings in App Configuration can have labels associated with them. To target a specific label (applies to all settings) either:
+Settings in App Configuration can have labels associated with them.
+
+To target a specific label for all settings:
 
 - Set the label to the environment variable `AZCFG_APPCONFIGURATION_LABEL`.
 - Use the option function `WithLabel`.
+
+To target speciefic settings with specific labels:
+
+- Set the labels to the environment variable `AZCFG_APPCONFIGURATION_LABELS` with format: `setting1=label1,setting2=label2`.
+- Use the option function `WithLabels` and provide a `map[string]string` with the setting as key and label as value.
 
 ### Authentication
 

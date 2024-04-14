@@ -415,178 +415,6 @@ func TestSetupCredential(t *testing.T) {
 	}
 }
 
-func TestSetupKeyVault(t *testing.T) {
-	var tests = []struct {
-		name  string
-		input struct {
-			vault string
-			envs  map[string]string
-		}
-		want string
-	}{
-		{
-			name: "vault from environment",
-			input: struct {
-				vault string
-				envs  map[string]string
-			}{
-				envs: map[string]string{
-					azcfgKeyVaultName: "vault",
-				},
-			},
-			want: "vault",
-		},
-		{
-			name: "name from options",
-			input: struct {
-				vault string
-				envs  map[string]string
-			}{
-				vault: "vault",
-			},
-			want: "vault",
-		},
-		{
-			name: "name from options, override environment",
-			input: struct {
-				vault string
-				envs  map[string]string
-			}{
-				vault: "vault1",
-				envs: map[string]string{
-					azcfgKeyVaultName: "vault2",
-				},
-			},
-			want: "vault1",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			os.Clearenv()
-			for k, v := range test.input.envs {
-				t.Setenv(k, v)
-			}
-
-			got := setupKeyVault(test.input.vault)
-
-			if test.want != got {
-				t.Errorf("setupKeyVault() = unexpected result, want: %s, got: %s\n", test.want, got)
-			}
-		})
-	}
-}
-
-func TestSetupAppConfiguration(t *testing.T) {
-	var tests = []struct {
-		name  string
-		input struct {
-			appConfig string
-			label     string
-			envs      map[string]string
-		}
-		wantAppConfig string
-		wantLabel     string
-	}{
-		{
-			name: "App Configuration from environment",
-			input: struct {
-				appConfig string
-				label     string
-				envs      map[string]string
-			}{
-				envs: map[string]string{
-					azcfgAppConfigurationName: "appconfig",
-				},
-			},
-			wantAppConfig: "appconfig",
-		},
-		{
-			name: "App Confiruation from options",
-			input: struct {
-				appConfig string
-				label     string
-				envs      map[string]string
-			}{
-				appConfig: "appconfig",
-			},
-			wantAppConfig: "appconfig",
-		},
-		{
-			name: "App Configuration from option, override environment",
-			input: struct {
-				appConfig string
-				label     string
-				envs      map[string]string
-			}{
-				appConfig: "appconfig1",
-				envs: map[string]string{
-					azcfgAppConfigurationName: "appconfig2",
-				},
-			},
-			wantAppConfig: "appconfig1",
-		},
-		{
-			name: "App Configuration label from environment",
-			input: struct {
-				appConfig string
-				label     string
-				envs      map[string]string
-			}{
-				envs: map[string]string{
-					azcfgAppConfigurationLabel: "label",
-				},
-			},
-			wantLabel: "label",
-		},
-		{
-			name: "App Configuration label from options",
-			input: struct {
-				appConfig string
-				label     string
-				envs      map[string]string
-			}{
-				label: "label",
-			},
-			wantLabel: "label",
-		},
-		{
-			name: "App Configuration label from options, override environment",
-			input: struct {
-				appConfig string
-				label     string
-				envs      map[string]string
-			}{
-				label: "label1",
-				envs: map[string]string{
-					azcfgAppConfigurationLabel: "label2",
-				},
-			},
-			wantLabel: "label1",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			os.Clearenv()
-
-			for k, v := range test.input.envs {
-				t.Setenv(k, v)
-			}
-
-			gotAppConfig, gotLabel := setupAppConfiguration(test.input.appConfig, test.input.label)
-
-			if test.wantAppConfig != gotAppConfig {
-				t.Errorf("setupAppConfiguration() = unexpected result, want: %s, got: %s\n", test.wantAppConfig, gotAppConfig)
-			}
-
-			if test.wantLabel != gotLabel {
-				t.Errorf("setupAppConfiguration() = unexpected result, want: %s, got: %s\n", test.wantLabel, gotLabel)
-			}
-		})
-	}
-}
-
 func TestCoalesceString(t *testing.T) {
 	var tests = []struct {
 		name  string
@@ -633,6 +461,154 @@ func TestCoalesceString(t *testing.T) {
 
 			if test.want != got {
 				t.Errorf("coalesceString() = unexpected result, want: %s, got: %s\n", test.want, got)
+			}
+		})
+	}
+}
+
+func TestCoalesceBool(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input struct {
+			x, y bool
+		}
+		want bool
+	}{
+		{
+			name: "x is true",
+			input: struct {
+				x, y bool
+			}{
+				x: true,
+				y: false,
+			},
+			want: true,
+		},
+		{
+			name: "x is false",
+			input: struct {
+				x, y bool
+			}{
+				x: false,
+				y: true,
+			},
+			want: true,
+		},
+		{
+			name: "x and y are false",
+			input: struct {
+				x, y bool
+			}{
+				x: false,
+				y: false,
+			},
+			want: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := coalesceBool(test.input.x, test.input.y)
+
+			if test.want != got {
+				t.Errorf("coalesceBool() = unexpected result, want: %t, got: %t\n", test.want, got)
+			}
+		})
+	}
+}
+
+func TestCoalesceMap(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input struct {
+			x, y map[string]string
+		}
+		want map[string]string
+	}{
+		{
+			name: "x is not empty",
+			input: struct {
+				x, y map[string]string
+			}{
+				x: map[string]string{
+					"setting1": "prod",
+				},
+			},
+			want: map[string]string{
+				"setting1": "prod",
+			},
+		},
+		{
+			name: "x is empty",
+			input: struct {
+				x, y map[string]string
+			}{
+				x: nil,
+				y: map[string]string{
+					"setting1": "prod",
+				},
+			},
+			want: map[string]string{
+				"setting1": "prod",
+			},
+		},
+		{
+			name: "x and y are empty",
+			input: struct {
+				x, y map[string]string
+			}{
+				x: nil,
+				y: nil,
+			},
+			want: nil,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := coalesceMap(test.input.x, test.input.y)
+
+			if diff := cmp.Diff(test.want, got); diff != "" {
+				t.Errorf("coalesceMap() = unexpected result (-want +got)\n%s\n", diff)
+			}
+		})
+	}
+}
+
+func TestParseLabels(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input string
+		want  map[string]string
+	}{
+		{
+			name: "empty string",
+			want: nil,
+		},
+		{
+			name:  "with labels",
+			input: "setting1=prod,setting2=test",
+			want: map[string]string{
+				"setting1": "prod",
+				"setting2": "test",
+			},
+		},
+		{
+			name:  "with labels (spaces in string)",
+			input: "setting1 = prod, setting2 = test",
+			want: map[string]string{
+				"setting1": "prod",
+				"setting2": "test",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := parseLabels(test.input)
+
+			if diff := cmp.Diff(test.want, got); diff != "" {
+				t.Errorf("parseLabels() = unexpected result (-want +got)\n%s\n", diff)
 			}
 		})
 	}

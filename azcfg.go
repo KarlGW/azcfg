@@ -28,8 +28,16 @@ func Parse(v any, options ...Option) error {
 	return parser.Parse(v, options...)
 }
 
+// parseOptions contains options for the parser.
+type parseOptions struct {
+	secretClient  secretClient
+	settingClient settingClient
+	label         string
+	labels        map[string]string
+}
+
 // Parse secrets into the configuration.
-func parse(ctx context.Context, d any, secretClient secretClient, settingClient settingClient, label string) error {
+func parse(ctx context.Context, d any, opts parseOptions) error {
 	v := reflect.ValueOf(d)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("must provide a pointer to a struct")
@@ -38,6 +46,9 @@ func parse(ctx context.Context, d any, secretClient secretClient, settingClient 
 	if v.Kind() != reflect.Struct {
 		return errors.New("provided value is not a struct")
 	}
+
+	secretClient := opts.secretClient
+	settingClient := opts.settingClient
 
 	errCh := make(chan error, 2)
 	mu := sync.RWMutex{}
@@ -73,7 +84,7 @@ func parse(ctx context.Context, d any, secretClient secretClient, settingClient 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			settings, err := settingClient.GetSettings(ctx, settingFields, setting.WithLabel(label))
+			settings, err := settingClient.GetSettings(ctx, settingFields, setting.WithLabel(opts.label))
 			if err != nil {
 				errCh <- err
 				return

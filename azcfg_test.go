@@ -186,7 +186,7 @@ func TestParse(t *testing.T) {
 			secretClient := mockSecretClient{err: test.wantErr}
 			settingClient := mockSettingClient{err: test.wantErr}
 
-			gotErr := parse(context.Background(), &test.input, secretClient, settingClient, "")
+			gotErr := parse(context.Background(), &test.input, parseOptions{secretClient: secretClient, settingClient: settingClient})
 			if diff := cmp.Diff(test.want, test.input, cmp.AllowUnexported(Struct{})); diff != "" {
 				t.Errorf("parse() = unexpected result, (-want, +got)\n%s\n", diff)
 			}
@@ -221,7 +221,7 @@ func TestParseRequired(t *testing.T) {
 			secretClient := mockSecretClient{}
 			settingClient := mockSettingClient{}
 
-			gotErr := parse(context.Background(), &test.input, secretClient, settingClient, "")
+			gotErr := parse(context.Background(), &test.input, parseOptions{secretClient: secretClient, settingClient: settingClient})
 			if test.wantErr != nil && gotErr == nil {
 				t.Errorf("Unexpected result, should return error\n")
 			}

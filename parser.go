@@ -164,7 +164,11 @@ func (p *parser) Parse(v any, options ...Option) error {
 		ctx = opts.Context
 	}
 
-	return parse(ctx, v, p.secretClient, p.settingClient, p.label)
+	return parse(ctx, v, parseOptions{
+		secretClient:  p.secretClient,
+		settingClient: p.settingClient,
+		label:         p.label,
+	})
 }
 
 // setupCredential configures credential based on the provided

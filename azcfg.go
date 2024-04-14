@@ -32,8 +32,8 @@ func Parse(v any, options ...Option) error {
 type parseOptions struct {
 	secretClient  secretClient
 	settingClient settingClient
-	label         string
 	labels        map[string]string
+	label         string
 }
 
 // Parse secrets into the configuration.
@@ -84,7 +84,7 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			settings, err := settingClient.GetSettings(ctx, settingFields, setting.WithLabel(opts.label))
+			settings, err := settingClient.GetSettings(ctx, settingFields, setting.WithLabel(opts.label), setting.WithLabels(opts.labels))
 			if err != nil {
 				errCh <- err
 				return

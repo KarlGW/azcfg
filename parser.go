@@ -79,8 +79,6 @@ type parser struct {
 	secretClient  secretClient
 	settingClient settingClient
 	cred          auth.Credential
-	label         string
-	labels        map[string]string
 	timeout       time.Duration
 	concurrency   int
 }
@@ -105,8 +103,7 @@ func NewParser(options ...Option) (*parser, error) {
 		p.timeout = opts.Timeout
 	}
 
-	vault := setupKeyVault(opts.KeyVault)
-	appConfiguration, label, labels := setupAppConfiguration(opts.AppConfiguration, opts.Label, opts.Labels)
+	vault := coalesceString(opts.KeyVault, os.Getenv(azcfgKeyVaultName))
 	if opts.SecretClient == nil && len(vault) > 0 {
 		if p.cred == nil {
 			var err error
@@ -126,6 +123,8 @@ func NewParser(options ...Option) (*parser, error) {
 	} else {
 		p.secretClient = opts.SecretClient
 	}
+
+	appConfiguration := coalesceString(opts.AppConfiguration, os.Getenv(azcfgAppConfigurationName))
 	if opts.SettingClient == nil && len(appConfiguration) > 0 {
 		if p.cred == nil {
 			var err error
@@ -135,8 +134,6 @@ func NewParser(options ...Option) (*parser, error) {
 			}
 		}
 
-		p.label = label
-		p.labels = labels
 		p.settingClient = setting.NewClient(
 			appConfiguration,
 			p.cred,
@@ -174,8 +171,8 @@ func (p *parser) Parse(v any, options ...Option) error {
 	return parse(ctx, v, parseOptions{
 		secretClient:  p.secretClient,
 		settingClient: p.settingClient,
-		label:         p.label,
-		labels:        p.labels,
+		label:         coalesceString(opts.Label, os.Getenv(azcfgAppConfigurationLabel)),
+		labels:        coalesceMap(opts.Labels, parseLabels(os.Getenv(azcfgAppConfigurationLabels))),
 	})
 }
 
@@ -238,31 +235,6 @@ func setupCredential(options Options) (auth.Credential, error) {
 	return nil, fmt.Errorf("%w: could not determine credential", ErrInvalidCredential)
 }
 
-// setupKeyVault configures target Key Vault based on the provided parameters.
-func setupKeyVault(vault string) string {
-	if len(vault) == 0 {
-		return os.Getenv(azcfgKeyVaultName)
-	} else {
-		return vault
-	}
-}
-
-// setupAppConfiguration configures target App Configuration based on the provided
-// parameters.
-func setupAppConfiguration(appConfiguration, label string, labels map[string]string) (string, string, map[string]string) {
-	if len(appConfiguration) == 0 {
-		appConfiguration = os.Getenv(azcfgAppConfigurationName)
-	}
-	if len(label) == 0 {
-		label = os.Getenv(azcfgAppConfigurationLabel)
-	}
-	if len(labels) == 0 {
-		labels = parseLabels(os.Getenv(azcfgAppConfigurationLabels))
-	}
-
-	return appConfiguration, label, labels
-}
-
 // coelesceString returns the first non-empty string (if any).
 func coalesceString(x, y string) string {
 	if len(x) > 0 {
@@ -284,6 +256,14 @@ func parseBool(s string) bool {
 // coalesceBool returns the first non-false boolean (if any).
 func coalesceBool(x, y bool) bool {
 	if x {
+		return x
+	}
+	return y
+}
+
+// coalesceMap returns the first non-empty map (if any).
+func coalesceMap[K comparable, V any](x, y map[K]V) map[K]V {
+	if len(x) > 0 {
 		return x
 	}
 	return y

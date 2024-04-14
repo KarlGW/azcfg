@@ -1,5 +1,6 @@
 #!/bin/bash
 version=$1
+module=$2
 
 if [[ -z $version ]]; then
   echo "A version must be specified."
@@ -17,6 +18,10 @@ if [[ $(git branch --show-current) != "main" ]]; then
 fi
 
 tag=v$version
+if [ ! -z $module ]; then
+  tag=$module/$tag
+fi
+
 echo "Creating tag $tag for version $version."
 echo ""
 

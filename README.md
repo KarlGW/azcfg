@@ -17,6 +17,7 @@
   * [App Configuration setting labels](#app-configuration-setting-labels)
   * [Authentication](#authentication)
   * [Credentials](#credentials)
+  * [National clouds](#national-clouds)
 
 This module is used to get secrets from an Azure Key Vault and settings from App Configuraion and set them into a struct. The idea of parsing
 configuration values into a struct was inspired by [`env`](https://github.com/caarlos0/env).
@@ -526,3 +527,58 @@ func main() {
 ```
 
 For additional information about how to use `azidentity`, check its [documentation](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity).
+
+
+### National clouds
+
+By default the standard Azure (Public Cloud) is the target for all requests. By either setting options or environment variables others
+can be used.
+
+The following are supported:
+
+- Azure Public (the standard Azure cloud)
+- Azure Government
+- Azure China
+
+**With options**
+
+```go
+package main
+
+import (
+    "github.com/KarlGW/azcfg"
+    "github.com/KarlGW/azcfg/azure/cloud"
+)
+
+func main() {
+    var cfg Config
+    // Azure Public (is default, but for the case of the example).
+    if err := azcfg.Parse(&cfg, azcfg.WithCloud(cloud.AzurePublic)); err != nil {
+        // Handle error.
+    }
+
+    // Azure Government.
+    if err := azcfg.Parse(&cfg, azcfg.WithCloud(cloud.AzureGovernment)); err != nil {
+        // Handle error.
+    }
+
+    // Azure China.
+    if err := azcfg.Parse(&cfg, azcfg.WithCloud(cloud.AzureChina)); err != nil {
+        // Handle error.
+    }
+
+    // Parser.
+    parser, err := azcfg.NewParser(azcfg.WithCloud(cloud.AzurePublic))
+    if err != nil {
+        // Handle error.
+    }
+}
+```
+
+**With environment variable**
+
+Set the environment variable `AZCFG_CLOUD`.
+
+- **Azure Public**: `Azure`, `Public`, `AzurePublic`.
+- **Azure Government**: `Government`, `AzureGovernment`.
+- **Azure China**: `China`, `AzureChina`.

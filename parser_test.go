@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/azure/cloud"
 	"github.com/KarlGW/azcfg/internal/identity"
 	"github.com/KarlGW/azcfg/internal/secret"
 	"github.com/KarlGW/azcfg/internal/setting"
@@ -621,6 +622,69 @@ func TestParseLabels(t *testing.T) {
 
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("parseLabels() = unexpected result (-want +got)\n%s\n", diff)
+			}
+		})
+	}
+}
+
+func TestParseCloud(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input string
+		want  cloud.Cloud
+	}{
+		{
+			name: "empty string",
+			want: cloud.AzurePublic,
+		},
+		{
+			name:  "Azure",
+			input: "Azure",
+			want:  cloud.AzurePublic,
+		},
+		{
+			name:  "AzurePublic",
+			input: "AzurePublic",
+			want:  cloud.AzurePublic,
+		},
+		{
+			name:  "Public",
+			input: "Public",
+			want:  cloud.AzurePublic,
+		},
+		{
+			name:  "AzureGovernment",
+			input: "AzureGovernment",
+			want:  cloud.AzureGovernment,
+		},
+		{
+			name:  "Government",
+			input: "Government",
+			want:  cloud.AzureGovernment,
+		},
+		{
+			name:  "AzureChina",
+			input: "AzureChina",
+			want:  cloud.AzureChina,
+		},
+		{
+			name:  "China",
+			input: "China",
+			want:  cloud.AzureChina,
+		},
+		{
+			name:  "non-existent cloud",
+			input: "NonExistent",
+			want:  cloud.AzurePublic,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := parseCloud(test.input)
+
+			if test.want != got {
+				t.Errorf("parseCloud() = unexpected result, want: %s, got: %s\n", test.want, got)
 			}
 		})
 	}

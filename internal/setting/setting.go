@@ -199,7 +199,6 @@ func (c *Client) Get(ctx context.Context, key string, options ...Option) (Settin
 		}
 		headers.Add("Authorization", "Bearer "+token.AccessToken)
 	} else if c.accessKey != (AccessKey{}) {
-
 		authHeaders, err := hmacAuthenticationHeaders(
 			c.accessKey,
 			http.MethodGet,

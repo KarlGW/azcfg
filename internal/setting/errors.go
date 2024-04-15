@@ -12,6 +12,8 @@ const (
 )
 
 var (
+	// ErrNoCredential is returned when no credential is provided.
+	ErrNoCredential = errors.New("no credential provided")
 	// ErrParseSecretURL is returned when a secret URL cannot be parsed.
 	ErrParseSecretURL = errors.New("failed to parse secret URL")
 )

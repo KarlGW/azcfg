@@ -57,6 +57,7 @@ type secretClient interface {
 type Client struct {
 	c           request.Client
 	cred        auth.Credential
+	accessKey   AccessKey
 	sc          secretClient
 	cloud       cloud.Cloud
 	scope       string
@@ -73,8 +74,30 @@ type ClientOption func(c *Client)
 
 // NewClient creates and returns a new Client.
 func NewClient(appConfiguration string, cred auth.Credential, options ...ClientOption) *Client {
+	c := newClient(appConfiguration, options...)
+	c.cred = cred
+	return c
+}
+
+// AccessKey contains the id and secret for access key
+// authentication.
+type AccessKey struct {
+	ID     string
+	Secret string
+}
+
+// NewClientWithAccessKey creates and returns a new Client with the provided
+// access key.
+func NewClientWithAccessKey(appConfiguration string, key AccessKey) *Client {
+	c := newClient(appConfiguration)
+	c.accessKey.ID = key.ID
+	c.accessKey.Secret = key.Secret
+	return c
+}
+
+// newClient creates and returns a new Client.
+func newClient(appConfiguration string, options ...ClientOption) *Client {
 	c := &Client{
-		cred:        cred,
 		cloud:       cloud.AzurePublic,
 		userAgent:   "azcfg/" + version.Version(),
 		concurrency: defaultConcurrency,
@@ -137,22 +160,33 @@ func (c *Client) Get(ctx context.Context, key string, options ...Option) (Settin
 		u += "&label=" + label
 	}
 
-	var authHeader string
+	headers := http.Header{
+		"User-Agent": []string{c.userAgent},
+	}
+
 	if c.cred != nil {
 		token, err := c.cred.Token(ctx, auth.WithScope(c.scope))
 		if err != nil {
 			return Setting{}, err
 		}
-		authHeader = "Bearer " + token.AccessToken
-	} else {
-		// Create auth header value credential and secret.
-		// Add this functionality further on.
-		authHeader = ""
-	}
+		headers.Add("Authorization", "Bearer "+token.AccessToken)
+	} else if c.accessKey != (AccessKey{}) {
 
-	headers := http.Header{
-		"User-Agent":    []string{c.userAgent},
-		"Authorization": []string{authHeader},
+		authHeaders, err := hmacAuthenticationHeaders(
+			c.accessKey,
+			http.MethodGet,
+			u,
+			[]byte(""),
+		)
+		if err != nil {
+			return Setting{}, err
+		}
+		for k, v := range authHeaders {
+			headers.Add(k, v[0])
+		}
+
+	} else {
+		return Setting{}, ErrNoCredential
 	}
 
 	resp, err := request.Do(ctx, c.c, headers, http.MethodGet, u, nil)

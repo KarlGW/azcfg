@@ -129,15 +129,15 @@ func NewParser(options ...Option) (*parser, error) {
 
 	appConfiguration := coalesceString(opts.AppConfiguration, os.Getenv(azcfgAppConfigurationName))
 	if opts.SettingClient == nil && len(appConfiguration) > 0 {
+		var err error
 		if p.cred == nil {
-			var err error
 			p.cred, err = setupCredential(opts)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		p.settingClient = setting.NewClient(
+		p.settingClient, err = setting.NewClient(
 			appConfiguration,
 			p.cred,
 			setting.WithTimeout(p.timeout),
@@ -145,6 +145,9 @@ func NewParser(options ...Option) (*parser, error) {
 			setting.WithRetryPolicy(opts.RetryPolicy),
 			setting.WithCloud(opts.Cloud),
 		)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		p.settingClient = opts.SettingClient
 	}

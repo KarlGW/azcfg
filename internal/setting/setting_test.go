@@ -11,10 +11,159 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/azure/cloud"
 	"github.com/KarlGW/azcfg/internal/secret"
+	"github.com/KarlGW/azcfg/version"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
+
+func TestNewClient(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input struct {
+			appConfiguration string
+			cred             auth.Credential
+			options          []ClientOption
+		}
+		want    *Client
+		wantErr error
+	}{
+		{
+			name: "new client",
+			input: struct {
+				appConfiguration string
+				cred             auth.Credential
+				options          []ClientOption
+			}{
+				appConfiguration: "config",
+				cred:             &mockCredential{},
+			},
+			want: &Client{
+				cred:        &mockCredential{},
+				cloud:       cloud.AzurePublic,
+				scope:       "https://azconfig.io/.default",
+				baseURL:     "https://config.azconfig.io",
+				userAgent:   "azcfg/" + version.Version(),
+				concurrency: defaultConcurrency,
+				timeout:     defaultTimeout,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, gotErr := NewClient(test.input.appConfiguration, test.input.cred, test.input.options...)
+
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Client{}, mockCredential{}), cmpopts.IgnoreFields(Client{}, "c", "mu")); diff != "" {
+				t.Errorf("NewClient() = unexpected result (-want +got)\n%s\n", diff)
+			}
+
+			if diff := cmp.Diff(test.wantErr, gotErr, cmpopts.EquateErrors()); diff != "" {
+				t.Errorf("NewClient() = unexpected error (-want +got)\n%s\n", diff)
+			}
+		})
+	}
+}
+
+func TestNewClientWithAccessKey(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input struct {
+			appConfiguration string
+			key              AccessKey
+			options          []ClientOption
+		}
+		want    *Client
+		wantErr error
+	}{
+		{
+			name: "new client",
+			input: struct {
+				appConfiguration string
+				key              AccessKey
+				options          []ClientOption
+			}{
+				appConfiguration: "config",
+				key:              AccessKey{ID: "id", Secret: "secret"},
+			},
+			want: &Client{
+				accessKey: AccessKey{
+					ID:     "id",
+					Secret: "secret",
+				},
+				cloud:       cloud.AzurePublic,
+				scope:       "https://azconfig.io/.default",
+				baseURL:     "https://config.azconfig.io",
+				userAgent:   "azcfg/" + version.Version(),
+				concurrency: defaultConcurrency,
+				timeout:     defaultTimeout,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, gotErr := NewClientWithAccessKey(test.input.appConfiguration, test.input.key, test.input.options...)
+
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Client{}, mockCredential{}), cmpopts.IgnoreFields(Client{}, "c", "mu")); diff != "" {
+				t.Errorf("NewClientWithAccessKey() = unexpected result (-want +got)\n%s\n", diff)
+			}
+
+			if diff := cmp.Diff(test.wantErr, gotErr, cmpopts.EquateErrors()); diff != "" {
+				t.Errorf("NewClientWithAccessKey() = unexpected error (-want +got)\n%s\n", diff)
+			}
+		})
+	}
+}
+
+func TestNewClientWithConnectionString(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input struct {
+			connectionString string
+			options          []ClientOption
+		}
+		want    *Client
+		wantErr error
+	}{
+		{
+			name: "new client",
+			input: struct {
+				connectionString string
+				options          []ClientOption
+			}{
+				connectionString: "Endpoint=https://config.azconfig.io;Id=id;Secret=secret",
+			},
+			want: &Client{
+				accessKey: AccessKey{
+					ID:     "id",
+					Secret: "secret",
+				},
+				cloud:       cloud.AzurePublic,
+				scope:       "https://azconfig.io/.default",
+				baseURL:     "https://config.azconfig.io",
+				userAgent:   "azcfg/" + version.Version(),
+				concurrency: defaultConcurrency,
+				timeout:     defaultTimeout,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, gotErr := NewClientWithConnectionString(test.input.connectionString, test.input.options...)
+
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Client{}, mockCredential{}), cmpopts.IgnoreFields(Client{}, "c", "mu")); diff != "" {
+				t.Errorf("NewClientWithConnectionString() = unexpected result (-want +got)\n%s\n", diff)
+			}
+
+			if diff := cmp.Diff(test.wantErr, gotErr, cmpopts.EquateErrors()); diff != "" {
+				t.Errorf("NewClientWithConnectionString() = unexpected error (-want +got)\n%s\n", diff)
+			}
+		})
+	}
+}
 
 func TestClient_GetSettings(t *testing.T) {
 	var tests = []struct {
@@ -280,7 +429,7 @@ func TestClient_GetSettings(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			client := NewClient("config", mockCredential{}, func(c *Client) {
+			client, _ := NewClient("config", mockCredential{}, func(c *Client) {
 				c.c = mockHttpClient{
 					bodies: test.input.bodies,
 					label:  test.input.label,
@@ -393,7 +542,7 @@ func TestClient_getSecret(t *testing.T) {
 				}
 			}
 
-			client := NewClient("config", mockCredential{}, func(c *Client) {
+			client, _ := NewClient("config", mockCredential{}, func(c *Client) {
 				c.c = mockHttpClient{}
 				c.sc = test.input.secretClient
 				c.timeout = time.Millisecond * 10
@@ -462,6 +611,75 @@ func TestClient_vaultAndSecret(t *testing.T) {
 
 			if diff := cmp.Diff(test.wantErr, gotErr, cmpopts.EquateErrors()); diff != "" {
 				t.Errorf("vaultAndSecret() = unexpected error (-want +got)\n%s\n", diff)
+			}
+		})
+	}
+}
+
+func TestParseConnectionString(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input string
+		want  struct {
+			appConfiguration string
+			accessKey        AccessKey
+		}
+		wantErr error
+	}{
+		{
+			name:  "parse connection string",
+			input: "Endpoint=https://test.azconfig.io;Id=id;Secret=secret",
+			want: struct {
+				appConfiguration string
+				accessKey        AccessKey
+			}{
+				appConfiguration: "test",
+				accessKey:        AccessKey{ID: "id", Secret: "secret"},
+			},
+		},
+		{
+			name:  "parse connection string - missing key or value",
+			input: "Endpoint=https://test.azconfig.io;Id=id;Secret",
+			want: struct {
+				appConfiguration string
+				accessKey        AccessKey
+			}{},
+			wantErr: ErrParseConnectionString,
+		},
+		{
+			name:  "parse connection string - missing secret",
+			input: "Endpoint=https://test.azconfig.io;Id=id",
+			want: struct {
+				appConfiguration string
+				accessKey        AccessKey
+			}{},
+			wantErr: ErrParseConnectionString,
+		},
+		{
+			name:  "parse connection string - invalid endpoint",
+			input: "Endpoint=invalid;Id=id;Secret=secret",
+			want: struct {
+				appConfiguration string
+				accessKey        AccessKey
+			}{},
+			wantErr: ErrParseConnectionString,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			gotAppConfiguration, gotAccessKey, gotErr := parseConnectionString(test.input)
+
+			if test.want.appConfiguration != gotAppConfiguration {
+				t.Errorf("parseConnectionString() = unexpected appConfiguration, want: %s, got: %s\n", test.want.appConfiguration, gotAppConfiguration)
+			}
+
+			if diff := cmp.Diff(test.want.accessKey, gotAccessKey); diff != "" {
+				t.Errorf("parseConnectionString() = unexpected accessKey (-want +got)\n%s\n", diff)
+			}
+
+			if diff := cmp.Diff(test.wantErr, gotErr, cmpopts.EquateErrors()); diff != "" {
+				t.Errorf("parseConnectionString() = unexpected error (-want +got)\n%s\n", diff)
 			}
 		})
 	}

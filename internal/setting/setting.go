@@ -72,11 +72,18 @@ type Client struct {
 // ClientOption is a function that sets options to *Client.
 type ClientOption func(c *Client)
 
-// NewClient creates and returns a new Client.
-func NewClient(appConfiguration string, cred auth.Credential, options ...ClientOption) *Client {
+// NewClient creates and returns a new *Client.
+func NewClient(appConfiguration string, cred auth.Credential, options ...ClientOption) (*Client, error) {
+	if len(appConfiguration) == 0 {
+		return nil, ErrEmptyAppConfigurationName
+	}
+	if cred == nil {
+		return nil, ErrNoCredential
+	}
+
 	c := newClient(appConfiguration, options...)
 	c.cred = cred
-	return c
+	return c, nil
 }
 
 // AccessKey contains the id and secret for access key
@@ -86,13 +93,34 @@ type AccessKey struct {
 	Secret string
 }
 
-// NewClientWithAccessKey creates and returns a new Client with the provided
+// NewClientWithAccessKey creates and returns a new *Client with the provided
 // access key.
-func NewClientWithAccessKey(appConfiguration string, key AccessKey) *Client {
-	c := newClient(appConfiguration)
+func NewClientWithAccessKey(appConfiguration string, key AccessKey, options ...ClientOption) (*Client, error) {
+	if len(appConfiguration) == 0 {
+		return nil, ErrEmptyAppConfigurationName
+	}
+	if len(key.ID) == 0 {
+		return nil, ErrMissingAccessKeyID
+	}
+	if len(key.Secret) == 0 {
+		return nil, ErrMissingAccessKeySecret
+	}
+
+	c := newClient(appConfiguration, options...)
 	c.accessKey.ID = key.ID
 	c.accessKey.Secret = key.Secret
-	return c
+	return c, nil
+}
+
+// NewClientWithConnectionString creates and returns a new *Client with the provided
+// connection string.
+func NewClientWithConnectionString(connectionString string, options ...ClientOption) (*Client, error) {
+	appConfiguration, key, err := parseConnectionString(connectionString)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewClientWithAccessKey(appConfiguration, key, options...)
 }
 
 // newClient creates and returns a new Client.
@@ -345,8 +373,37 @@ func vaultAndSecret(rawURL string) (string, string, error) {
 	return vault, secret, nil
 }
 
-var newSecretClient = func(vault string, cred auth.Credential, options ...secret.ClientOption) secretClient {
-	return secret.NewClient(vault, cred, options...)
+// parseConnectionString parses the connection string and returns the app configuration
+// name and access key.
+func parseConnectionString(connectionString string) (string, AccessKey, error) {
+	parts := strings.Split(connectionString, ";")
+	if len(parts) != 3 {
+		return "", AccessKey{}, fmt.Errorf("%w: invalid connection string format", ErrParseConnectionString)
+	}
+
+	var appConfiguration, id, secret string
+	for _, part := range parts {
+		kv := strings.Split(part, "=")
+		if len(kv) != 2 {
+			return "", AccessKey{}, fmt.Errorf("%w: missing key or value", ErrParseConnectionString)
+		}
+
+		if strings.ToLower(kv[0]) == "endpoint" {
+			u, err := url.Parse(kv[1])
+			if err != nil {
+				return "", AccessKey{}, fmt.Errorf("%w: %s", ErrParseConnectionString, err)
+			}
+			if len(u.Host) == 0 {
+				return "", AccessKey{}, fmt.Errorf("%w: invalid endpoint", ErrParseConnectionString)
+			}
+			appConfiguration = strings.Split(u.Host, ".")[0]
+		} else if strings.ToLower(kv[0]) == "id" {
+			id = kv[1]
+		} else if strings.ToLower(kv[0]) == "secret" {
+			secret = kv[1]
+		}
+	}
+	return appConfiguration, AccessKey{ID: id, Secret: secret}, nil
 }
 
 // uri returns the base URI for the provided cloud.
@@ -370,4 +427,8 @@ func endpoint(cloud cloud.Cloud, appConfiguration string) string {
 // scope returns the scope for the provided cloud.
 func scope(cloud cloud.Cloud) string {
 	return fmt.Sprintf("https://%s/.default", uri(cloud))
+}
+
+var newSecretClient = func(vault string, cred auth.Credential, options ...secret.ClientOption) secretClient {
+	return secret.NewClient(vault, cred, options...)
 }

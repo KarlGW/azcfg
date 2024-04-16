@@ -8,9 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
@@ -27,39 +24,7 @@ const (
 	defaultTimeout = time.Second * 10
 	// defaultConcurrency is the default concurrency for the
 	// clients of the parser.
-	defaultConcurrency = 10
-)
-
-const (
-	// azcfgTenantID is the environment variable for the tenant ID.
-	azcfgTenantID = "AZCFG_TENANT_ID"
-	// azcfgClientID is the environment variable for the client ID.
-	azcfgClientID = "AZCFG_CLIENT_ID"
-	// azcfgClientSecret is the environment variable for the client
-	// secret.
-	azcfgClientSecret = "AZCFG_CLIENT_SECRET"
-	// azcfgClientCertificate is the environment variable for the client
-	// certificate.
-	azcfgClientCertificate = "AZCFG_CLIENT_CERTIFICATE"
-	// azcfgClientCertificatePath is the environment variable for the path
-	// to the client certificate.
-	azcfgClientCertificatePath = "AZCFG_CLIENT_CERTIFICATE_PATH"
-	// azcfgAzureCLICredential is the environment variable for the Azure CLI
-	// credential.
-	azcfgAzureCLICredential = "AZCFG_AZURE_CLI_CREDENTIAL"
-	// azcfgKeyVaultName is the environment variable for the Key Vault name.
-	azcfgKeyVaultName = "AZCFG_KEYVAULT_NAME"
-	// azcfgAppConfigurationName is the environment variable for the App
-	// Configuration name.
-	azcfgAppConfigurationName = "AZCFG_APPCONFIGURATION_NAME"
-	// azcfgAppConfigurationLabel is the environment variable for the App
-	// Configuration label.
-	azcfgAppConfigurationLabel = "AZCFG_APPCONFIGURATION_LABEL"
-	// azcfgAppConfigurationLabels is the environment variable for the App
-	// Configuration labels.
-	azcfgAppConfigurationLabels = "AZCFG_APPCONFIGURATION_LABELS"
-	// azcfgCloud is the environment variable for the (azure) cloud.
-	azcfgCloud = "AZCFG_CLOUD"
+	defaultConcurrency = 20
 )
 
 // secretClient is the interface that wraps around method GetSecrets.
@@ -88,38 +53,47 @@ type parser struct {
 // NewParser creates and returns a *Parser. With no options provided
 // it will have default settings for timeout and concurrency.
 func NewParser(options ...Option) (*parser, error) {
-	p := &parser{
-		timeout:     defaultTimeout,
-		concurrency: defaultConcurrency,
-	}
-
 	opts := Options{
-		Cloud: parseCloud(os.Getenv(azcfgCloud)),
+		Cloud:       parseCloud(os.Getenv(azcfgCloud)),
+		Concurrency: defaultConcurrency,
+		Timeout:     defaultTimeout,
 	}
 	for _, option := range options {
 		option(&opts)
 	}
-	if opts.Concurrency > 0 {
-		p.concurrency = opts.Concurrency
-	}
-	if opts.Timeout > 0 {
-		p.timeout = opts.Timeout
+
+	p := &parser{
+		timeout:     opts.Timeout,
+		concurrency: opts.Concurrency,
 	}
 
 	vault := coalesceString(opts.KeyVault, os.Getenv(azcfgKeyVaultName))
+	appConfiguration := coalesceString(opts.AppConfiguration, os.Getenv(azcfgAppConfigurationName))
+	appConfigurationConnectionString := coalesceString(opts.Authentication.AppConfigurationConnectionString, os.Getenv(azcfgAppConfigurationConnectionString))
+
 	if opts.SecretClient == nil && len(vault) > 0 {
+		if opts.Credential != nil {
+			p.cred = opts.Credential
+		}
+
 		if p.cred == nil {
 			var err error
-			p.cred, err = setupCredential(opts)
+			p.cred, err = setupCredential(opts.Cloud, opts.Authentication.Entra)
 			if err != nil {
 				return nil, err
 			}
 		}
+
+		concurrency := p.concurrency
+		if len(appConfiguration) > 0 || len(appConfigurationConnectionString) > 0 {
+			concurrency /= 2
+		}
+
 		p.secretClient = secret.NewClient(
 			vault,
 			p.cred,
 			secret.WithTimeout(p.timeout),
-			secret.WithConcurrency(p.concurrency),
+			secret.WithConcurrency(concurrency),
 			secret.WithRetryPolicy(opts.RetryPolicy),
 			secret.WithCloud(opts.Cloud),
 		)
@@ -127,23 +101,39 @@ func NewParser(options ...Option) (*parser, error) {
 		p.secretClient = opts.SecretClient
 	}
 
-	appConfiguration := coalesceString(opts.AppConfiguration, os.Getenv(azcfgAppConfigurationName))
-	if opts.SettingClient == nil && len(appConfiguration) > 0 {
+	if opts.SettingClient == nil && len(appConfiguration) > 0 || len(appConfigurationConnectionString) > 0 {
+		if opts.Credential != nil {
+			p.cred = opts.Credential
+		}
+
 		var err error
-		if p.cred == nil {
-			p.cred, err = setupCredential(opts)
+		if p.cred == nil && len(appConfigurationConnectionString) == 0 {
+			p.cred, err = setupCredential(opts.Cloud, opts.Authentication.Entra)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		p.settingClient, err = setting.NewClient(
-			appConfiguration,
-			p.cred,
+		concurrency := p.concurrency
+		if len(vault) > 0 {
+			concurrency /= 2
+		}
+
+		options := []setting.ClientOption{
 			setting.WithTimeout(p.timeout),
-			setting.WithConcurrency(p.concurrency),
+			setting.WithConcurrency(concurrency),
 			setting.WithRetryPolicy(opts.RetryPolicy),
 			setting.WithCloud(opts.Cloud),
+		}
+
+		p.settingClient, err = newSettingClient(
+			settings{
+				appConfiguration: appConfiguration,
+				credential:       p.cred,
+				accessKey:        opts.Authentication.AppConfigurationAccessKey,
+				connectionString: appConfigurationConnectionString,
+			},
+			options...,
 		)
 		if err != nil {
 			return nil, err
@@ -184,25 +174,21 @@ func (p *parser) Parse(v any, options ...Option) error {
 
 // setupCredential configures credential based on the provided
 // options.
-func setupCredential(options Options) (auth.Credential, error) {
-	if options.Credential != nil {
-		return options.Credential, nil
+func setupCredential(cloud cloud.Cloud, entra Entra) (auth.Credential, error) {
+	if coalesceBool(entra.AzureCLICredential, parseBool(os.Getenv(azcfgAzureCLICredential))) {
+		return newAzureCLICredential(identity.WithCloud(cloud))
 	}
 
-	if coalesceBool(options.AzureCLICredential, parseBool(os.Getenv(azcfgAzureCLICredential))) {
-		return newAzureCLICredential(identity.WithCloud(options.Cloud))
-	}
-
-	tenantID := coalesceString(options.TenantID, os.Getenv(azcfgTenantID))
-	clientID := coalesceString(options.ClientID, os.Getenv(azcfgClientID))
-	if len(tenantID) == 0 || options.ManagedIdentity {
-		if options.ManagedIdentityIMDSDialTimeout == 0 {
-			options.ManagedIdentityIMDSDialTimeout = time.Second * 3
+	tenantID := coalesceString(entra.TenantID, os.Getenv(azcfgTenantID))
+	clientID := coalesceString(entra.ClientID, os.Getenv(azcfgClientID))
+	if len(tenantID) == 0 || entra.ManagedIdentity {
+		if entra.ManagedIdentityIMDSDialTimeout == 0 {
+			entra.ManagedIdentityIMDSDialTimeout = time.Second * 3
 		}
 		cred, err := newManagedIdentityCredential(
 			clientID,
-			identity.WithCloud(options.Cloud),
-			identity.WithIMDSDialTimeout(options.ManagedIdentityIMDSDialTimeout),
+			identity.WithCloud(cloud),
+			identity.WithIMDSDialTimeout(entra.ManagedIdentityIMDSDialTimeout),
 		)
 		if err != nil && !errors.Is(err, identity.ErrIMDSEndpointUnavailable) {
 			return nil, err
@@ -212,15 +198,15 @@ func setupCredential(options Options) (auth.Credential, error) {
 		}
 	}
 
-	clientSecret := coalesceString(options.ClientSecret, os.Getenv(azcfgClientSecret))
+	clientSecret := coalesceString(entra.ClientSecret, os.Getenv(azcfgClientSecret))
 	if len(clientSecret) > 0 {
-		return newClientSecretCredential(tenantID, clientID, clientSecret, identity.WithCloud(options.Cloud))
+		return newClientSecretCredential(tenantID, clientID, clientSecret, identity.WithCloud(cloud))
 	}
 
 	var certs []*x509.Certificate
 	var key *rsa.PrivateKey
-	if len(options.Certificates) > 0 && options.PrivateKey != nil {
-		certs, key = options.Certificates, options.PrivateKey
+	if len(entra.Certificates) > 0 && entra.PrivateKey != nil {
+		certs, key = entra.Certificates, entra.PrivateKey
 	} else {
 		certificate, certificatePath := os.Getenv(azcfgClientCertificate), os.Getenv(azcfgClientCertificatePath)
 		var err error
@@ -230,85 +216,59 @@ func setupCredential(options Options) (auth.Credential, error) {
 		}
 	}
 
-	if options.Assertion != nil {
-		return newClientAssertionCredential(tenantID, clientID, options.Assertion, identity.WithCloud(options.Cloud))
+	if entra.Assertion != nil {
+		return newClientAssertionCredential(tenantID, clientID, entra.Assertion, identity.WithCloud(cloud))
 	}
 
 	if len(certs) > 0 && key != nil {
-		return newClientCertificateCredential(tenantID, clientID, certs, key, identity.WithCloud(options.Cloud))
+		return newClientCertificateCredential(tenantID, clientID, certs, key, identity.WithCloud(cloud))
 	}
 
-	return nil, fmt.Errorf("%w: could not determine credential", ErrInvalidCredential)
+	return nil, fmt.Errorf("%w: could not determine and create Entra credential", ErrInvalidCredential)
 }
 
-// coelesceString returns the first non-empty string (if any).
-func coalesceString(x, y string) string {
-	if len(x) > 0 {
-		return x
-	}
-	return y
+// settings contains the necessary values for setting client creation.
+type settings struct {
+	credential       auth.Credential
+	accessKey        AppConfigurationAccessKey
+	appConfiguration string
+	connectionString string
 }
 
-// parseBool returns the boolean represented by the string.
-// If the string cannot be parsed, it returns false.
-func parseBool(s string) bool {
-	b, err := strconv.ParseBool(s)
-	if err != nil {
-		return false
+// newSettingClient creates a new setting client based on the provided settings.
+func newSettingClient(settings settings, options ...setting.ClientOption) (settingClient, error) {
+	if len(settings.appConfiguration) > 0 && settings.credential != nil {
+		return setting.NewClient(
+			settings.appConfiguration,
+			settings.credential,
+			options...,
+		)
 	}
-	return b
-}
-
-// coalesceBool returns the first non-false boolean (if any).
-func coalesceBool(x, y bool) bool {
-	if x {
-		return x
+	if len(settings.connectionString) > 0 {
+		return setting.NewClientWithConnectionString(
+			settings.connectionString,
+			options...,
+		)
 	}
-	return y
-}
-
-// coalesceMap returns the first non-empty map (if any).
-func coalesceMap[K comparable, V any](x, y map[K]V) map[K]V {
-	if len(x) > 0 {
-		return x
+	accessKeyID := coalesceString(settings.accessKey.ID, os.Getenv(azcfgAppConfigurationAccessKeyID))
+	accessKeySecret := coalesceString(settings.accessKey.Secret, os.Getenv(azcfgAppConfigurationAccessKeySecret))
+	if len(settings.appConfiguration) > 0 && len(accessKeyID) > 0 && len(accessKeySecret) > 0 {
+		return setting.NewClientWithAccessKey(
+			settings.appConfiguration,
+			setting.AccessKey{
+				ID:     settings.accessKey.ID,
+				Secret: settings.accessKey.Secret,
+			},
+			options...,
+		)
 	}
-	return y
-}
-
-// parseLabels from the provided string. Format: setting1=label1,setting2=label2.
-func parseLabels(labels string) map[string]string {
-	if len(labels) == 0 {
-		return nil
+	if len(settings.connectionString) > 0 {
+		return setting.NewClientWithConnectionString(
+			settings.connectionString,
+			options...,
+		)
 	}
-
-	re := regexp.MustCompile(`\s+`)
-	parts := strings.Split(re.ReplaceAllString(labels, ""), ",")
-	m := make(map[string]string, len(parts))
-	for i := range parts {
-		p := strings.Split(parts[i], "=")
-		if len(p) == 2 {
-			m[p[0]] = p[1]
-		}
-
-	}
-	if len(m) == 0 {
-		return nil
-	}
-	return m
-}
-
-// parseCloud returns the cloud from the provided string.
-func parseCloud(c string) cloud.Cloud {
-	switch strings.ToLower(c) {
-	case "azure", "public", "azurepublic":
-		return cloud.AzurePublic
-	case "government", "azuregovernment":
-		return cloud.AzureGovernment
-	case "china", "azurechina":
-		return cloud.AzureChina
-	default:
-		return cloud.AzurePublic
-	}
+	return nil, fmt.Errorf("%w: could not determine and create app configuration credential", ErrInvalidCredential)
 }
 
 // certificatesAndKeyFromPEM extracts the x509 certificates and private key from the given PEM.

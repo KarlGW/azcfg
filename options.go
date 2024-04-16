@@ -34,6 +34,36 @@ type Options struct {
 	Labels map[string]string
 	// Cloud is the Azure cloud to make requests to.
 	Cloud cloud.Cloud
+	// RetryPolicy is the retry policy for the clients of the parser.
+	RetryPolicy RetryPolicy
+	// Authentication ...
+	Authentication Authentication
+	// Concurrency is the amount of secrets/settings that will be retrieved
+	// concurrently. Defaults to 10.
+	Concurrency int
+	// Timeout is the total timeout for retrieval of secrets.
+	// Defaults to 10 seconds.
+	Timeout time.Duration
+}
+
+// Option is a function that sets Options.
+type Option func(o *Options)
+
+// Authentication contains authentication settings for the parser.
+type Authentication struct {
+	Entra                            Entra
+	AppConfigurationAccessKey        AppConfigurationAccessKey
+	AppConfigurationConnectionString string
+}
+
+// Entra contains authentication settings for Microsoft Entra
+// authentication for the parser.
+type Entra struct {
+	// Assertion is an assertion function for a client assertion credential.
+	Assertion func() (string, error)
+	// PrivateKey to be used with the certificates for the Service Principal
+	// with access to target Key Vault and/or App Configuration.
+	PrivateKey *rsa.PrivateKey
 	// TenantID of the Service Principal with access to target
 	// Key Vault and/or App Configuration.
 	TenantID string
@@ -46,32 +76,23 @@ type Options struct {
 	// Certificates for the Service Principal with access to target Key Vault
 	// and/or App Configuration.
 	Certificates []*x509.Certificate
-	// Assertion is an assertion function for a client assertion credential.
-	Assertion func() (string, error)
-	// PrivateKey to be used with the certificates for the Service Principal
-	// with access to target Key Vault and/or App Configuration.
-	PrivateKey *rsa.PrivateKey
-	// RetryPolicy is the retry policy for the clients of the parser.
-	RetryPolicy RetryPolicy
-	// Concurrency is the amount of secrets/settings that will be retrieved
-	// concurrently. Defaults to 10.
-	Concurrency int
-	// Timeout is the total timeout for retrieval of secrets.
-	// Defaults to 10 seconds.
-	Timeout time.Duration
-	// ManagedIdentityIMDSDialTimeout sets the dial timeout for the testing the
-	// IMDS endpoint for managed identities that makes use of IMDS
-	// (example Azure Virtual Machines and Container Instances).
-	ManagedIdentityIMDSDialTimeout time.Duration
 	// ManagedIdentity sets the use of a managed identity. To use a user assigned
 	// managed identity, use together with ClientID.
 	ManagedIdentity bool
 	// AzureCLICredential sets the use of Azure CLI credentials.
 	AzureCLICredential bool
+	// ManagedIdentityIMDSDialTimeout sets the dial timeout for the testing the
+	// IMDS endpoint for managed identities that makes use of IMDS
+	// (example Azure Virtual Machines and Container Instances).
+	ManagedIdentityIMDSDialTimeout time.Duration
 }
 
-// Option is a function that sets Options.
-type Option func(o *Options)
+// AppConfigurationAccessKey contains ID and secret for an App Configuration
+// access key.
+type AppConfigurationAccessKey struct {
+	ID     string
+	Secret string
+}
 
 // WithCredential sets the provided credential to the parser.
 func WithCredential(cred auth.Credential) Option {
@@ -112,9 +133,9 @@ func WithTimeout(d time.Duration) Option {
 // a secret (client secret credential).
 func WithClientSecretCredential(tenantID, clientID, clientSecret string) Option {
 	return func(o *Options) {
-		o.TenantID = tenantID
-		o.ClientID = clientID
-		o.ClientSecret = clientSecret
+		o.Authentication.Entra.TenantID = tenantID
+		o.Authentication.Entra.ClientID = clientID
+		o.Authentication.Entra.ClientSecret = clientSecret
 	}
 }
 
@@ -122,10 +143,10 @@ func WithClientSecretCredential(tenantID, clientID, clientSecret string) Option 
 // a certificate (client certificate credential).
 func WithClientCertificateCredential(tenantID, clientID string, certificates []*x509.Certificate, key *rsa.PrivateKey) Option {
 	return func(o *Options) {
-		o.TenantID = tenantID
-		o.ClientID = clientID
-		o.Certificates = certificates
-		o.PrivateKey = key
+		o.Authentication.Entra.TenantID = tenantID
+		o.Authentication.Entra.ClientID = clientID
+		o.Authentication.Entra.Certificates = certificates
+		o.Authentication.Entra.PrivateKey = key
 	}
 }
 
@@ -133,18 +154,18 @@ func WithClientCertificateCredential(tenantID, clientID string, certificates []*
 // The assertion should be a function that returns a JWT from an identity provider.
 func WithClientAssertionCredential(tenantID, clientID string, assertion func() (string, error)) Option {
 	return func(o *Options) {
-		o.TenantID = tenantID
-		o.ClientID = clientID
-		o.Assertion = assertion
+		o.Authentication.Entra.TenantID = tenantID
+		o.Authentication.Entra.ClientID = clientID
+		o.Authentication.Entra.Assertion = assertion
 	}
 }
 
 // WithManagedIdentity sets the parser to use a managed identity.
 func WithManagedIdentity(clientID ...string) Option {
 	return func(o *Options) {
-		o.ManagedIdentity = true
+		o.Authentication.Entra.ManagedIdentity = true
 		if len(clientID) > 0 {
-			o.ClientID = clientID[0]
+			o.Authentication.Entra.ClientID = clientID[0]
 		}
 	}
 }
@@ -155,7 +176,7 @@ func WithManagedIdentity(clientID ...string) Option {
 func WithManagedIdentityIMDSDialTimeout(d time.Duration) Option {
 	return func(o *Options) {
 		if d > 0 {
-			o.ManagedIdentityIMDSDialTimeout = d
+			o.Authentication.Entra.ManagedIdentityIMDSDialTimeout = d
 		}
 	}
 }
@@ -163,7 +184,7 @@ func WithManagedIdentityIMDSDialTimeout(d time.Duration) Option {
 // WithAzureCLICredential sets the parser to use Azure CLI credential.
 func WithAzureCLICredential() Option {
 	return func(o *Options) {
-		o.AzureCLICredential = true
+		o.Authentication.Entra.AzureCLICredential = true
 	}
 }
 

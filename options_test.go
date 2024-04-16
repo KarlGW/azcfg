@@ -54,17 +54,25 @@ func TestOptions(t *testing.T) {
 			name:  "WithClientSecretCredential",
 			input: WithClientSecretCredential("1111", "2222", "3333"),
 			want: Options{
-				TenantID:     "1111",
-				ClientID:     "2222",
-				ClientSecret: "3333",
+				Authentication: Authentication{
+					Entra: Entra{
+						TenantID:     "1111",
+						ClientID:     "2222",
+						ClientSecret: "3333",
+					},
+				},
 			},
 		},
 		{
 			name:  "WithManagedIdentity",
 			input: WithManagedIdentity("2222"),
 			want: Options{
-				ClientID:        "2222",
-				ManagedIdentity: true,
+				Authentication: Authentication{
+					Entra: Entra{
+						ClientID:        "2222",
+						ManagedIdentity: true,
+					},
+				},
 			},
 		},
 		{
@@ -94,7 +102,7 @@ func TestOptions(t *testing.T) {
 		got := Options{}
 		test.input(&got)
 
-		if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Options{}, mockCredential{}), cmpopts.IgnoreUnexported(stub.SecretClient{}, stub.SettingClient{}), cmpopts.IgnoreFields(Options{}, "PrivateKey")); diff != "" {
+		if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Options{}, mockCredential{}), cmpopts.IgnoreUnexported(stub.SecretClient{}, stub.SettingClient{}), cmpopts.IgnoreFields(Entra{}, "PrivateKey")); diff != "" {
 			t.Errorf("%s = unexpected result (-want +got)\n%s\n", test.name, diff)
 		}
 	}

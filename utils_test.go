@@ -58,57 +58,6 @@ func TestCoalesceString(t *testing.T) {
 	}
 }
 
-func TestCoalesceBool(t *testing.T) {
-	var tests = []struct {
-		name  string
-		input struct {
-			x, y bool
-		}
-		want bool
-	}{
-		{
-			name: "x is true",
-			input: struct {
-				x, y bool
-			}{
-				x: true,
-				y: false,
-			},
-			want: true,
-		},
-		{
-			name: "x is false",
-			input: struct {
-				x, y bool
-			}{
-				x: false,
-				y: true,
-			},
-			want: true,
-		},
-		{
-			name: "x and y are false",
-			input: struct {
-				x, y bool
-			}{
-				x: false,
-				y: false,
-			},
-			want: false,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := coalesceBool(test.input.x, test.input.y)
-
-			if test.want != got {
-				t.Errorf("coalesceBool() = unexpected result, want: %t, got: %t\n", test.want, got)
-			}
-		})
-	}
-}
-
 func TestCoalesceMap(t *testing.T) {
 	var tests = []struct {
 		name  string

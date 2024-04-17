@@ -46,9 +46,7 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  &secret.Client{},
 				settingClient: &setting.Client{},
-				cred:          &identity.ClientCredential{},
 				timeout:       time.Second * 10,
-				concurrency:   defaultConcurrency,
 			},
 		},
 		{
@@ -66,9 +64,7 @@ func TestNewParser(t *testing.T) {
 			},
 			want: &parser{
 				secretClient: &secret.Client{},
-				cred:         &identity.ClientCredential{},
 				timeout:      time.Second * 10,
-				concurrency:  defaultConcurrency,
 			},
 		},
 		{
@@ -86,9 +82,7 @@ func TestNewParser(t *testing.T) {
 			},
 			want: &parser{
 				settingClient: &setting.Client{},
-				cred:          &identity.ClientCredential{},
 				timeout:       time.Second * 10,
-				concurrency:   defaultConcurrency,
 			},
 		},
 		{
@@ -108,9 +102,7 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  &secret.Client{},
 				settingClient: &setting.Client{},
-				cred:          &identity.ClientCredential{},
 				timeout:       time.Second * 10,
-				concurrency:   30,
 			},
 		},
 		{
@@ -143,9 +135,7 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  stub.SecretClient{},
 				settingClient: nil,
-				cred:          nil,
 				timeout:       time.Second * 10,
-				concurrency:   defaultConcurrency,
 			},
 		},
 		{
@@ -161,9 +151,7 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  nil,
 				settingClient: stub.SettingClient{},
-				cred:          nil,
 				timeout:       time.Second * 10,
-				concurrency:   defaultConcurrency,
 			},
 		},
 		{
@@ -180,9 +168,7 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  stub.SecretClient{},
 				settingClient: stub.SettingClient{},
-				cred:          nil,
 				timeout:       time.Second * 10,
-				concurrency:   defaultConcurrency,
 			},
 		},
 	}
@@ -233,62 +219,15 @@ func TestSetupCredential(t *testing.T) {
 		input struct {
 			cloud   cloud.Cloud
 			options Entra
-			envs    map[string]string
 		}
 		want    auth.Credential
 		wantErr error
 	}{
 		{
-			name: "credential settings from environment (client secret credential)",
-			input: struct {
-				cloud   cloud.Cloud
-				options Entra
-				envs    map[string]string
-			}{
-				envs: map[string]string{
-					azcfgTenantID:     "1111",
-					azcfgClientID:     "2222",
-					azcfgClientSecret: "3333",
-				},
-			},
-			want: &identity.ClientCredential{},
-		},
-		{
-			name: "credential settings from environment (client certificate credential from base64)",
-			input: struct {
-				cloud   cloud.Cloud
-				options Entra
-				envs    map[string]string
-			}{
-				envs: map[string]string{
-					azcfgTenantID:          "1111",
-					azcfgClientID:          "2222",
-					azcfgClientCertificate: "certificate",
-				},
-			},
-			want: &identity.ClientCredential{},
-		},
-		{
-			name: "credential settings from environment (client certificate credential from file)",
-			input: struct {
-				cloud   cloud.Cloud
-				options Entra
-				envs    map[string]string
-			}{
-				envs: map[string]string{
-					azcfgTenantID:              "1111",
-					azcfgClientID:              "2222",
-					azcfgClientCertificatePath: "certificate",
-				},
-			},
-			want: &identity.ClientCredential{},
-		},
-		{
 			name: "credential settings from environment (managed identity)",
 			input: struct {
 				cloud   cloud.Cloud
 				options Entra
-				envs    map[string]string
 			}{},
 			want: &identity.ManagedIdentityCredential{},
 		},
@@ -297,7 +236,6 @@ func TestSetupCredential(t *testing.T) {
 			input: struct {
 				cloud   cloud.Cloud
 				options Entra
-				envs    map[string]string
 			}{
 				options: Entra{
 					TenantID:     "1111",
@@ -312,7 +250,6 @@ func TestSetupCredential(t *testing.T) {
 			input: struct {
 				cloud   cloud.Cloud
 				options Entra
-				envs    map[string]string
 			}{
 				options: Entra{
 					TenantID:     "1111",
@@ -328,7 +265,6 @@ func TestSetupCredential(t *testing.T) {
 			input: struct {
 				cloud   cloud.Cloud
 				options Entra
-				envs    map[string]string
 			}{
 				options: Entra{ManagedIdentity: true},
 			},
@@ -339,12 +275,11 @@ func TestSetupCredential(t *testing.T) {
 			input: struct {
 				cloud   cloud.Cloud
 				options Entra
-				envs    map[string]string
 			}{
-				envs: map[string]string{
-					azcfgTenantID:              "1111",
-					azcfgClientID:              "2222",
-					azcfgClientCertificatePath: "certificate",
+				options: Entra{
+					TenantID:        "1111",
+					ClientID:        "2222",
+					certificatePath: "certificate",
 				},
 			},
 			wantErr: errors.New("invalid path"),
@@ -353,8 +288,6 @@ func TestSetupCredential(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			os.Clearenv()
-
 			newClientSecretCredential = func(_, _, _ string, _ ...identity.CredentialOption) (*identity.ClientCredential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
@@ -378,10 +311,6 @@ func TestSetupCredential(t *testing.T) {
 					return nil, nil, test.wantErr
 				}
 				return []*x509.Certificate{{}}, &rsa.PrivateKey{}, nil
-			}
-
-			for k, v := range test.input.envs {
-				t.Setenv(k, v)
 			}
 
 			got, gotErr := setupCredential(test.input.cloud, test.input.options)

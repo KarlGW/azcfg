@@ -16,6 +16,14 @@ func coalesceString(x, y string) string {
 	return y
 }
 
+// coalesceMap returns the first non-empty map (if any).
+func coalesceMap[K comparable, V any](x, y map[K]V) map[K]V {
+	if len(x) > 0 {
+		return x
+	}
+	return y
+}
+
 // parseBool returns the boolean represented by the string.
 // If the string cannot be parsed, it returns false.
 func parseBool(s string) bool {
@@ -24,22 +32,6 @@ func parseBool(s string) bool {
 		return false
 	}
 	return b
-}
-
-// coalesceBool returns the first non-false boolean (if any).
-func coalesceBool(x, y bool) bool {
-	if x {
-		return x
-	}
-	return y
-}
-
-// coalesceMap returns the first non-empty map (if any).
-func coalesceMap[K comparable, V any](x, y map[K]V) map[K]V {
-	if len(x) > 0 {
-		return x
-	}
-	return y
 }
 
 // parseLabels from the provided string. Format: setting1=label1,setting2=label2.

@@ -102,7 +102,7 @@ func TestOptions(t *testing.T) {
 		got := Options{}
 		test.input(&got)
 
-		if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Options{}, mockCredential{}), cmpopts.IgnoreUnexported(stub.SecretClient{}, stub.SettingClient{}), cmpopts.IgnoreFields(Entra{}, "PrivateKey")); diff != "" {
+		if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Options{}, mockCredential{}, Entra{}), cmpopts.IgnoreUnexported(stub.SecretClient{}, stub.SettingClient{}), cmpopts.IgnoreFields(Entra{}, "PrivateKey")); diff != "" {
 			t.Errorf("%s = unexpected result (-want +got)\n%s\n", test.name, diff)
 		}
 	}

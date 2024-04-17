@@ -186,10 +186,9 @@ func setupCredential(cloud cloud.Cloud, entra Entra) (auth.Credential, error) {
 	var key *rsa.PrivateKey
 	if len(entra.Certificates) > 0 && entra.PrivateKey != nil {
 		certs, key = entra.Certificates, entra.PrivateKey
-	} else {
-		certificates, certificatePath := entra.certificate, entra.certificatePath
+	} else if len(entra.certificate) > 0 || len(entra.certificatePath) > 0 {
 		var err error
-		certs, key, err = certificateAndKey(certificates, certificatePath)
+		certs, key, err = certificateAndKey(entra.certificate, entra.certificatePath)
 		if err != nil {
 			return nil, err
 		}
@@ -228,9 +227,8 @@ func newSettingClient(settings settings, options ...setting.ClientOption) (setti
 			options...,
 		)
 	}
-	accessKeyID := coalesceString(settings.accessKey.ID, os.Getenv(azcfgAppConfigurationAccessKeyID))
-	accessKeySecret := coalesceString(settings.accessKey.Secret, os.Getenv(azcfgAppConfigurationAccessKeySecret))
-	if len(settings.appConfiguration) > 0 && len(accessKeyID) > 0 && len(accessKeySecret) > 0 {
+
+	if len(settings.appConfiguration) > 0 && len(settings.accessKey.ID) > 0 && len(settings.accessKey.Secret) > 0 {
 		return setting.NewClientWithAccessKey(
 			settings.appConfiguration,
 			setting.AccessKey{
@@ -240,12 +238,7 @@ func newSettingClient(settings settings, options ...setting.ClientOption) (setti
 			options...,
 		)
 	}
-	if len(settings.connectionString) > 0 {
-		return setting.NewClientWithConnectionString(
-			settings.connectionString,
-			options...,
-		)
-	}
+
 	return nil, fmt.Errorf("%w: could not determine and create app configuration credential", ErrInvalidCredential)
 }
 

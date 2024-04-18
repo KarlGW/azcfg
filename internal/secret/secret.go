@@ -54,7 +54,13 @@ type Client struct {
 type ClientOption func(c *Client)
 
 // NewClient creates and returns a new *Client.
-func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Client {
+func NewClient(vault string, cred auth.Credential, options ...ClientOption) (*Client, error) {
+	if len(vault) == 0 {
+		return nil, ErrEmptyKeyVaultName
+	}
+	if cred == nil {
+		return nil, ErrNilCredential
+	}
 	c := &Client{
 		cred:        cred,
 		cloud:       cloud.AzurePublic,
@@ -81,7 +87,7 @@ func NewClient(vault string, cred auth.Credential, options ...ClientOption) *Cli
 			httpr.WithRetryPolicy(c.retryPolicy),
 		)
 	}
-	return c
+	return c, nil
 }
 
 // Options for client operations.

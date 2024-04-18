@@ -14,6 +14,8 @@ const (
 var (
 	// ErrEmptyAppConfigurationName is returned when an empty app configuration name is provided.
 	ErrEmptyAppConfigurationName = errors.New("app configration name cannot be empty")
+	// ErrNilCredential is returned when credential is nil.
+	ErrNilCredential = errors.New("credential cannot be nil")
 	// ErrNoCredential is returned when no credential is provided.
 	ErrNoCredential = errors.New("no credential provided")
 	// ErrMissingAccessKeyID is returned when an access key ID is missing.

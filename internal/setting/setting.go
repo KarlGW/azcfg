@@ -78,7 +78,7 @@ func NewClient(appConfiguration string, cred auth.Credential, options ...ClientO
 		return nil, ErrEmptyAppConfigurationName
 	}
 	if cred == nil {
-		return nil, ErrNoCredential
+		return nil, ErrNilCredential
 	}
 
 	c := newClient(appConfiguration, options...)
@@ -274,11 +274,14 @@ func (c *Client) getSecret(ctx context.Context, uri string) (secret.Secret, erro
 		return secret.Secret{}, err
 	}
 	if c.sc == nil {
-		c.sc = newSecretClient(v, c.cred,
+		c.sc, err = newSecretClient(v, c.cred,
 			secret.WithConcurrency(c.concurrency),
 			secret.WithTimeout(c.timeout),
 			secret.WithRetryPolicy(c.retryPolicy),
 		)
+		if err != nil {
+			return secret.Secret{}, err
+		}
 	} else {
 		if c.sc.Vault() != v {
 			c.sc.SetVault(v)
@@ -428,6 +431,6 @@ func scope(cloud cloud.Cloud) string {
 	return fmt.Sprintf("https://%s/.default", uri(cloud))
 }
 
-var newSecretClient = func(vault string, cred auth.Credential, options ...secret.ClientOption) secretClient {
+var newSecretClient = func(vault string, cred auth.Credential, options ...secret.ClientOption) (secretClient, error) {
 	return secret.NewClient(vault, cred, options...)
 }

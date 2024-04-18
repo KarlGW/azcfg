@@ -59,6 +59,9 @@ const (
 	// defaultConcurrency is the default concurrency for the
 	// clients of the parser.
 	defaultConcurrency = 20
+	// defaultManagedIdentityIMDSDialTimeout is the default dial timeout
+	// for testing the IMDS endpoint for managed identities.
+	defaultManagedIdentityIMDSDialTimeout = time.Second * 3
 )
 
 // Options contains options for the Parser.
@@ -73,7 +76,7 @@ type Options struct {
 	// the timeout set on the parser. Only applies when used together
 	// with the Parse function or parser Parse method.
 	Context context.Context
-	// Cloud is the Azure cloud to make requests to.
+	// Cloud is the Azure cloud to make requests to. Defaults to AzurePublic.
 	Cloud cloud.Cloud
 	// KeyVault is the name of the Key Vault containing secrets.
 	KeyVault string
@@ -90,10 +93,10 @@ type Options struct {
 	// Authentication contains authentication settings for the parser.
 	Authentication Authentication
 	// Concurrency is the amount of secrets/settings that will be retrieved
-	// concurrently. Defaults to 10.
+	// concurrently. Shared for all clients. Defaults to 20.
 	Concurrency int
-	// Timeout is the total timeout for retrieval of secrets.
-	// Defaults to 10 seconds.
+	// Timeout is the total timeout for retrieval of secrets and settings.
+	// Shared for all clients. Defaults to 10 seconds.
 	Timeout time.Duration
 }
 
@@ -107,12 +110,13 @@ func defaultOptions() Options {
 		Labels:           parseLabels(os.Getenv(azcfgAppConfigurationLabels)),
 		Authentication: Authentication{
 			Entra: Entra{
-				TenantID:           os.Getenv(azcfgTenantID),
-				ClientID:           os.Getenv(azcfgClientID),
-				ClientSecret:       os.Getenv(azcfgClientSecret),
-				AzureCLICredential: parseBool(os.Getenv(azcfgAzureCLICredential)),
-				certificate:        os.Getenv(azcfgClientCertificate),
-				certificatePath:    os.Getenv(azcfgClientCertificatePath),
+				TenantID:                       os.Getenv(azcfgTenantID),
+				ClientID:                       os.Getenv(azcfgClientID),
+				ClientSecret:                   os.Getenv(azcfgClientSecret),
+				AzureCLICredential:             parseBool(os.Getenv(azcfgAzureCLICredential)),
+				certificate:                    os.Getenv(azcfgClientCertificate),
+				certificatePath:                os.Getenv(azcfgClientCertificatePath),
+				ManagedIdentityIMDSDialTimeout: defaultManagedIdentityIMDSDialTimeout,
 			},
 			AppConfigurationAccessKey: AppConfigurationAccessKey{
 				ID:     os.Getenv(azcfgAppConfigurationAccessKeyID),
@@ -164,9 +168,10 @@ type Entra struct {
 	ManagedIdentity bool
 	// AzureCLICredential sets the use of Azure CLI credentials.
 	AzureCLICredential bool
-	// ManagedIdentityIMDSDialTimeout sets the dial timeout for the testing the
-	// IMDS endpoint for managed identities that makes use of IMDS
-	// (example Azure Virtual Machines and Container Instances).
+	// ManagedIdentityIMDSDialTimeout sets the dial timeout for testing the
+	// IMDS endpoint for managed identities that makes use of IMDS.
+	// Examples are Azure Virtual Machines and Container Instances.
+	// Defaults to 3 seconds.
 	ManagedIdentityIMDSDialTimeout time.Duration
 }
 

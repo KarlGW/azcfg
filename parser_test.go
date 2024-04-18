@@ -1,16 +1,13 @@
 package azcfg
 
 import (
-	"bytes"
 	"context"
-	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/pem"
+	"encoding/base64"
 	"errors"
-	"math/big"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -19,6 +16,7 @@ import (
 	"github.com/KarlGW/azcfg/internal/identity"
 	"github.com/KarlGW/azcfg/internal/secret"
 	"github.com/KarlGW/azcfg/internal/setting"
+	"github.com/KarlGW/azcfg/internal/testutils"
 	"github.com/KarlGW/azcfg/stub"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -513,8 +511,14 @@ func TestSetupCredential(t *testing.T) {
 		},
 	}
 
+	var oldCertificateAndKey = certificateAndKey
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				certificateAndKey = oldCertificateAndKey
+			})
+
 			newClientSecretCredential = func(_, _, _ string, _ ...identity.CredentialOption) (*identity.ClientCredential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
@@ -566,25 +570,76 @@ func TestSetupCredential(t *testing.T) {
 }
 
 func TestCertificateAndKey(t *testing.T) {
+	cert, err := testutils.CreateCertificate()
+	if err != nil {
+		t.Fatalf("Unexpected error creating certificate: %v\n", err)
+	}
+
 	var tests = []struct {
 		name  string
 		input struct {
 			certificate, certificatePath string
 		}
 		want struct {
-			certs []x509.Certificate
-			key   *rsa.PrivateKey
+			certificate []*x509.Certificate
+			key         *rsa.PrivateKey
 		}
 		wantErr error
 	}{
-		{},
+		{
+			name: "certificate provided",
+			input: struct {
+				certificate, certificatePath string
+			}{
+				certificate: base64.StdEncoding.EncodeToString(addBytes(cert.RawRSAKey, cert.RawCert)),
+			},
+			want: struct {
+				certificate []*x509.Certificate
+				key         *rsa.PrivateKey
+			}{
+				certificate: []*x509.Certificate{cert.Cert},
+				key:         cert.RSAKey,
+			},
+		},
+		{
+			name: "certificate path provided",
+			input: struct {
+				certificate, certificatePath string
+			}{
+				certificatePath: "test-cert.pem",
+			},
+			want: struct {
+				certificate []*x509.Certificate
+				key         *rsa.PrivateKey
+			}{
+				certificate: []*x509.Certificate{cert.Cert},
+				key:         cert.RSAKey,
+			},
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, _, err := createCertificate()
-			if err != nil {
-				t.Errorf("Unexpected error creating certificate: %v\n", err)
+			if len(test.input.certificatePath) > 0 {
+				certFile, err := testutils.WriteCertificateFile(filepath.Join(os.TempDir(), test.input.certificatePath), cert.RawRSAKey, cert.RawCert)
+				if err != nil {
+					t.Fatalf("Unexpected error writing certificate file: %v\n", err)
+				}
+				defer os.Remove(certFile.Name())
+			}
+
+			gotCerts, gotKey, gotErr := certificateAndKey(test.input.certificate, filepath.Join(os.TempDir(), test.input.certificatePath))
+
+			if diff := cmp.Diff(test.want.certificate, gotCerts); diff != "" {
+				t.Errorf("certificateAndKey() = unexpected certificate (-want +got)\n%s\n", diff)
+			}
+
+			if diff := cmp.Diff(test.want.key, gotKey); diff != "" {
+				t.Errorf("certificateAndKey() = unexpected key (-want +got)\n%s\n", diff)
+			}
+
+			if test.wantErr == nil && gotErr != nil {
+				t.Errorf("Unexpected error: %v\n", gotErr)
 			}
 		})
 	}
@@ -599,44 +654,3 @@ func (c mockCredential) Token(ctx context.Context, options ...auth.TokenOption) 
 var (
 	errTestManagedIdentity = errors.New("managed identity error")
 )
-
-func createCertificate() ([]byte, []byte, error) {
-	pk, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	template := x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			Organization: []string{"azcfg"},
-		},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Hour * 24 * 365),
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-		IsCA:                  true,
-	}
-
-	b, err := x509.CreateCertificate(rand.Reader, &template, &template, &pk.PublicKey, pk)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var certBuf bytes.Buffer
-	if err := pem.Encode(&certBuf, &pem.Block{Type: "CERTIFICATE", Bytes: b}); err != nil {
-		return nil, nil, err
-	}
-
-	kb, err := x509.MarshalPKCS8PrivateKey(pk)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var keyBuf bytes.Buffer
-	if err := pem.Encode(&keyBuf, &pem.Block{Type: "PRIVATE KEY", Bytes: kb}); err != nil {
-		return nil, nil, err
-	}
-	return certBuf.Bytes(), keyBuf.Bytes(), nil
-}

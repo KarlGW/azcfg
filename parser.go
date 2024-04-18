@@ -161,10 +161,6 @@ func setupCredential(cloud cloud.Cloud, entra Entra) (auth.Credential, error) {
 	}
 
 	if len(entra.TenantID) == 0 || entra.ManagedIdentity {
-		if entra.ManagedIdentityIMDSDialTimeout == 0 {
-			entra.ManagedIdentityIMDSDialTimeout = time.Second * 3
-		}
-
 		cred, err := newManagedIdentityCredential(
 			entra.ClientID,
 			identity.WithCloud(cloud),

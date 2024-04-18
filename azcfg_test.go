@@ -292,43 +292,6 @@ func TestGetBitSize(t *testing.T) {
 	}
 }
 
-func TestSplitTrim(t *testing.T) {
-	var tests = []struct {
-		name  string
-		input string
-		sep   string
-		want  []string
-	}{
-		{
-			name:  "nosep",
-			input: "aaaa,bbbb, cccc,     dddd",
-			want:  []string{"aaaa", "bbbb", "cccc", "dddd"},
-		},
-		{
-			name:  "comma",
-			input: "aaaa,bbbb, cccc,     dddd",
-			sep:   ",",
-			want:  []string{"aaaa", "bbbb", "cccc", "dddd"},
-		},
-		{
-			name:  "colon",
-			input: "aaaa:bbbb: cccc:     dddd",
-			sep:   ":",
-			want:  []string{"aaaa", "bbbb", "cccc", "dddd"},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := splitTrim(test.input, test.sep)
-
-			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("splitTrim(%q, %q) = unexpected result, (-want, +got)\n%s\n", test.input, test.sep, diff)
-			}
-		})
-	}
-}
-
 type Struct struct {
 	String                  string  `secret:"string"`
 	StringPtr               *string `secret:"string-ptr"`

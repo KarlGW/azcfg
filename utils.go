@@ -8,6 +8,18 @@ import (
 	"github.com/KarlGW/azcfg/azure/cloud"
 )
 
+// splitTrim splits a string by the provided separator, after
+// trimming whitespaces.
+func splitTrim(s, sep string) []string {
+	if len(s) == 0 {
+		return nil
+	}
+	if len(sep) == 0 {
+		sep = ","
+	}
+	return strings.Split(regexp.MustCompile(sep+`\s+`).ReplaceAllString(s, sep), sep)
+}
+
 // coelesceString returns the first non-empty string (if any).
 func coalesceString(x, y string) string {
 	if len(x) > 0 {

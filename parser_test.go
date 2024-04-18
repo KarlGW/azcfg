@@ -1,6 +1,7 @@
 package azcfg
 
 import (
+	"bytes"
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
@@ -591,7 +592,7 @@ func TestCertificateAndKey(t *testing.T) {
 			input: struct {
 				certificate, certificatePath string
 			}{
-				certificate: base64.StdEncoding.EncodeToString(addBytes(cert.RawRSAKey, cert.RawCert)),
+				certificate: base64.StdEncoding.EncodeToString(joinBytes(cert.RawRSAKey, cert.RawCert)),
 			},
 			want: struct {
 				certificate []*x509.Certificate
@@ -654,3 +655,11 @@ func (c mockCredential) Token(ctx context.Context, options ...auth.TokenOption) 
 var (
 	errTestManagedIdentity = errors.New("managed identity error")
 )
+
+func joinBytes(b ...[]byte) []byte {
+	var buf bytes.Buffer
+	for _, v := range b {
+		buf.Write(v)
+	}
+	return buf.Bytes()
+}

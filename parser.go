@@ -54,8 +54,8 @@ func NewParser(options ...Option) (*parser, error) {
 
 	var secretClient secretClient
 	if opts.SecretClient == nil && len(opts.KeyVault) > 0 {
+		var err error
 		if cred == nil {
-			var err error
 			cred, err = setupCredential(opts.Cloud, opts.Authentication.Entra)
 			if err != nil {
 				return nil, err
@@ -67,7 +67,7 @@ func NewParser(options ...Option) (*parser, error) {
 			concurrency /= 2
 		}
 
-		secretClient = secret.NewClient(
+		secretClient, err = secret.NewClient(
 			opts.KeyVault,
 			cred,
 			secret.WithTimeout(opts.Timeout),
@@ -75,6 +75,9 @@ func NewParser(options ...Option) (*parser, error) {
 			secret.WithRetryPolicy(opts.RetryPolicy),
 			secret.WithCloud(opts.Cloud),
 		)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		secretClient = opts.SecretClient
 	}

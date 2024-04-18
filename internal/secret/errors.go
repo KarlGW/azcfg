@@ -7,6 +7,13 @@ const (
 	SecretNotFound = "SecretNotFound"
 )
 
+var (
+	// ErrEmptyKeyVaultName is returned when an empty key vault name is provided.
+	ErrEmptyKeyVaultName = errors.New("key vault name cannot be empty")
+	// ErrNilCredential is returned when credential is nil.
+	ErrNilCredential = errors.New("credential cannot be nil")
+)
+
 // secretError represents an error returned from the Key Vault REST API.
 type secretError struct {
 	Err struct {

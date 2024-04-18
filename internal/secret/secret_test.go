@@ -12,9 +12,60 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
+	"github.com/KarlGW/azcfg/azure/cloud"
+	"github.com/KarlGW/azcfg/version"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
+
+func TestNewClient(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input struct {
+			vault   string
+			cred    auth.Credential
+			options []ClientOption
+		}
+		want    *Client
+		wantErr error
+	}{
+		{
+			name: "defaults",
+			input: struct {
+				vault   string
+				cred    auth.Credential
+				options []ClientOption
+			}{
+				vault: "vault",
+				cred:  &mockCredential{},
+			},
+			want: &Client{
+				cred:        &mockCredential{},
+				cloud:       cloud.AzurePublic,
+				scope:       "https://vault.azure.net/.default",
+				baseURL:     "https://vault.vault.azure.net/secrets",
+				vault:       "vault",
+				userAgent:   "azcfg/" + version.Version(),
+				concurrency: defaultConcurrency,
+				timeout:     defaultTimeout,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, gotErr := NewClient(test.input.vault, test.input.cred, test.input.options...)
+
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Client{}, mockCredential{}), cmpopts.IgnoreFields(Client{}, "c")); diff != "" {
+				t.Errorf("NewClient() = unexpected result (-want +got)\n%s\n", diff)
+			}
+
+			if diff := cmp.Diff(test.wantErr, gotErr, cmpopts.EquateErrors()); diff != "" {
+				t.Errorf("NewClient() = unexpected error (-want +got)\n%s\n", diff)
+			}
+		})
+	}
+}
 
 func TestClient_GetSecrets(t *testing.T) {
 	var tests = []struct {
@@ -106,7 +157,7 @@ func TestClient_GetSecrets(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			client := NewClient("vault", mockCredential{}, func(c *Client) {
+			client, _ := NewClient("vault", mockCredential{}, func(c *Client) {
 				c.c = mockHttpClient{
 					bodies: test.input.bodies,
 					err:    test.input.err,

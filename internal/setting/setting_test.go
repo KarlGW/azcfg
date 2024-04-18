@@ -30,7 +30,7 @@ func TestNewClient(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name: "new client",
+			name: "defaults",
 			input: struct {
 				appConfiguration string
 				cred             auth.Credential
@@ -535,11 +535,11 @@ func TestClient_getSecret(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			newSecretClient = func(_ string, _ auth.Credential, _ ...secret.ClientOption) secretClient {
+			newSecretClient = func(_ string, _ auth.Credential, _ ...secret.ClientOption) (secretClient, error) {
 				return &mockSecretClient{
 					secrets: test.input.secrets,
 					err:     test.input.err,
-				}
+				}, nil
 			}
 
 			client, _ := NewClient("config", mockCredential{}, func(c *Client) {

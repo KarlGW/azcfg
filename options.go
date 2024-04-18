@@ -87,7 +87,7 @@ type Options struct {
 	Labels map[string]string
 	// RetryPolicy is the retry policy for the clients of the parser.
 	RetryPolicy RetryPolicy
-	// Authentication ...
+	// Authentication contains authentication settings for the parser.
 	Authentication Authentication
 	// Concurrency is the amount of secrets/settings that will be retrieved
 	// concurrently. Defaults to 10.

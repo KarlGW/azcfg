@@ -1,11 +1,14 @@
 package azcfg
 
 import (
+	"bytes"
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"errors"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -14,6 +17,7 @@ import (
 	"github.com/KarlGW/azcfg/internal/identity"
 	"github.com/KarlGW/azcfg/internal/secret"
 	"github.com/KarlGW/azcfg/internal/setting"
+	"github.com/KarlGW/azcfg/internal/testutils"
 	"github.com/KarlGW/azcfg/stub"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -30,7 +34,7 @@ func TestNewParser(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name: "setting up secret and setting client",
+			name: "setting up secret and setting client (environment)",
 			input: struct {
 				options []Option
 				envs    map[string]string
@@ -46,13 +50,11 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  &secret.Client{},
 				settingClient: &setting.Client{},
-				cred:          &identity.ClientCredential{},
 				timeout:       time.Second * 10,
-				concurrency:   10,
 			},
 		},
 		{
-			name: "setting up secret client",
+			name: "setting up secret client (environment)",
 			input: struct {
 				options []Option
 				envs    map[string]string
@@ -66,13 +68,11 @@ func TestNewParser(t *testing.T) {
 			},
 			want: &parser{
 				secretClient: &secret.Client{},
-				cred:         &identity.ClientCredential{},
 				timeout:      time.Second * 10,
-				concurrency:  10,
 			},
 		},
 		{
-			name: "setting up setting client",
+			name: "setting up setting client (environment)",
 			input: struct {
 				options []Option
 				envs    map[string]string
@@ -86,9 +86,79 @@ func TestNewParser(t *testing.T) {
 			},
 			want: &parser{
 				settingClient: &setting.Client{},
-				cred:          &identity.ClientCredential{},
 				timeout:       time.Second * 10,
-				concurrency:   10,
+			},
+		},
+		{
+			name: "setting up setting client with access key (environment)",
+			input: struct {
+				options []Option
+				envs    map[string]string
+			}{
+				envs: map[string]string{
+					azcfgAppConfigurationName:            "appconfig",
+					azcfgAppConfigurationAccessKeyID:     "id",
+					azcfgAppConfigurationAccessKeySecret: "secret",
+				},
+			},
+			want: &parser{
+				settingClient: &setting.Client{},
+				timeout:       time.Second * 10,
+			},
+		},
+		{
+			name: "setting up setting client with access key, overriding provided credential (environment)",
+			input: struct {
+				options []Option
+				envs    map[string]string
+			}{
+				options: []Option{
+					WithCredential(&mockCredential{}),
+				},
+				envs: map[string]string{
+					azcfgAppConfigurationName:            "appconfig",
+					azcfgAppConfigurationAccessKeyID:     "id",
+					azcfgAppConfigurationAccessKeySecret: "secret",
+				},
+			},
+			want: &parser{
+				settingClient: &setting.Client{},
+				timeout:       time.Second * 10,
+			},
+		},
+		{
+			name: "setting up setting client with connection string (environment)",
+			input: struct {
+				options []Option
+				envs    map[string]string
+			}{
+				envs: map[string]string{
+					azcfgAppConfigurationName:             "appconfig",
+					azcfgAppConfigurationConnectionString: "Endpoint=https://config.azconfig.io;Id=id;Secret=secret",
+				},
+			},
+			want: &parser{
+				settingClient: &setting.Client{},
+				timeout:       time.Second * 10,
+			},
+		},
+		{
+			name: "setting up setting client with connection string, override provided credential (environment)",
+			input: struct {
+				options []Option
+				envs    map[string]string
+			}{
+				options: []Option{
+					WithCredential(&mockCredential{}),
+				},
+				envs: map[string]string{
+					azcfgAppConfigurationName:             "appconfig",
+					azcfgAppConfigurationConnectionString: "Endpoint=https://config.azconfig.io;Id=id;Secret=secret",
+				},
+			},
+			want: &parser{
+				settingClient: &setting.Client{},
+				timeout:       time.Second * 10,
 			},
 		},
 		{
@@ -98,7 +168,7 @@ func TestNewParser(t *testing.T) {
 				envs    map[string]string
 			}{
 				options: []Option{
-					WithConcurrency(20),
+					WithConcurrency(30),
 					WithTimeout(time.Second * 10),
 					WithClientSecretCredential("1111", "2222", "3333"),
 					WithKeyVault("vault1"),
@@ -108,19 +178,32 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  &secret.Client{},
 				settingClient: &setting.Client{},
-				cred:          &identity.ClientCredential{},
 				timeout:       time.Second * 10,
-				concurrency:   20,
 			},
 		},
 		{
-			name: "error setting up credential",
+			name: "error setting up credential for secrets",
 			input: struct {
 				options []Option
 				envs    map[string]string
 			}{
 				envs: map[string]string{
-					azcfgKeyVaultName:         "vault",
+					azcfgKeyVaultName: "vault",
+					azcfgTenantID:     "1111",
+					azcfgClientID:     "2222",
+					azcfgClientSecret: "3333",
+				},
+			},
+			want:    nil,
+			wantErr: identity.ErrInvalidClientID,
+		},
+		{
+			name: "error setting up credential for settings",
+			input: struct {
+				options []Option
+				envs    map[string]string
+			}{
+				envs: map[string]string{
 					azcfgAppConfigurationName: "appconfig",
 					azcfgTenantID:             "1111",
 					azcfgClientID:             "2222",
@@ -143,9 +226,7 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  stub.SecretClient{},
 				settingClient: nil,
-				cred:          nil,
 				timeout:       time.Second * 10,
-				concurrency:   10,
 			},
 		},
 		{
@@ -161,9 +242,7 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  nil,
 				settingClient: stub.SettingClient{},
-				cred:          nil,
 				timeout:       time.Second * 10,
-				concurrency:   10,
 			},
 		},
 		{
@@ -180,9 +259,7 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  stub.SecretClient{},
 				settingClient: stub.SettingClient{},
-				cred:          nil,
 				timeout:       time.Second * 10,
-				concurrency:   10,
 			},
 		},
 	}
@@ -227,89 +304,116 @@ func TestNewParser(t *testing.T) {
 	}
 }
 
+func TestParser_Parse(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input struct {
+			s          Struct
+			options    []Option
+			secrets    map[string]string
+			secretErr  error
+			settings   map[string]string
+			settingErr error
+		}
+		want    Struct
+		wantErr error
+	}{
+		{
+			name: "parse secrets and settings",
+			input: struct {
+				s          Struct
+				options    []Option
+				secrets    map[string]string
+				secretErr  error
+				settings   map[string]string
+				settingErr error
+			}{
+				s: Struct{},
+				secrets: map[string]string{
+					"string": "new string",
+				},
+				settings: map[string]string{
+					"string-setting": "new string setting",
+				},
+			},
+			want: Struct{
+				String:        "new string",
+				StringSetting: "new string setting",
+			},
+		},
+		{
+			name: "parse secrets and settings with context",
+			input: struct {
+				s          Struct
+				options    []Option
+				secrets    map[string]string
+				secretErr  error
+				settings   map[string]string
+				settingErr error
+			}{
+				s: Struct{},
+				secrets: map[string]string{
+					"string": "new string",
+				},
+				settings: map[string]string{
+					"string-setting": "new string setting",
+				},
+				options: []Option{
+					WithContext(context.Background()),
+				},
+			},
+			want: Struct{
+				String:        "new string",
+				StringSetting: "new string setting",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			p := &parser{
+				secretClient:  stub.NewSecretClient(test.input.secrets, test.input.secretErr),
+				settingClient: stub.NewSettingClient(test.input.settings, test.input.settingErr),
+			}
+
+			gotErr := p.Parse(&test.input.s, test.input.options...)
+
+			if diff := cmp.Diff(test.want, test.input.s, cmp.AllowUnexported(Struct{})); diff != "" {
+				t.Errorf("Parse() = unexpected result (-want +got)\n%s\n", diff)
+			}
+
+			if test.wantErr != nil && gotErr == nil {
+				t.Errorf("Unexpected result, should return error\n")
+			}
+		})
+	}
+}
+
 func TestSetupCredential(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input struct {
-			options Options
-			envs    map[string]string
+			cloud   cloud.Cloud
+			options Entra
 		}
 		want    auth.Credential
 		wantErr error
 	}{
 		{
-			name: "credential settings from environment (client secret credential)",
-			input: struct {
-				options Options
-				envs    map[string]string
-			}{
-				envs: map[string]string{
-					azcfgTenantID:     "1111",
-					azcfgClientID:     "2222",
-					azcfgClientSecret: "3333",
-				},
-			},
-			want: &identity.ClientCredential{},
-		},
-		{
-			name: "credential settings from environment (client certificate credential from base64)",
-			input: struct {
-				options Options
-				envs    map[string]string
-			}{
-				envs: map[string]string{
-					azcfgTenantID:          "1111",
-					azcfgClientID:          "2222",
-					azcfgClientCertificate: "certificate",
-				},
-			},
-			want: &identity.ClientCredential{},
-		},
-		{
-			name: "credential settings from environment (client certificate credential from file)",
-			input: struct {
-				options Options
-				envs    map[string]string
-			}{
-				envs: map[string]string{
-					azcfgTenantID:              "1111",
-					azcfgClientID:              "2222",
-					azcfgClientCertificatePath: "certificate",
-				},
-			},
-			want: &identity.ClientCredential{},
-		},
-		{
 			name: "credential settings from environment (managed identity)",
 			input: struct {
-				options Options
-				envs    map[string]string
+				cloud   cloud.Cloud
+				options Entra
 			}{},
 			want: &identity.ManagedIdentityCredential{},
 		},
 		{
-			name: "credential settings from options (provided credential)",
-			input: struct {
-				options Options
-				envs    map[string]string
-			}{
-				options: Options{
-					Credential: mockCredential{
-						t: "custom",
-					},
-				},
-			},
-			want: mockCredential{
-				t: "custom",
-			},
-		},
-		{
 			name: "credential settings from options (client secret credential)",
 			input: struct {
-				options Options
-				envs    map[string]string
+				cloud   cloud.Cloud
+				options Entra
 			}{
-				options: Options{
+				options: Entra{
 					TenantID:     "1111",
 					ClientID:     "2222",
 					ClientSecret: "3333",
@@ -320,10 +424,10 @@ func TestSetupCredential(t *testing.T) {
 		{
 			name: "credential settings from options (client certificate credential)",
 			input: struct {
-				options Options
-				envs    map[string]string
+				cloud   cloud.Cloud
+				options Entra
 			}{
-				options: Options{
+				options: Entra{
 					TenantID:     "1111",
 					ClientID:     "2222",
 					Certificates: []*x509.Certificate{{}},
@@ -333,46 +437,88 @@ func TestSetupCredential(t *testing.T) {
 			want: &identity.ClientCredential{},
 		},
 		{
+			name: "credential settings from options (client assertion credential)",
+			input: struct {
+				cloud   cloud.Cloud
+				options Entra
+			}{
+				options: Entra{
+					TenantID: "1111",
+					ClientID: "2222",
+					Assertion: func() (string, error) {
+						return "assertion", nil
+					},
+				},
+			},
+			want: &identity.ClientCredential{},
+		},
+		{
+			name: "credential settings from options (azure cli)",
+			input: struct {
+				cloud   cloud.Cloud
+				options Entra
+			}{
+				options: Entra{AzureCLICredential: true},
+			},
+			want: &identity.AzureCLICredential{},
+		},
+		{
 			name: "credential settings from options (managed identity)",
 			input: struct {
-				options Options
-				envs    map[string]string
+				cloud   cloud.Cloud
+				options Entra
 			}{
-				options: Options{ManagedIdentity: true},
+				options: Entra{ManagedIdentity: true},
 			},
 			want: &identity.ManagedIdentityCredential{},
 		},
 		{
 			name: "error setting up client certificate credential",
 			input: struct {
-				options Options
-				envs    map[string]string
+				cloud   cloud.Cloud
+				options Entra
 			}{
-				envs: map[string]string{
-					azcfgTenantID:              "1111",
-					azcfgClientID:              "2222",
-					azcfgClientCertificatePath: "certificate",
+				options: Entra{
+					TenantID:        "1111",
+					ClientID:        "2222",
+					certificatePath: "certificate",
 				},
 			},
 			wantErr: errors.New("invalid path"),
 		},
 		{
-			name: "error missing client ID",
+			name: "error setting up managed identity credential",
 			input: struct {
-				options Options
-				envs    map[string]string
+				cloud   cloud.Cloud
+				options Entra
 			}{
-				envs: map[string]string{
-					azcfgTenantID: "1111",
+				options: Entra{
+					ManagedIdentity: true,
 				},
 			},
-			wantErr: ErrMissingClientID,
+			wantErr: errTestManagedIdentity,
+		},
+		{
+			name: "error - cannot determine credential",
+			input: struct {
+				cloud   cloud.Cloud
+				options Entra
+			}{
+				options: Entra{
+					TenantID: "1111",
+				},
+			},
+			wantErr: ErrInvalidCredential,
 		},
 	}
 
+	var oldCertificateAndKey = certificateAndKey
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			os.Clearenv()
+			t.Cleanup(func() {
+				certificateAndKey = oldCertificateAndKey
+			})
 
 			newClientSecretCredential = func(_, _, _ string, _ ...identity.CredentialOption) (*identity.ClientCredential, error) {
 				if test.wantErr != nil {
@@ -386,11 +532,23 @@ func TestSetupCredential(t *testing.T) {
 				}
 				return &identity.ClientCredential{}, nil
 			}
+			newClientAssertionCredential = func(_, _ string, _ func() (string, error), _ ...identity.CredentialOption) (*identity.ClientCredential, error) {
+				if test.wantErr != nil {
+					return nil, test.wantErr
+				}
+				return &identity.ClientCredential{}, nil
+			}
 			newManagedIdentityCredential = func(_ string, _ ...identity.CredentialOption) (*identity.ManagedIdentityCredential, error) {
 				if test.wantErr != nil {
 					return nil, test.wantErr
 				}
 				return &identity.ManagedIdentityCredential{}, nil
+			}
+			newAzureCLICredential = func(_ ...identity.CredentialOption) (*identity.AzureCLICredential, error) {
+				if test.wantErr != nil {
+					return nil, test.wantErr
+				}
+				return &identity.AzureCLICredential{}, nil
 			}
 			certificateAndKey = func(_, _ string) ([]*x509.Certificate, *rsa.PrivateKey, error) {
 				if test.wantErr != nil {
@@ -399,13 +557,9 @@ func TestSetupCredential(t *testing.T) {
 				return []*x509.Certificate{{}}, &rsa.PrivateKey{}, nil
 			}
 
-			for k, v := range test.input.envs {
-				t.Setenv(k, v)
-			}
+			got, gotErr := setupCredential(test.input.cloud, test.input.options)
 
-			got, gotErr := setupCredential(test.input.options)
-
-			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(mockCredential{}), cmpopts.IgnoreUnexported(identity.ClientCredential{}, identity.ManagedIdentityCredential{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(mockCredential{}), cmpopts.IgnoreUnexported(identity.ClientCredential{}, identity.ManagedIdentityCredential{}, identity.AzureCLICredential{})); diff != "" {
 				t.Errorf("setupCredential() = unexpected (-want +got)\n%s\n", diff)
 			}
 
@@ -416,284 +570,96 @@ func TestSetupCredential(t *testing.T) {
 	}
 }
 
-func TestCoalesceString(t *testing.T) {
+func TestCertificateAndKey(t *testing.T) {
+	cert, err := testutils.CreateCertificate()
+	if err != nil {
+		t.Fatalf("Unexpected error creating certificate: %v\n", err)
+	}
+
 	var tests = []struct {
 		name  string
 		input struct {
-			x, y string
+			certificate, certificatePath string
 		}
-		want string
-	}{
-		{
-			name: "x is not empty",
-			input: struct {
-				x, y string
-			}{
-				x: "x",
-				y: "y",
-			},
-			want: "x",
-		},
-		{
-			name: "x is empty",
-			input: struct {
-				x, y string
-			}{
-				x: "",
-				y: "y",
-			},
-			want: "y",
-		},
-		{
-			name: "x and y are empty",
-			input: struct {
-				x, y string
-			}{
-				x: "",
-				y: "",
-			},
-			want: "",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := coalesceString(test.input.x, test.input.y)
-
-			if test.want != got {
-				t.Errorf("coalesceString() = unexpected result, want: %s, got: %s\n", test.want, got)
-			}
-		})
-	}
-}
-
-func TestCoalesceBool(t *testing.T) {
-	var tests = []struct {
-		name  string
-		input struct {
-			x, y bool
+		want struct {
+			certificate []*x509.Certificate
+			key         *rsa.PrivateKey
 		}
-		want bool
+		wantErr error
 	}{
 		{
-			name: "x is true",
+			name: "certificate provided",
 			input: struct {
-				x, y bool
+				certificate, certificatePath string
 			}{
-				x: true,
-				y: false,
+				certificate: base64.StdEncoding.EncodeToString(joinBytes(cert.RawRSAKey, cert.RawCert)),
 			},
-			want: true,
+			want: struct {
+				certificate []*x509.Certificate
+				key         *rsa.PrivateKey
+			}{
+				certificate: []*x509.Certificate{cert.Cert},
+				key:         cert.RSAKey,
+			},
 		},
 		{
-			name: "x is false",
+			name: "certificate path provided",
 			input: struct {
-				x, y bool
+				certificate, certificatePath string
 			}{
-				x: false,
-				y: true,
+				certificatePath: "test-cert.pem",
 			},
-			want: true,
-		},
-		{
-			name: "x and y are false",
-			input: struct {
-				x, y bool
+			want: struct {
+				certificate []*x509.Certificate
+				key         *rsa.PrivateKey
 			}{
-				x: false,
-				y: false,
-			},
-			want: false,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := coalesceBool(test.input.x, test.input.y)
-
-			if test.want != got {
-				t.Errorf("coalesceBool() = unexpected result, want: %t, got: %t\n", test.want, got)
-			}
-		})
-	}
-}
-
-func TestCoalesceMap(t *testing.T) {
-	var tests = []struct {
-		name  string
-		input struct {
-			x, y map[string]string
-		}
-		want map[string]string
-	}{
-		{
-			name: "x is not empty",
-			input: struct {
-				x, y map[string]string
-			}{
-				x: map[string]string{
-					"setting1": "prod",
-				},
-			},
-			want: map[string]string{
-				"setting1": "prod",
-			},
-		},
-		{
-			name: "x is empty",
-			input: struct {
-				x, y map[string]string
-			}{
-				x: nil,
-				y: map[string]string{
-					"setting1": "prod",
-				},
-			},
-			want: map[string]string{
-				"setting1": "prod",
-			},
-		},
-		{
-			name: "x and y are empty",
-			input: struct {
-				x, y map[string]string
-			}{
-				x: nil,
-				y: nil,
-			},
-			want: nil,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := coalesceMap(test.input.x, test.input.y)
-
-			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("coalesceMap() = unexpected result (-want +got)\n%s\n", diff)
-			}
-		})
-	}
-}
-
-func TestParseLabels(t *testing.T) {
-	var tests = []struct {
-		name  string
-		input string
-		want  map[string]string
-	}{
-		{
-			name: "empty string",
-			want: nil,
-		},
-		{
-			name:  "with labels",
-			input: "setting1=prod,setting2=test",
-			want: map[string]string{
-				"setting1": "prod",
-				"setting2": "test",
-			},
-		},
-		{
-			name:  "with labels (spaces in string)",
-			input: "setting1 = prod, setting2 = test",
-			want: map[string]string{
-				"setting1": "prod",
-				"setting2": "test",
-			},
-		},
-		{
-			name:  "with malformed label",
-			input: "setting1",
-			want:  nil,
-		},
-		{
-			name:  "with malformed second label",
-			input: "setting1=prod,setting2",
-			want: map[string]string{
-				"setting1": "prod",
+				certificate: []*x509.Certificate{cert.Cert},
+				key:         cert.RSAKey,
 			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := parseLabels(test.input)
+			if len(test.input.certificatePath) > 0 {
+				certFile, err := testutils.WriteCertificateFile(filepath.Join(os.TempDir(), test.input.certificatePath), cert.RawRSAKey, cert.RawCert)
+				if err != nil {
+					t.Fatalf("Unexpected error writing certificate file: %v\n", err)
+				}
+				defer os.Remove(certFile.Name())
+			}
 
-			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("parseLabels() = unexpected result (-want +got)\n%s\n", diff)
+			gotCerts, gotKey, gotErr := certificateAndKey(test.input.certificate, filepath.Join(os.TempDir(), test.input.certificatePath))
+
+			if diff := cmp.Diff(test.want.certificate, gotCerts); diff != "" {
+				t.Errorf("certificateAndKey() = unexpected certificate (-want +got)\n%s\n", diff)
+			}
+
+			if diff := cmp.Diff(test.want.key, gotKey); diff != "" {
+				t.Errorf("certificateAndKey() = unexpected key (-want +got)\n%s\n", diff)
+			}
+
+			if test.wantErr == nil && gotErr != nil {
+				t.Errorf("Unexpected error: %v\n", gotErr)
 			}
 		})
 	}
 }
 
-func TestParseCloud(t *testing.T) {
-	var tests = []struct {
-		name  string
-		input string
-		want  cloud.Cloud
-	}{
-		{
-			name: "empty string",
-			want: cloud.AzurePublic,
-		},
-		{
-			name:  "Azure",
-			input: "Azure",
-			want:  cloud.AzurePublic,
-		},
-		{
-			name:  "AzurePublic",
-			input: "AzurePublic",
-			want:  cloud.AzurePublic,
-		},
-		{
-			name:  "Public",
-			input: "Public",
-			want:  cloud.AzurePublic,
-		},
-		{
-			name:  "AzureGovernment",
-			input: "AzureGovernment",
-			want:  cloud.AzureGovernment,
-		},
-		{
-			name:  "Government",
-			input: "Government",
-			want:  cloud.AzureGovernment,
-		},
-		{
-			name:  "AzureChina",
-			input: "AzureChina",
-			want:  cloud.AzureChina,
-		},
-		{
-			name:  "China",
-			input: "China",
-			want:  cloud.AzureChina,
-		},
-		{
-			name:  "non-existent cloud",
-			input: "NonExistent",
-			want:  cloud.AzurePublic,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := parseCloud(test.input)
-
-			if test.want != got {
-				t.Errorf("parseCloud() = unexpected result, want: %s, got: %s\n", test.want, got)
-			}
-		})
-	}
-}
-
-type mockCredential struct {
-	t string
-}
+type mockCredential struct{}
 
 func (c mockCredential) Token(ctx context.Context, options ...auth.TokenOption) (auth.Token, error) {
 	return auth.Token{}, nil
+}
+
+var (
+	errTestManagedIdentity = errors.New("managed identity error")
+)
+
+func joinBytes(b ...[]byte) []byte {
+	var buf bytes.Buffer
+	for _, v := range b {
+		buf.Write(v)
+	}
+	return buf.Bytes()
 }

@@ -13,8 +13,6 @@ var (
 var (
 	// ErrInvalidCredential is returned when a credential is not valid.
 	ErrInvalidCredential = errors.New("invalid credential")
-	// ErrMissingClientID is returned when a client ID is required but not provided.
-	ErrMissingClientID = errors.New("client ID is required for client credentials")
 )
 
 // RequiredFieldsError represents an error when either secrets or settings

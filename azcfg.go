@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -255,18 +254,6 @@ func getBitSize(k reflect.Kind) int {
 		bit = 64
 	}
 	return bit
-}
-
-// splitTrim splits a string by the provided separator, after
-// trimming whitespaces.
-func splitTrim(s, sep string) []string {
-	if len(s) == 0 {
-		return nil
-	}
-	if len(sep) == 0 {
-		sep = ","
-	}
-	return strings.Split(regexp.MustCompile(sep+`\s+`).ReplaceAllString(s, sep), sep)
 }
 
 // isRequired checks the provided string slice if the second element (if any)

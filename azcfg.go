@@ -205,7 +205,9 @@ func setValue(v reflect.Value, val string) error {
 		if v.IsNil() {
 			v.Set(reflect.New(v.Type().Elem()))
 		}
-		setValue(v.Elem(), val)
+		if err := setValue(v.Elem(), val); err != nil {
+			return err
+		}
 	case reflect.String:
 		v.SetString(val)
 	case reflect.Bool:

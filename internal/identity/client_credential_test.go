@@ -28,7 +28,7 @@ func TestNewClientCredential(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name: "new client credential with secret and scope",
+			name: "new client credential with secret",
 			input: struct {
 				tenantID string
 				clientID string

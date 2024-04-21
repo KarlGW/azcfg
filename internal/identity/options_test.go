@@ -40,10 +40,10 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:  "WithCertificate",
-			input: WithCertificate([]*x509.Certificate{_testCert.Cert}, _testCert.RSAKey),
+			input: WithCertificate([]*x509.Certificate{_testCert1.Cert}, _testCert1.Key),
 			want: CredentialOptions{
-				certificates: []*x509.Certificate{_testCert.Cert},
-				key:          _testCert.RSAKey,
+				certificates: []*x509.Certificate{_testCert1.Cert},
+				key:          _testCert1.Key,
 			},
 		},
 		{

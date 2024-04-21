@@ -20,6 +20,9 @@ var (
 
 // CertificatesAndKeyFromPEM extracts the x509 certificates and private key from the given PEM.
 func CertificatesAndKeyFromPEM(pem []byte) ([]*x509.Certificate, *rsa.PrivateKey, error) {
+	if len(pem) == 0 {
+		return nil, nil, errors.New("empty pem provided")
+	}
 	var certs []*x509.Certificate
 	var privateKey *rsa.PrivateKey
 	for {

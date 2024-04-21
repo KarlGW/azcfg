@@ -16,7 +16,6 @@ import (
 	"github.com/KarlGW/azcfg/azure/cloud"
 	"github.com/KarlGW/azcfg/internal/httpr"
 	"github.com/KarlGW/azcfg/internal/request"
-	"github.com/KarlGW/azcfg/internal/testutils"
 	"github.com/KarlGW/azcfg/version"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -192,8 +191,8 @@ func TestNewClientCertificateCredential(t *testing.T) {
 			}{
 				tenantID:     _testTenantID,
 				clientID:     _testClientID,
-				certificates: []*x509.Certificate{_testCert.Cert},
-				key:          _testCert.RSAKey,
+				certificates: []*x509.Certificate{_testCert1.Cert},
+				key:          _testCert1.Key,
 				options:      []CredentialOption{},
 			},
 			want: &ClientCredential{
@@ -205,10 +204,10 @@ func TestNewClientCertificateCredential(t *testing.T) {
 				tenantID:  _testTenantID,
 				clientID:  _testClientID,
 				certificate: certificate{
-					cert:       _testCert.Cert,
-					key:        _testCert.RSAKey,
-					thumbprint: _testCert.Thumbprint,
-					x5c:        []string{base64.StdEncoding.EncodeToString(_testCert.Cert.Raw)},
+					cert:       _testCert1.Cert,
+					key:        _testCert1.Key,
+					thumbprint: _testCert1.Thumbprint,
+					x5c:        []string{base64.StdEncoding.EncodeToString(_testCert1.Cert.Raw)},
 				},
 			},
 		},
@@ -223,7 +222,7 @@ func TestNewClientCertificateCredential(t *testing.T) {
 			}{
 				tenantID: _testTenantID,
 				clientID: _testClientID,
-				key:      _testCert.RSAKey,
+				key:      _testCert1.Key,
 				options:  []CredentialOption{},
 			},
 			wantErr: errors.New("client certificate invalid"),
@@ -239,7 +238,7 @@ func TestNewClientCertificateCredential(t *testing.T) {
 			}{
 				tenantID:     _testTenantID,
 				clientID:     _testClientID,
-				certificates: []*x509.Certificate{_testCert.Cert},
+				certificates: []*x509.Certificate{_testCert1.Cert},
 				options:      []CredentialOption{},
 			},
 			wantErr: errors.New("client certificate key invalid"),
@@ -348,7 +347,7 @@ func TestClientCredential_Token(t *testing.T) {
 		{
 			name: "get token (client certificate)",
 			input: func(client request.Client) *ClientCredential {
-				cred, _ := NewClientCertificateCredential(_testTenantID, _testClientID, []*x509.Certificate{_testCert.Cert}, _testCert.RSAKey, WithHTTPClient(client))
+				cred, _ := NewClientCertificateCredential(_testTenantID, _testClientID, []*x509.Certificate{_testCert1.Cert}, _testCert1.Key, WithHTTPClient(client))
 				return cred
 			},
 			want: auth.Token{
@@ -525,7 +524,3 @@ func compareAssertionFunc(x, y func() (string, error)) bool {
 	yResult, yErr := y()
 	return xResult == yResult && xErr == yErr
 }
-
-var (
-	_testCert, _ = testutils.CreateCertificate()
-)

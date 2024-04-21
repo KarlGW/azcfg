@@ -20,6 +20,8 @@ var (
 	ErrInvalidTenantID = errors.New("invalid tenant ID")
 	// ErrInvalidClientID is returned when an invalid Client ID is provided.
 	ErrInvalidClientID = errors.New("invalid client ID")
+	// ErrInvalidCredentials is returned when credentials such as a client secre, certificate or assertion are missing.
+	ErrInvalidCredentials = errors.New("invalid credentials, needs a shared secret, certificate or assertion")
 )
 
 // authResult represents a token response from the authentication

@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/pem"
 	"math/big"
 	"os"
@@ -14,10 +16,11 @@ import (
 
 // Certificate contains a certificate and RSA key pair.
 type Certificate struct {
-	Cert      *x509.Certificate
-	RSAKey    *rsa.PrivateKey
-	RawCert   []byte
-	RawRSAKey []byte
+	Cert       *x509.Certificate
+	RSAKey     *rsa.PrivateKey
+	RawCert    []byte
+	RawRSAKey  []byte
+	Thumbprint string
 }
 
 // CreateCertificate creates a new certificate and RSA key pair.
@@ -64,11 +67,14 @@ func CreateCertificate() (Certificate, error) {
 		return Certificate{}, err
 	}
 
+	hashed := sha1.Sum(cert.Raw)
+
 	certificate := Certificate{
-		Cert:      cert,
-		RSAKey:    pk,
-		RawCert:   certBuf.Bytes(),
-		RawRSAKey: keyBuf.Bytes(),
+		Cert:       cert,
+		RSAKey:     pk,
+		RawCert:    certBuf.Bytes(),
+		RawRSAKey:  keyBuf.Bytes(),
+		Thumbprint: base64.StdEncoding.EncodeToString(hashed[:]),
 	}
 	return certificate, nil
 }

@@ -169,8 +169,6 @@ func TestNewClientSecretCredential(t *testing.T) {
 }
 
 func TestNewClientCertificateCredential(t *testing.T) {
-	_testCert, _ := testutils.CreateCertificate()
-
 	var tests = []struct {
 		name  string
 		input struct {
@@ -350,7 +348,6 @@ func TestClientCredential_Token(t *testing.T) {
 		{
 			name: "get token (client certificate)",
 			input: func(client request.Client) *ClientCredential {
-				_testCert, _ := testutils.CreateCertificate()
 				cred, _ := NewClientCertificateCredential(_testTenantID, _testClientID, []*x509.Certificate{_testCert.Cert}, _testCert.RSAKey, WithHTTPClient(client))
 				return cred
 			},
@@ -528,3 +525,7 @@ func compareAssertionFunc(x, y func() (string, error)) bool {
 	yResult, yErr := y()
 	return xResult == yResult && xErr == yErr
 }
+
+var (
+	_testCert, _ = testutils.CreateCertificate()
+)

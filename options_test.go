@@ -214,7 +214,7 @@ func TestOptions(t *testing.T) {
 		test.input(&got)
 
 		if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Options{}, mockCredential{}, Entra{}), cmpopts.IgnoreUnexported(stub.SecretClient{}, stub.SettingClient{}), cmpopts.IgnoreFields(Entra{}, "PrivateKey"), cmp.Comparer(compareAssertionFunc)); diff != "" {
-			t.Errorf("%s = unexpected result (-want +got)\n%s\n", test.name, diff)
+			t.Errorf("%s() = unexpected result (-want +got)\n%s\n", test.name, diff)
 		}
 	}
 }

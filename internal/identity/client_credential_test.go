@@ -347,7 +347,7 @@ func TestClientCredential_Token(t *testing.T) {
 		{
 			name: "get token (client certificate)",
 			input: func(client request.Client) *ClientCredential {
-				cred, _ := NewClientCertificateCredential(_testTenantID, _testClientID, []*x509.Certificate{_testCert1.Cert}, _testCert1.Key, WithHTTPClient(client))
+				cred, _ := NewClientCredential(_testTenantID, _testClientID, WithCertificate([]*x509.Certificate{_testCert1.Cert}, _testCert1.Key), WithHTTPClient(client))
 				return cred
 			},
 			want: auth.Token{

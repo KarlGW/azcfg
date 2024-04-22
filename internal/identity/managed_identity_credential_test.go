@@ -40,9 +40,10 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 			want: &ManagedIdentityCredential{
 				c: &http.Client{},
 				headers: http.Header{
-					"User-Agent": {"azcfg/" + version.Version()},
-					"Metadata":   {"true"},
+					"Metadata": {"true"},
 				},
+				tokens:     map[string]*auth.Token{},
+				userAgent:  "azcfg/" + version.Version(),
 				endpoint:   imdsEndpoint,
 				apiVersion: imdsAPIVersion,
 			},
@@ -62,9 +63,10 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 			want: &ManagedIdentityCredential{
 				c: &http.Client{},
 				headers: http.Header{
-					"User-Agent": {"azcfg/" + version.Version()},
-					"Metadata":   {"true"},
+					"Metadata": {"true"},
 				},
+				tokens:     map[string]*auth.Token{},
+				userAgent:  "azcfg/" + version.Version(),
 				endpoint:   imdsEndpoint,
 				apiVersion: imdsAPIVersion,
 				clientID:   _testClientID,
@@ -85,9 +87,10 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 			want: &ManagedIdentityCredential{
 				c: &http.Client{},
 				headers: http.Header{
-					"User-Agent": {"azcfg/" + version.Version()},
-					"Metadata":   {"true"},
+					"Metadata": {"true"},
 				},
+				tokens:     map[string]*auth.Token{},
+				userAgent:  "azcfg/" + version.Version(),
 				endpoint:   imdsEndpoint,
 				apiVersion: imdsAPIVersion,
 				resourceID: _testResourceID,
@@ -109,9 +112,10 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 			want: &ManagedIdentityCredential{
 				c: &http.Client{},
 				headers: http.Header{
-					"User-Agent":        {"azcfg/" + version.Version()},
 					"X-Identity-Header": {"12345"},
 				},
+				tokens:     map[string]*auth.Token{},
+				userAgent:  "azcfg/" + version.Version(),
 				endpoint:   "ENDPOINT",
 				apiVersion: appServiceAPIVersion,
 			},
@@ -168,7 +172,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 
 			got, gotErr := NewManagedIdentityCredential(test.input.options...)
 
-			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(ManagedIdentityCredential{}), cmpopts.IgnoreUnexported(http.Client{}, ManagedIdentityCredential{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(ManagedIdentityCredential{}), cmpopts.IgnoreFields(ManagedIdentityCredential{}, "c", "mu")); diff != "" {
 				t.Errorf("NewManagedIdentityCredential() = unexpected result (-want +got)\n%s\n", diff)
 			}
 

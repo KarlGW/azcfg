@@ -156,6 +156,44 @@ func TestCoalesceMap(t *testing.T) {
 	}
 }
 
+func TestParseBool(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{
+			name: "empty string",
+			want: false,
+		},
+		{
+			name:  "true",
+			input: "true",
+			want:  true,
+		},
+		{
+			name:  "false",
+			input: "false",
+			want:  false,
+		},
+		{
+			name:  "invalid",
+			input: "invalid",
+			want:  false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := parseBool(test.input)
+
+			if test.want != got {
+				t.Errorf("parseBool() = unexpected result, want: %t, got: %t\n", test.want, got)
+			}
+		})
+	}
+}
+
 func TestParseLabels(t *testing.T) {
 	var tests = []struct {
 		name  string

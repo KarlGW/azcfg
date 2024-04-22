@@ -1,7 +1,6 @@
 package azcfg
 
 import (
-	"bytes"
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
@@ -592,14 +591,14 @@ func TestCertificateAndKey(t *testing.T) {
 			input: struct {
 				certificate, certificatePath string
 			}{
-				certificate: base64.StdEncoding.EncodeToString(joinBytes(cert.RawRSAKey, cert.RawCert)),
+				certificate: base64.StdEncoding.EncodeToString(append(cert.RawCert, cert.RawKey...)),
 			},
 			want: struct {
 				certificate []*x509.Certificate
 				key         *rsa.PrivateKey
 			}{
 				certificate: []*x509.Certificate{cert.Cert},
-				key:         cert.RSAKey,
+				key:         cert.Key,
 			},
 		},
 		{
@@ -614,7 +613,7 @@ func TestCertificateAndKey(t *testing.T) {
 				key         *rsa.PrivateKey
 			}{
 				certificate: []*x509.Certificate{cert.Cert},
-				key:         cert.RSAKey,
+				key:         cert.Key,
 			},
 		},
 	}
@@ -622,7 +621,7 @@ func TestCertificateAndKey(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if len(test.input.certificatePath) > 0 {
-				certFile, err := testutils.WriteCertificateFile(filepath.Join(os.TempDir(), test.input.certificatePath), cert.RawRSAKey, cert.RawCert)
+				certFile, err := testutils.WriteCertificateFile(filepath.Join(os.TempDir(), test.input.certificatePath), cert.RawKey, cert.RawCert)
 				if err != nil {
 					t.Fatalf("Unexpected error writing certificate file: %v\n", err)
 				}
@@ -655,11 +654,3 @@ func (c mockCredential) Token(ctx context.Context, options ...auth.TokenOption) 
 var (
 	errTestManagedIdentity = errors.New("managed identity error")
 )
-
-func joinBytes(b ...[]byte) []byte {
-	var buf bytes.Buffer
-	for _, v := range b {
-		buf.Write(v)
-	}
-	return buf.Bytes()
-}

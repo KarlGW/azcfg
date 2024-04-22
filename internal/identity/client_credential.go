@@ -19,11 +19,6 @@ import (
 	"github.com/KarlGW/azcfg/version"
 )
 
-var (
-	// ErrMissingCredentials is returned when credentials such as a client secret is missing.
-	ErrMissingCredentials = errors.New("missing credentials, needs a shared secret")
-)
-
 // ClientCredential represents a client credential for authentication to Azure
 // according to the client credential flow. It contains all the necessary settings
 // to perform token requests.
@@ -164,9 +159,8 @@ func (c *ClientCredential) tokenRequest(ctx context.Context, scope string) (auth
 		}
 		data.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 		data.Add("client_assertion", assertion)
-
 	} else {
-		return auth.Token{}, ErrMissingCredentials
+		return auth.Token{}, ErrInvalidCredential
 	}
 
 	headers := http.Header{

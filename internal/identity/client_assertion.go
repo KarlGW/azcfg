@@ -162,7 +162,7 @@ func newCertificate(certs []*x509.Certificate, key *rsa.PrivateKey) (certificate
 			c.cert = cert
 			hashed := sha1.Sum(c.cert.Raw)
 			c.thumbprint = base64.StdEncoding.EncodeToString(hashed[:])
-			c.x5c = append([]string{base64.StdEncoding.EncodeToString(cert.Raw)}, c.x5c...)
+			c.x5c = append([]string{base64.StdEncoding.EncodeToString(c.cert.Raw)}, c.x5c...)
 
 		} else {
 			c.x5c = append(c.x5c, base64.StdEncoding.EncodeToString(cert.Raw))

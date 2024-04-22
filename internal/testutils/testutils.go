@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/pem"
 	"math/big"
 	"os"
@@ -14,14 +16,35 @@ import (
 
 // Certificate contains a certificate and RSA key pair.
 type Certificate struct {
-	Cert      *x509.Certificate
-	RSAKey    *rsa.PrivateKey
-	RawCert   []byte
-	RawRSAKey []byte
+	Cert       *x509.Certificate
+	Key        *rsa.PrivateKey
+	RawCert    []byte
+	RawKey     []byte
+	Thumbprint string
 }
 
+// CreateCertificateOptions contains options for creating a certificate.
+type CreateCertificateOptions struct {
+	PKCS1 bool
+	PKCS8 bool
+}
+
+// CreateCertificateOption is a function that sets options for creating a
+// certificate.
+type CreateCertificateOption func(o *CreateCertificateOptions)
+
 // CreateCertificate creates a new certificate and RSA key pair.
-func CreateCertificate() (Certificate, error) {
+func CreateCertificate(options ...CreateCertificateOption) (Certificate, error) {
+	opts := CreateCertificateOptions{
+		PKCS8: true,
+	}
+	for _, option := range options {
+		option(&opts)
+	}
+	if opts.PKCS1 {
+		opts.PKCS8 = false
+	}
+
 	pk, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return Certificate{}, err
@@ -54,21 +77,32 @@ func CreateCertificate() (Certificate, error) {
 		return Certificate{}, err
 	}
 
-	kb, err := x509.MarshalPKCS8PrivateKey(pk)
-	if err != nil {
-		return Certificate{}, err
+	var kb []byte
+	var keyType string
+	if opts.PKCS8 {
+		kb, err = x509.MarshalPKCS8PrivateKey(pk)
+		if err != nil {
+			return Certificate{}, err
+		}
+		keyType = "PRIVATE KEY"
+	} else {
+		kb = x509.MarshalPKCS1PrivateKey(pk)
+		keyType = "RSA PRIVATE KEY"
 	}
 
 	var keyBuf bytes.Buffer
-	if err := pem.Encode(&keyBuf, &pem.Block{Type: "PRIVATE KEY", Bytes: kb}); err != nil {
+	if err := pem.Encode(&keyBuf, &pem.Block{Type: keyType, Bytes: kb}); err != nil {
 		return Certificate{}, err
 	}
 
+	hashed := sha1.Sum(cert.Raw)
+
 	certificate := Certificate{
-		Cert:      cert,
-		RSAKey:    pk,
-		RawCert:   certBuf.Bytes(),
-		RawRSAKey: keyBuf.Bytes(),
+		Cert:       cert,
+		Key:        pk,
+		RawCert:    certBuf.Bytes(),
+		RawKey:     keyBuf.Bytes(),
+		Thumbprint: base64.StdEncoding.EncodeToString(hashed[:]),
 	}
 	return certificate, nil
 }

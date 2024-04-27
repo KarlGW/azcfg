@@ -186,7 +186,7 @@ func TestClient_Vault(t *testing.T) {
 		got := client.Vault()
 
 		if want != got {
-			t.Errorf("Vault() = unexpected result, want: %s, got: %s", want, got)
+			t.Errorf("Vault() = unexpected result, want: %s, got: %s\n", want, got)
 		}
 	})
 
@@ -201,7 +201,7 @@ func TestClient_SetVault(t *testing.T) {
 		got := client.Vault()
 
 		if want != got {
-			t.Errorf("SetVault() = unexpected result, want: new-vault, got: %s", got)
+			t.Errorf("SetVault() = unexpected result, want: %s, got: %s\n", want, got)
 		}
 	})
 }
@@ -239,7 +239,7 @@ func TestUri(t *testing.T) {
 			got := uri(test.input)
 
 			if test.want != got {
-				t.Errorf("uri() = unexpected result, want: %s, got: %s", test.want, got)
+				t.Errorf("uri() = unexpected result, want: %s, got: %s\n", test.want, got)
 			}
 		})
 	}
@@ -294,7 +294,7 @@ func TestEndpoint(t *testing.T) {
 			got := endpoint(test.input.cloud, test.input.vault)
 
 			if test.want != got {
-				t.Errorf("endpoint() = unexpected result, want: %s, got: %s", test.want, got)
+				t.Errorf("endpoint() = unexpected result, want: %s, got: %s\n", test.want, got)
 			}
 		})
 	}
@@ -328,7 +328,7 @@ func TestScope(t *testing.T) {
 			got := scope(test.input)
 
 			if test.want != got {
-				t.Errorf("scope() = unexpected result, want: %s, got: %s", test.want, got)
+				t.Errorf("scope() = unexpected result, want: %s, got: %s\n", test.want, got)
 			}
 		})
 	}

@@ -188,7 +188,7 @@ func TestOptions(t *testing.T) {
 			},
 		},
 		{
-			name:  "WithCloud - invalid cloud",
+			name:  "(invalid) WithCloud",
 			input: WithCloud("invalid"),
 			want: Options{
 				Cloud: cloud.AzurePublic,

@@ -183,7 +183,7 @@ func (c *Client) Get(ctx context.Context, key string, options ...Option) (Settin
 		label = opts.Label
 	}
 
-	u := fmt.Sprintf("%s/kv/%s?api-version=%s", c.baseURL, key, apiVersion)
+	u := fmt.Sprintf("%s/%s?api-version=%s", c.baseURL, key, apiVersion)
 	if len(label) > 0 {
 		u += "&label=" + label
 	}
@@ -211,7 +211,6 @@ func (c *Client) Get(ctx context.Context, key string, options ...Option) (Settin
 		for k, v := range authHeaders {
 			headers.Add(k, v[0])
 		}
-
 	} else {
 		return Setting{}, ErrNoCredential
 	}
@@ -423,7 +422,7 @@ func uri(c cloud.Cloud) string {
 
 // endpoint returns the base endpoint for the provided cloud.
 func endpoint(cloud cloud.Cloud, appConfiguration string) string {
-	return fmt.Sprintf("https://%s.%s", appConfiguration, uri(cloud))
+	return fmt.Sprintf("https://%s.%s/kv", appConfiguration, uri(cloud))
 }
 
 // scope returns the scope for the provided cloud.

@@ -21,22 +21,6 @@ func WithTimeout(d time.Duration) ClientOption {
 	}
 }
 
-// WithLabel sets label on the on a setting request.
-func WithLabel(label string) Option {
-	return func(o *Options) {
-		o.Label = label
-	}
-}
-
-// WithLabels sets labels on the setting requests based on the provided
-// map. The key of the map should be the setting name, and the value
-// should be the label.
-func WithLabels(labels map[string]string) Option {
-	return func(o *Options) {
-		o.Labels = labels
-	}
-}
-
 // WithRetryPolicy sets the retry policy for setting retrieval.
 func WithRetryPolicy(r httpr.RetryPolicy) ClientOption {
 	return func(c *Client) {
@@ -52,5 +36,21 @@ func WithCloud(c cloud.Cloud) ClientOption {
 			cl = cloud.AzurePublic
 		}
 		c.cloud = cl
+	}
+}
+
+// WithLabel sets label on the on a setting request.
+func WithLabel(label string) Option {
+	return func(o *Options) {
+		o.Label = label
+	}
+}
+
+// WithLabels sets labels on the setting requests based on the provided
+// map. The key of the map should be the setting name, and the value
+// should be the label.
+func WithLabels(labels map[string]string) Option {
+	return func(o *Options) {
+		o.Labels = labels
 	}
 }

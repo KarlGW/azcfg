@@ -3,6 +3,7 @@ package setting
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"io"
 	"net/http"
@@ -43,7 +44,7 @@ func TestNewClient(t *testing.T) {
 				cred:        &mockCredential{},
 				cloud:       cloud.AzurePublic,
 				scope:       "https://azconfig.io/.default",
-				baseURL:     "https://config.azconfig.io",
+				baseURL:     "https://config.azconfig.io/kv",
 				userAgent:   "azcfg/" + version.Version(),
 				concurrency: defaultConcurrency,
 				timeout:     defaultTimeout,
@@ -94,7 +95,7 @@ func TestNewClientWithAccessKey(t *testing.T) {
 				},
 				cloud:       cloud.AzurePublic,
 				scope:       "https://azconfig.io/.default",
-				baseURL:     "https://config.azconfig.io",
+				baseURL:     "https://config.azconfig.io/kv",
 				userAgent:   "azcfg/" + version.Version(),
 				concurrency: defaultConcurrency,
 				timeout:     defaultTimeout,
@@ -142,7 +143,7 @@ func TestNewClientWithConnectionString(t *testing.T) {
 				},
 				cloud:       cloud.AzurePublic,
 				scope:       "https://azconfig.io/.default",
-				baseURL:     "https://config.azconfig.io",
+				baseURL:     "https://config.azconfig.io/kv",
 				userAgent:   "azcfg/" + version.Version(),
 				concurrency: defaultConcurrency,
 				timeout:     defaultTimeout,
@@ -169,13 +170,14 @@ func TestClient_GetSettings(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input struct {
-			keys    []string
-			options []Option
-			bodies  map[string][]byte
-			label   string
-			labels  map[string]string
-			secrets map[string]secret.Secret
-			err     error
+			withAccessKey bool
+			keys          []string
+			options       []Option
+			bodies        map[string][]byte
+			label         string
+			labels        map[string]string
+			secrets       map[string]secret.Secret
+			err           error
 		}
 		want    map[string]Setting
 		wantErr error
@@ -183,13 +185,14 @@ func TestClient_GetSettings(t *testing.T) {
 		{
 			name: "get settings",
 			input: struct {
-				keys    []string
-				options []Option
-				bodies  map[string][]byte
-				label   string
-				labels  map[string]string
-				secrets map[string]secret.Secret
-				err     error
+				withAccessKey bool
+				keys          []string
+				options       []Option
+				bodies        map[string][]byte
+				label         string
+				labels        map[string]string
+				secrets       map[string]secret.Secret
+				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
 				bodies: map[string][]byte{
@@ -206,15 +209,43 @@ func TestClient_GetSettings(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "get settings - access key",
+			input: struct {
+				withAccessKey bool
+				keys          []string
+				options       []Option
+				bodies        map[string][]byte
+				label         string
+				labels        map[string]string
+				secrets       map[string]secret.Secret
+				err           error
+			}{
+				withAccessKey: true,
+				keys:          []string{"setting-a", "setting-b", "setting-c"},
+				bodies: map[string][]byte{
+					"setting-a": []byte(`{"value":"a"}`),
+					"setting-b": []byte(`{"value":"b"}`),
+					"setting-c": []byte(`{"value":"c"}`),
+				},
+			},
+			want: map[string]Setting{
+				"setting-a": {Value: "a"},
+				"setting-b": {Value: "b"},
+				"setting-c": {Value: "c"},
+			},
+			wantErr: nil,
+		},
+		{
 			name: "get settings with label",
 			input: struct {
-				keys    []string
-				options []Option
-				bodies  map[string][]byte
-				label   string
-				labels  map[string]string
-				secrets map[string]secret.Secret
-				err     error
+				withAccessKey bool
+				keys          []string
+				options       []Option
+				bodies        map[string][]byte
+				label         string
+				labels        map[string]string
+				secrets       map[string]secret.Secret
+				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
 				bodies: map[string][]byte{
@@ -237,13 +268,14 @@ func TestClient_GetSettings(t *testing.T) {
 		{
 			name: "get settings with labels",
 			input: struct {
-				keys    []string
-				options []Option
-				bodies  map[string][]byte
-				label   string
-				labels  map[string]string
-				secrets map[string]secret.Secret
-				err     error
+				withAccessKey bool
+				keys          []string
+				options       []Option
+				bodies        map[string][]byte
+				label         string
+				labels        map[string]string
+				secrets       map[string]secret.Secret
+				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
 				bodies: map[string][]byte{
@@ -272,13 +304,14 @@ func TestClient_GetSettings(t *testing.T) {
 		{
 			name: "get settings with key vault references",
 			input: struct {
-				keys    []string
-				options []Option
-				bodies  map[string][]byte
-				label   string
-				labels  map[string]string
-				secrets map[string]secret.Secret
-				err     error
+				withAccessKey bool
+				keys          []string
+				options       []Option
+				bodies        map[string][]byte
+				label         string
+				labels        map[string]string
+				secrets       map[string]secret.Secret
+				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
 				bodies: map[string][]byte{
@@ -300,13 +333,14 @@ func TestClient_GetSettings(t *testing.T) {
 		{
 			name: "setting not found",
 			input: struct {
-				keys    []string
-				options []Option
-				bodies  map[string][]byte
-				label   string
-				labels  map[string]string
-				secrets map[string]secret.Secret
-				err     error
+				withAccessKey bool
+				keys          []string
+				options       []Option
+				bodies        map[string][]byte
+				label         string
+				labels        map[string]string
+				secrets       map[string]secret.Secret
+				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
 				bodies: map[string][]byte{
@@ -324,13 +358,14 @@ func TestClient_GetSettings(t *testing.T) {
 		{
 			name: "setting forbidden",
 			input: struct {
-				keys    []string
-				options []Option
-				bodies  map[string][]byte
-				label   string
-				labels  map[string]string
-				secrets map[string]secret.Secret
-				err     error
+				withAccessKey bool
+				keys          []string
+				options       []Option
+				bodies        map[string][]byte
+				label         string
+				labels        map[string]string
+				secrets       map[string]secret.Secret
+				err           error
 			}{
 				keys: []string{"setting-a"},
 				err:  errForbidden,
@@ -343,13 +378,14 @@ func TestClient_GetSettings(t *testing.T) {
 		{
 			name: "setting not found (key vault reference)",
 			input: struct {
-				keys    []string
-				options []Option
-				bodies  map[string][]byte
-				label   string
-				labels  map[string]string
-				secrets map[string]secret.Secret
-				err     error
+				withAccessKey bool
+				keys          []string
+				options       []Option
+				bodies        map[string][]byte
+				label         string
+				labels        map[string]string
+				secrets       map[string]secret.Secret
+				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
 				bodies: map[string][]byte{
@@ -368,13 +404,14 @@ func TestClient_GetSettings(t *testing.T) {
 		{
 			name: "server error",
 			input: struct {
-				keys    []string
-				options []Option
-				bodies  map[string][]byte
-				label   string
-				labels  map[string]string
-				secrets map[string]secret.Secret
-				err     error
+				withAccessKey bool
+				keys          []string
+				options       []Option
+				bodies        map[string][]byte
+				label         string
+				labels        map[string]string
+				secrets       map[string]secret.Secret
+				err           error
 			}{
 				keys: []string{"setting-a"},
 				err:  errServer,
@@ -389,13 +426,14 @@ func TestClient_GetSettings(t *testing.T) {
 		{
 			name: "request error",
 			input: struct {
-				keys    []string
-				options []Option
-				bodies  map[string][]byte
-				label   string
-				labels  map[string]string
-				secrets map[string]secret.Secret
-				err     error
+				withAccessKey bool
+				keys          []string
+				options       []Option
+				bodies        map[string][]byte
+				label         string
+				labels        map[string]string
+				secrets       map[string]secret.Secret
+				err           error
 			}{
 				keys: []string{"setting-a"},
 				err:  errRequest,
@@ -406,13 +444,14 @@ func TestClient_GetSettings(t *testing.T) {
 		{
 			name: "get secret error",
 			input: struct {
-				keys    []string
-				options []Option
-				bodies  map[string][]byte
-				label   string
-				labels  map[string]string
-				secrets map[string]secret.Secret
-				err     error
+				withAccessKey bool
+				keys          []string
+				options       []Option
+				bodies        map[string][]byte
+				label         string
+				labels        map[string]string
+				secrets       map[string]secret.Secret
+				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
 				bodies: map[string][]byte{
@@ -429,19 +468,27 @@ func TestClient_GetSettings(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			client, _ := NewClient("config", mockCredential{}, func(c *Client) {
-				c.c = mockHttpClient{
-					bodies: test.input.bodies,
-					label:  test.input.label,
-					labels: test.input.labels,
-					err:    test.input.err,
-				}
-				c.sc = &mockSecretClient{
-					secrets: test.input.secrets,
-					err:     test.input.err,
-				}
-				c.timeout = time.Millisecond * 10
-			})
+			opts := []ClientOption{
+				func(c *Client) {
+					c.c = mockHttpClient{
+						bodies: test.input.bodies,
+						label:  test.input.label,
+						labels: test.input.labels,
+						err:    test.input.err,
+					}
+					c.sc = &mockSecretClient{
+						secrets: test.input.secrets,
+						err:     test.input.err,
+					}
+					c.timeout = time.Millisecond * 10
+				},
+			}
+			var client *Client
+			if !test.input.withAccessKey {
+				client, _ = NewClient("config", mockCredential{}, opts...)
+			} else {
+				client, _ = NewClientWithAccessKey("config", AccessKey{ID: "id", Secret: base64.StdEncoding.EncodeToString([]byte(`secret`))}, opts...)
+			}
 
 			got, gotErr := client.GetSettings(context.Background(), test.input.keys, test.input.options...)
 
@@ -680,6 +727,134 @@ func TestParseConnectionString(t *testing.T) {
 
 			if diff := cmp.Diff(test.wantErr, gotErr, cmpopts.EquateErrors()); diff != "" {
 				t.Errorf("parseConnectionString() = unexpected error (-want +got)\n%s\n", diff)
+			}
+		})
+	}
+}
+
+func TestUri(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input cloud.Cloud
+		want  string
+	}{
+		{
+			name:  "azure public",
+			input: cloud.AzurePublic,
+			want:  "azconfig.io",
+		},
+		{
+			name:  "azure government",
+			input: cloud.AzureGovernment,
+			want:  "azconfig.azure.us",
+		},
+		{
+			name:  "azure china",
+			input: cloud.AzureChina,
+			want:  "azconfig.azure.cn",
+		},
+		{
+			name:  "invalid",
+			input: cloud.Cloud("invalid"),
+			want:  "",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := uri(test.input)
+
+			if test.want != got {
+				t.Errorf("uri() = unexpected result, want: %s, got: %s", test.want, got)
+			}
+		})
+	}
+}
+
+func TestEndpoint(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input struct {
+			cloud            cloud.Cloud
+			appConfiguration string
+		}
+		want string
+	}{
+		{
+			name: "azure public",
+			input: struct {
+				cloud            cloud.Cloud
+				appConfiguration string
+			}{
+				cloud:            cloud.AzurePublic,
+				appConfiguration: "config",
+			},
+			want: "https://config.azconfig.io/kv",
+		},
+		{
+			name: "azure government",
+			input: struct {
+				cloud            cloud.Cloud
+				appConfiguration string
+			}{
+				cloud:            cloud.AzureGovernment,
+				appConfiguration: "config",
+			},
+			want: "https://config.azconfig.azure.us/kv",
+		},
+		{
+			name: "azure china",
+			input: struct {
+				cloud            cloud.Cloud
+				appConfiguration string
+			}{
+				cloud:            cloud.AzureChina,
+				appConfiguration: "config",
+			},
+			want: "https://config.azconfig.azure.cn/kv",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := endpoint(test.input.cloud, test.input.appConfiguration)
+
+			if test.want != got {
+				t.Errorf("endpoint() = unexpected result, want: %s, got: %s", test.want, got)
+			}
+		})
+	}
+}
+
+func TestScope(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input cloud.Cloud
+		want  string
+	}{
+		{
+			name:  "azure public",
+			input: cloud.AzurePublic,
+			want:  "https://azconfig.io/.default",
+		},
+		{
+			name:  "azure government",
+			input: cloud.AzureGovernment,
+			want:  "https://azconfig.azure.us/.default",
+		},
+		{
+			name:  "azure china",
+			input: cloud.AzureChina,
+			want:  "https://azconfig.azure.cn/.default",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := scope(test.input)
+
+			if test.want != got {
+				t.Errorf("scope() = unexpected result, want: %s, got: %s", test.want, got)
 			}
 		})
 	}

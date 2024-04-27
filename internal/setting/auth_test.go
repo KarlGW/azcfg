@@ -124,5 +124,4 @@ func TestHash(t *testing.T) {
 
 var (
 	_testHash, _ = hash([]byte(""))
-	//_testDate    = time.Now().Format(http.TimeFormat)
 )

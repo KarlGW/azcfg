@@ -32,7 +32,7 @@ func TestHMACAuthenticationHeaders(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name: "hmac authentication headers",
+			name: "hmac authorization headers",
 			input: struct {
 				key     AccessKey
 				method  string

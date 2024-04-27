@@ -21,7 +21,7 @@ func hmacAuthenticationHeaders(key AccessKey, method, rawURL string, content []b
 	if err != nil {
 		return nil, err
 	}
-	date := time.Now().UTC().Format(http.TimeFormat)
+	date := now().UTC().Format(http.TimeFormat)
 
 	str := stringToSign(method, u.EscapedPath()+"?"+u.RawQuery, date, u.Host, contentHash)
 	signature, err := sign(str, key.Secret)
@@ -30,9 +30,9 @@ func hmacAuthenticationHeaders(key AccessKey, method, rawURL string, content []b
 	}
 
 	headers := http.Header{}
-	headers.Add("X-MS-Date", date)
+	headers.Add("X-Ms-Date", date)
 	headers.Add("Host", u.Host)
-	headers.Add("X-MS-Content-SHA256", contentHash)
+	headers.Add("X-Ms-Content-Sha256", contentHash)
 	headers.Add("Authorization", "HMAC-SHA256 Credential="+key.ID+", SignedHeaders=x-ms-date;host;x-ms-content-sha256, Signature="+signature)
 	return headers, nil
 }
@@ -79,3 +79,5 @@ func hash(content []byte) (string, error) {
 	}
 	return base64.StdEncoding.EncodeToString(hasher.Sum(nil)), nil
 }
+
+var now = time.Now

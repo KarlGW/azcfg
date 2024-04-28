@@ -98,7 +98,7 @@ func NewClientCertificateCredential(tenantID, clientID string, certificates []*x
 		return nil, errors.New("empty client certificate")
 	}
 	if key == nil {
-		return nil, errors.New("empty client private key")
+		return nil, errors.New("nil client certificate private key")
 	}
 
 	return NewClientCredential(tenantID, clientID, append(options, WithCertificate(certificates, key))...)

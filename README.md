@@ -467,7 +467,7 @@ azcfg.Parse(
 // System assigned identity.
 azcfg.Parse(&cfg, azcfg.WithManagedIdentity(), azcfg.WithKeyVault(vault))
 // User assigned identity.
-azcfg.Parse(&cfg, azcfg.WithManagedIdentity(clientID), azcfg.WithKeyVault(vault))
+azcfg.Parse(&cfg, azcfg.WithManagedIdentity(), azcfg.WithClientID(clientID), azcfg.WithKeyVault(vault))
 ```
 
 **Azure CLI**

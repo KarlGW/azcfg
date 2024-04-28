@@ -249,12 +249,18 @@ func WithClientAssertionCredential(tenantID, clientID string, assertion func() (
 }
 
 // WithManagedIdentity sets the parser to use a managed identity.
-func WithManagedIdentity(clientID ...string) Option {
+func WithManagedIdentity() Option {
 	return func(o *Options) {
 		o.Authentication.Entra.ManagedIdentity = true
-		if len(clientID) > 0 {
-			o.Authentication.Entra.ClientID = clientID[0]
-		}
+	}
+}
+
+// WithClientID sets the client ID for the parser. Use together
+// with option WithManagedIdentity to use a user assigned identity
+// with the provided client ID.
+func WithClientID(clientID string) Option {
+	return func(o *Options) {
+		o.Authentication.Entra.ClientID = clientID
 	}
 }
 

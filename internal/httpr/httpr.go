@@ -58,7 +58,7 @@ func (c Client) Do(r *http.Request) (*http.Response, error) {
 	}
 	if c.retryPolicy.Backoff == nil {
 		c.retryPolicy.Backoff = func(delay, maxDelay time.Duration, retry int) time.Duration {
-			return time.Millisecond * 500
+			return 0
 		}
 	}
 

@@ -99,12 +99,22 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:  "WithManagedIdentity",
-			input: WithManagedIdentity("2222"),
+			input: WithManagedIdentity(),
 			want: Options{
 				Authentication: Authentication{
 					Entra: Entra{
-						ClientID:        "2222",
 						ManagedIdentity: true,
+					},
+				},
+			},
+		},
+		{
+			name:  "WithClientID",
+			input: WithClientID("2222"),
+			want: Options{
+				Authentication: Authentication{
+					Entra: Entra{
+						ClientID: "2222",
 					},
 				},
 			},

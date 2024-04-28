@@ -18,9 +18,9 @@ import (
 type Certificate struct {
 	Cert       *x509.Certificate
 	Key        *rsa.PrivateKey
+	Thumbprint string
 	RawCert    []byte
 	RawKey     []byte
-	Thumbprint string
 }
 
 // CreateCertificateOptions contains options for creating a certificate.

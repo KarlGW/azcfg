@@ -14,11 +14,6 @@ import (
 	"github.com/KarlGW/azcfg/auth"
 )
 
-var (
-	// ErrAzureCLINotFound is returned when the Azure CLI is not found.
-	ErrAzureCLINotFound = errors.New("azure cli not found")
-)
-
 // AzureCLICredential represent credentials handled by the Azure CLI. It
 // contains all the necessary settings to perform token requests.
 type AzureCLICredential struct {
@@ -85,7 +80,7 @@ var cliToken = func(ctx context.Context, scope string) (auth.Token, error) {
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) && exitErr.ExitCode() == 127 || strings.HasPrefix(string(exitErr.Stderr), "'az' is not recognized") {
-			return auth.Token{}, ErrAzureCLINotFound
+			return auth.Token{}, errors.New("azure cli not found")
 		}
 		return auth.Token{}, err
 	}

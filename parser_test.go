@@ -194,7 +194,7 @@ func TestNewParser(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: identity.ErrInvalidClientID,
+			wantErr: cmpopts.AnyError,
 		},
 		{
 			name: "error setting up credential for settings",
@@ -210,7 +210,7 @@ func TestNewParser(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: identity.ErrInvalidClientID,
+			wantErr: cmpopts.AnyError,
 		},
 		{
 			name: "secret client provided",
@@ -507,7 +507,7 @@ func TestSetupCredential(t *testing.T) {
 					TenantID: "1111",
 				},
 			},
-			wantErr: ErrInvalidCredential,
+			wantErr: cmpopts.AnyError,
 		},
 	}
 

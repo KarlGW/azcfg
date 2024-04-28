@@ -640,7 +640,7 @@ func TestClient_vaultAndSecret(t *testing.T) {
 		{
 			name:    "faulty URL",
 			input:   "not-a-url",
-			wantErr: ErrParseSecretURL,
+			wantErr: cmpopts.AnyError,
 		},
 	}
 

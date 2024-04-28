@@ -1,27 +1,12 @@
 package identity
 
 import (
-	"errors"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
-)
-
-var (
-	// ErrEmptyTokenResponse is returned when the response from a token request
-	// is empty.
-	ErrEmptyTokenResponse = errors.New("empty token response")
-	// ErrTokenResponse is an erroneous token request.
-	ErrTokenResponse = errors.New("token response error")
-	// ErrInvalidTenantID is returned when an invalid Tenant ID is provided.
-	ErrInvalidTenantID = errors.New("invalid tenant ID")
-	// ErrInvalidClientID is returned when an invalid Client ID is provided.
-	ErrInvalidClientID = errors.New("invalid client ID")
-	// ErrInvalidCredential is returned when credential such as a secret, certificate or assertion are missing.
-	ErrInvalidCredential = errors.New("invalid credential, needs a secret, certificate or assertion")
 )
 
 // authResult represents a token response from the authentication

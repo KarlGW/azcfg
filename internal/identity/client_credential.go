@@ -39,10 +39,10 @@ type ClientCredential struct {
 // NewClientCredential creates and returns a new *ClientCredential.
 func NewClientCredential(tenantID string, clientID string, options ...CredentialOption) (*ClientCredential, error) {
 	if !validGUID(tenantID) {
-		return nil, ErrInvalidTenantID
+		return nil, errors.New("invalid tenant ID")
 	}
 	if !validGUID(clientID) {
-		return nil, ErrInvalidClientID
+		return nil, errors.New("invalid client ID")
 	}
 
 	c := &ClientCredential{
@@ -85,7 +85,7 @@ func NewClientCredential(tenantID string, clientID string, options ...Credential
 // secret (client secret credential).
 func NewClientSecretCredential(tenantID, clientID, secret string, options ...CredentialOption) (*ClientCredential, error) {
 	if len(secret) == 0 {
-		return nil, errors.New("client secret invalid")
+		return nil, errors.New("empty client secret")
 	}
 
 	return NewClientCredential(tenantID, clientID, append(options, WithSecret(secret))...)
@@ -95,10 +95,10 @@ func NewClientSecretCredential(tenantID, clientID, secret string, options ...Cre
 // a certificate and private key (client certificate credential).
 func NewClientCertificateCredential(tenantID, clientID string, certificates []*x509.Certificate, key *rsa.PrivateKey, options ...CredentialOption) (*ClientCredential, error) {
 	if len(certificates) == 0 {
-		return nil, errors.New("client certificate invalid")
+		return nil, errors.New("empty client certificate")
 	}
 	if key == nil {
-		return nil, errors.New("client certificate key invalid")
+		return nil, errors.New("empty client private key")
 	}
 
 	return NewClientCredential(tenantID, clientID, append(options, WithCertificate(certificates, key))...)
@@ -108,7 +108,7 @@ func NewClientCertificateCredential(tenantID, clientID string, certificates []*x
 // a client assertion function (client assertion credential).
 func NewClientAssertionCredential(tenantID, clientID string, assertion func() (string, error), options ...CredentialOption) (*ClientCredential, error) {
 	if assertion == nil {
-		return nil, errors.New("client assertion function invalid")
+		return nil, errors.New("nil client assertion")
 	}
 	return NewClientCredential(tenantID, clientID, append(options, WithAssertion(assertion))...)
 }
@@ -160,7 +160,7 @@ func (c *ClientCredential) tokenRequest(ctx context.Context, scope string) (auth
 		data.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 		data.Add("client_assertion", assertion)
 	} else {
-		return auth.Token{}, ErrInvalidCredential
+		return auth.Token{}, errors.New("invalid credential, needs a secret, certificate or assertion")
 	}
 
 	headers := http.Header{

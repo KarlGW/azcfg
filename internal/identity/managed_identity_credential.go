@@ -19,12 +19,6 @@ import (
 )
 
 var (
-	// ErrUnsupportedManagedIdentityType is returned when the type of the managed identity
-	// cannot be established.
-	ErrUnsupportedManagedIdentityType = errors.New("unsupported managed identity type")
-	// ErrInvalidManagedIdentityResourceID is returned when an invalid managed
-	// identity resource ID is provided.
-	ErrInvalidManagedIdentityResourceID = errors.New("invalid managed identity resource ID")
 	// ErrIMDSEndpointUnavailable is returned when the IMDS endpoint is unavailable.
 	ErrIMDSEndpointUnavailable = errors.New("IMDS endpoint unavailable")
 )
@@ -87,14 +81,14 @@ func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentity
 
 	if len(opts.clientID) > 0 {
 		if !validGUID(opts.clientID) {
-			return nil, ErrInvalidClientID
+			return nil, errors.New("invalid client ID")
 		}
 		c.clientID = opts.clientID
 	}
 
 	if len(opts.resourceID) > 0 {
 		if !validManagedIdentityResourceID(opts.resourceID) {
-			return nil, ErrInvalidManagedIdentityResourceID
+			return nil, errors.New("invalid managed identity resource ID")
 		}
 		c.resourceID = opts.resourceID
 	}
@@ -104,7 +98,7 @@ func NewManagedIdentityCredential(options ...CredentialOption) (*ManagedIdentity
 			c.endpoint, c.apiVersion = endpoint, appServiceAPIVersion
 			c.headers.Add("X-Identity-Header", header)
 		} else {
-			return nil, ErrUnsupportedManagedIdentityType
+			return nil, errors.New("unsupported managed identity type")
 		}
 	} else {
 		c.endpoint, c.apiVersion = imdsEndpoint, imdsAPIVersion

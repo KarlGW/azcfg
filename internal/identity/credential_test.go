@@ -9,16 +9,9 @@ import (
 
 	"github.com/KarlGW/azcfg/auth"
 	"github.com/KarlGW/azcfg/internal/request"
+	"github.com/KarlGW/azcfg/internal/uuid"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-)
-
-var (
-	_testTenantID     = "56757959-9916-4cd6-8b2f-df038fcc3c85"
-	_testClientID     = "afb5e3e4-0fa1-4a22-aa35-6387dc0bc09d"
-	_testClientSecret = "12345"
-	_testResourceID   = "/subscriptions/93af3dd4-71ff-498e-ab46-7137dc2575e4/resourcegroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity"
-	_testScope        = "https://management.azure.com/.default"
 )
 
 func TestTokenFromAuthResult(t *testing.T) {
@@ -75,3 +68,12 @@ func setupHTTPClient(target string, _ error) request.Client {
 		Transport: tr,
 	}
 }
+
+var (
+	_testTenantID, _       = uuid.New()
+	_testClientID, _       = uuid.New()
+	_testSubscriptionID, _ = uuid.New()
+	_testClientSecret      = "12345"
+	_testResourceID        = "/subscriptions/" + _testSubscriptionID + "/resourcegroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity"
+	_testScope             = "https://management.azure.com/.default"
+)

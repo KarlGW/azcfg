@@ -2,7 +2,6 @@ package identity
 
 import (
 	"crypto"
-	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -10,8 +9,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
+
+	"github.com/KarlGW/azcfg/internal/uuid"
 )
 
 // newCertificateAssertion creates a new assertion jwt for a client certificate credential.
@@ -25,7 +25,7 @@ func newCertificateAssertion(endpoint, clientID string, cert certificate) (jwt, 
 		header.X5C = cert.x5c
 	}
 
-	uuid, err := newUUID()
+	uuid, err := uuid.New()
 	if err != nil {
 		return jwt{}, err
 	}
@@ -112,20 +112,6 @@ type signature []byte
 // Encode the signature as a base64 encoded string.
 func (s signature) Encode() string {
 	return base64.URLEncoding.EncodeToString(s)
-}
-
-// newUUID creates a new UUID for the jwt.
-var newUUID = func() (string, error) {
-	uuid := make([]byte, 16)
-	_, err := rand.Read(uuid)
-	if err != nil {
-		return "", err
-	}
-
-	uuid[6] = (uuid[6] & 0x0f) | 0x40
-	uuid[8] = (uuid[8] & 0x3f) | 0x80
-
-	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:]), nil
 }
 
 // certificate is a processed certificate chain and key that contains

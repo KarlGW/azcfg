@@ -160,12 +160,12 @@ func (p *parser) Parse(v any, options ...Option) error {
 // options.
 func setupCredential(cloud cloud.Cloud, entra Entra) (auth.Credential, error) {
 	if entra.AzureCLICredential {
-		return newAzureCLICredential(identity.WithCloud(cloud))
+		return identity.NewAzureCLICredential(identity.WithCloud(cloud))
 	}
 
 	if len(entra.TenantID) == 0 || entra.ManagedIdentity {
-		cred, err := newManagedIdentityCredential(
-			entra.ClientID,
+		cred, err := identity.NewManagedIdentityCredential(
+			identity.WithClientID(entra.ClientID),
 			identity.WithCloud(cloud),
 			identity.WithIMDSDialTimeout(entra.ManagedIdentityIMDSDialTimeout),
 		)
@@ -178,7 +178,7 @@ func setupCredential(cloud cloud.Cloud, entra Entra) (auth.Credential, error) {
 	}
 
 	if len(entra.ClientSecret) > 0 {
-		return newClientSecretCredential(entra.TenantID, entra.ClientID, entra.ClientSecret, identity.WithCloud(cloud))
+		return identity.NewClientSecretCredential(entra.TenantID, entra.ClientID, entra.ClientSecret, identity.WithCloud(cloud))
 	}
 
 	var certs []*x509.Certificate
@@ -193,11 +193,11 @@ func setupCredential(cloud cloud.Cloud, entra Entra) (auth.Credential, error) {
 		}
 	}
 	if len(certs) > 0 && key != nil {
-		return newClientCertificateCredential(entra.TenantID, entra.ClientID, certs, key, identity.WithCloud(cloud))
+		return identity.NewClientCertificateCredential(entra.TenantID, entra.ClientID, certs, key, identity.WithCloud(cloud))
 	}
 
 	if entra.Assertion != nil {
-		return newClientAssertionCredential(entra.TenantID, entra.ClientID, entra.Assertion, identity.WithCloud(cloud))
+		return identity.NewClientAssertionCredential(entra.TenantID, entra.ClientID, entra.Assertion, identity.WithCloud(cloud))
 	}
 
 	return nil, errors.New("could not determine and create entra credential")
@@ -245,7 +245,7 @@ func newSettingClient(settings settings, options ...setting.ClientOption) (setti
 var certificatesAndKeyFromPEM = identity.CertificatesAndKeyFromPEM
 
 // certificateAndKey gets the certificates and keys from the provided certificate or certificate path.
-var certificateAndKey = func(certificate, certificatePath string) ([]*x509.Certificate, *rsa.PrivateKey, error) {
+func certificateAndKey(certificate, certificatePath string) ([]*x509.Certificate, *rsa.PrivateKey, error) {
 	var pem []byte
 	var err error
 	if len(certificate) > 0 {
@@ -260,24 +260,4 @@ var certificateAndKey = func(certificate, certificatePath string) ([]*x509.Certi
 	}
 
 	return certificatesAndKeyFromPEM(pem)
-}
-
-var newClientSecretCredential = func(tenantID, clientID, clientSecret string, options ...identity.CredentialOption) (*identity.ClientCredential, error) {
-	return identity.NewClientSecretCredential(tenantID, clientID, clientSecret, options...)
-}
-
-var newClientCertificateCredential = func(tenantID, clientID string, certificates []*x509.Certificate, key *rsa.PrivateKey, options ...identity.CredentialOption) (*identity.ClientCredential, error) {
-	return identity.NewClientCertificateCredential(tenantID, clientID, certificates, key, options...)
-}
-
-var newClientAssertionCredential = func(tenantID, clientID string, assertion func() (string, error), options ...identity.CredentialOption) (*identity.ClientCredential, error) {
-	return identity.NewClientAssertionCredential(tenantID, clientID, assertion, options...)
-}
-
-var newManagedIdentityCredential = func(clientID string, options ...identity.CredentialOption) (*identity.ManagedIdentityCredential, error) {
-	return identity.NewManagedIdentityCredential(append(options, identity.WithClientID(clientID))...)
-}
-
-var newAzureCLICredential = func(options ...identity.CredentialOption) (*identity.AzureCLICredential, error) {
-	return identity.NewAzureCLICredential(options...)
 }

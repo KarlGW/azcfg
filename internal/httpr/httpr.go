@@ -1,8 +1,6 @@
 package httpr
 
 import (
-	"bytes"
-	"context"
 	"io"
 	"net/http"
 	"time"
@@ -50,9 +48,17 @@ func NewClient(options ...Option) *Client {
 
 // Do sends an HTTP request and returns an HTTP response.
 func (c Client) Do(r *http.Request) (*http.Response, error) {
-	if r.Body != nil && r.GetBody == nil {
-		if err := bufferRequestBody(r); err != nil {
-			return nil, err
+	if c.cl == nil {
+		c.cl = &http.Client{}
+	}
+	if c.retryPolicy.Retry == nil {
+		c.retryPolicy.Retry = func(r *http.Response, err error) bool {
+			return false
+		}
+	}
+	if c.retryPolicy.Backoff == nil {
+		c.retryPolicy.Backoff = func(delay, maxDelay time.Duration, retry int) time.Duration {
+			return 0
 		}
 	}
 
@@ -81,27 +87,6 @@ func (c Client) Do(r *http.Request) (*http.Response, error) {
 	}
 }
 
-// bufferRequestBody reads the request body into a buffer
-// and sets r.GetBody with the buffer to be used
-// with retries.
-func bufferRequestBody(r *http.Request) error {
-	if r.Body == nil {
-		return nil
-	}
-	b, err := io.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-	if err := r.Body.Close(); err != nil {
-		return err
-	}
-	r.GetBody = func() (io.ReadCloser, error) {
-		return io.NopCloser(bytes.NewReader(b)), nil
-	}
-	r.Body = io.NopCloser(bytes.NewReader(b))
-	return nil
-}
-
 // resetRequest resets the request to be used before a
 // retry.
 func resetRequest(r *http.Request) error {
@@ -125,21 +110,4 @@ func drainResponse(r *http.Response) error {
 		return err
 	}
 	return nil
-}
-
-// NewRequest makes use of http.NewRequestWithContext and takes a []byte instead
-// of a io.ReadCloser as a body. If the provided body is not empty it will
-// set the GetBody function of the resulting request. This to prepare
-// the request for retries as implemented by Do from the httpr.Client.
-func NewRequest(ctx context.Context, method, url string, body []byte) (*http.Request, error) {
-	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	if len(body) > 0 {
-		req.GetBody = func() (io.ReadCloser, error) {
-			return io.NopCloser(bytes.NewReader(body)), nil
-		}
-	}
-	return req, err
 }

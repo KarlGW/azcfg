@@ -20,6 +20,7 @@ func TestClient_Do(t *testing.T) {
 		req         func() *http.Request
 		retryPolicy RetryPolicy
 		retries     int
+		emptyClient bool
 		err         error
 	}
 
@@ -47,6 +48,20 @@ func TestClient_Do(t *testing.T) {
 					Retry:    defaultRetry,
 					Backoff:  exponentialBackoff,
 				},
+			},
+			want: want{
+				statusCode: http.StatusOK,
+				body:       []byte(`{"message":"hello"}`),
+			},
+		},
+		{
+			name: "successful GET - empty client",
+			input: input{
+				req: func() *http.Request {
+					req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
+					return req
+				},
+				emptyClient: true,
 			},
 			want: want{
 				statusCode: http.StatusOK,
@@ -169,7 +184,7 @@ func TestClient_Do(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			ts := setupServer(false, test.input.retries, test.input.err)
 			defer ts.Close()
-			client := setupClient(ts.Listener.Addr().String(), test.input.retryPolicy, test.input.err)
+			client := setupClient(ts.Listener.Addr().String(), test.input.retryPolicy, test.input.emptyClient, test.input.err)
 
 			got, gotErr := client.Do(test.input.req())
 			if test.wantErr == nil && got == nil {
@@ -225,7 +240,7 @@ func setupServer(tls bool, retries int, err error) *httptest.Server {
 	}))
 }
 
-func setupClient(target string, rp RetryPolicy, err error) *Client {
+func setupClient(target string, rp RetryPolicy, emptyClient bool, err error) *Client {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
@@ -237,7 +252,12 @@ func setupClient(target string, rp RetryPolicy, err error) *Client {
 			return net.Dial("tcp", target)
 		},
 	}
-	return NewClient(WithTransport(tr), WithRetryPolicy(rp), WithTimeout(time.Millisecond*5))
+	if emptyClient {
+		return &Client{cl: &http.Client{Transport: tr}}
+	} else {
+		return NewClient(WithTransport(tr), WithRetryPolicy(rp), WithTimeout(time.Millisecond*5))
+	}
+
 }
 
 var errTestClient = errors.New("client error")

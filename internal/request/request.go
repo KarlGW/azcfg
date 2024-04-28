@@ -1,11 +1,10 @@
 package request
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"net/http"
-
-	"github.com/KarlGW/azcfg/internal/httpr"
 )
 
 // Client is the interface that wraps around method Do.
@@ -15,7 +14,7 @@ type Client interface {
 
 // Do performs a request with the provided arguments.
 func Do(ctx context.Context, client Client, headers http.Header, method, url string, body []byte) (Response, error) {
-	req, err := httpr.NewRequest(ctx, method, url, body)
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(body))
 	if err != nil {
 		return Response{}, err
 	}

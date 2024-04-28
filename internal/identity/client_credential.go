@@ -160,7 +160,7 @@ func (c *ClientCredential) tokenRequest(ctx context.Context, scope string) (auth
 		data.Add("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
 		data.Add("client_assertion", assertion)
 	} else {
-		return auth.Token{}, errors.New("invalid credential, needs a secret, certificate or assertion")
+		return auth.Token{}, errors.New("invalid credential, need a secret, certificate or assertion")
 	}
 
 	headers := http.Header{

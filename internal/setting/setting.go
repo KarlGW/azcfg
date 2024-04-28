@@ -202,17 +202,16 @@ func (c *Client) Get(ctx context.Context, key string, options ...Option) (Settin
 		}
 		headers.Add("Authorization", "Bearer "+token.AccessToken)
 	} else if c.accessKey != (AccessKey{}) {
-		authHeaders, err := hmacAuthenticationHeaders(
+		err := addHMACAuthenticationHeaders(
+			headers,
 			c.accessKey,
 			http.MethodGet,
 			u,
+			time.Now().UTC(),
 			[]byte(""),
 		)
 		if err != nil {
 			return Setting{}, err
-		}
-		for k, v := range authHeaders {
-			headers.Add(k, v[0])
 		}
 	} else {
 		return Setting{}, errors.New("no credential provided")

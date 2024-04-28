@@ -4,37 +4,41 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 )
 
-// hmacAuthenticationHeaders returns the headers required for for Azure
+// addHMACAuthenticationHeaders adds the headers required for for Azure
 // App Configuration authentication with access key.
-func hmacAuthenticationHeaders(key AccessKey, method, rawURL string, content []byte) (http.Header, error) {
+func addHMACAuthenticationHeaders(headers http.Header, key AccessKey, method, rawURL string, date time.Time, content []byte) error {
+	if headers == nil {
+		return errors.New("nil headers")
+	}
+
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	contentHash, err := hash(content)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	date := now().UTC().Format(http.TimeFormat)
 
-	str := stringToSign(method, u.EscapedPath()+"?"+u.RawQuery, date, u.Host, contentHash)
+	dateHTTP := date.Format(http.TimeFormat)
+	str := stringToSign(method, u.EscapedPath()+"?"+u.RawQuery, dateHTTP, u.Host, contentHash)
 	signature, err := sign(str, key.Secret)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	headers := http.Header{}
-	headers.Add("X-Ms-Date", date)
+	headers.Add("X-Ms-Date", dateHTTP)
 	headers.Add("Host", u.Host)
 	headers.Add("X-Ms-Content-Sha256", contentHash)
 	headers.Add("Authorization", "HMAC-SHA256 Credential="+key.ID+", SignedHeaders=x-ms-date;host;x-ms-content-sha256, Signature="+signature)
-	return headers, nil
+	return nil
 }
 
 // stringToSign return the string to sign for Azure App Configuration authentication
@@ -79,5 +83,3 @@ func hash(content []byte) (string, error) {
 	}
 	return base64.StdEncoding.EncodeToString(hasher.Sum(nil)), nil
 }
-
-var now = time.Now

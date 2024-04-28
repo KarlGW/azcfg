@@ -57,7 +57,7 @@ type ClientOption func(c *Client)
 // NewClient creates and returns a new *Client.
 func NewClient(vault string, cred auth.Credential, options ...ClientOption) (*Client, error) {
 	if len(vault) == 0 {
-		return nil, errors.New("empty vault name")
+		return nil, errors.New("empty key vault name")
 	}
 	if cred == nil {
 		return nil, errors.New("nil credential")

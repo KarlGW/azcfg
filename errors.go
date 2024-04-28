@@ -23,7 +23,7 @@ type RequiredFieldsError struct {
 
 // Error returns the combined error messages from the errors
 // contained in RequiredFieldsError.
-func (e *RequiredFieldsError) Error() string {
+func (e RequiredFieldsError) Error() string {
 	var msgs []string
 	for _, err := range e.errors {
 		msgs = append(msgs, err.Error())
@@ -93,22 +93,19 @@ func buildErr(errs ...error) error {
 	if len(errs) == 0 {
 		return nil
 	}
-	var reqErr *RequiredFieldsError
+
+	var reqErr RequiredFieldsError
 	var msgs []string
 	for _, err := range errs {
-		if errors.Is(err, requiredSecretsError{}) || errors.Is(err, requiredSettingsError{}) {
-			if reqErr == nil {
-				reqErr = &RequiredFieldsError{
-					errors: []error{err},
-				}
-			} else {
-				reqErr.errors = append(reqErr.errors, err)
-			}
+		var reqSecretsErr requiredSecretsError
+		var reqSettingsErr requiredSettingsError
+		if errors.As(err, &reqSecretsErr) || errors.As(err, &reqSettingsErr) {
+			reqErr.errors = append(reqErr.errors, err)
 		} else {
 			msgs = append(msgs, err.Error())
 		}
 	}
-	if reqErr != nil {
+	if len(reqErr.errors) > 0 {
 		return reqErr
 	}
 	return errors.New(strings.Join(msgs, "\n"))

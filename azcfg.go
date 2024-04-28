@@ -3,7 +3,6 @@ package azcfg
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -174,7 +173,7 @@ func setFields[V hasValue](v reflect.Value, values map[string]V, tag string) err
 			tags := strings.Split(value, ",")
 			if val, ok := values[tags[0]]; ok {
 				if len(val.GetValue()) == 0 && isRequired(tags) {
-					return fmt.Errorf("%w: %s", errRequired, tags[0])
+					return errRequired
 				} else if len(val.GetValue()) == 0 {
 					continue
 				}

@@ -14,6 +14,10 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
+var (
+	_testScope = "https://management.azure.com/.default"
+)
+
 func TestWithTokenCredential(t *testing.T) {
 	t.Run("TokenCredential", func(t *testing.T) {
 		got := azcfg.Options{}
@@ -25,7 +29,7 @@ func TestWithTokenCredential(t *testing.T) {
 			},
 		}
 
-		if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(credential{}, mockTokenCredential{}), cmpopts.IgnoreFields(azcfg.Options{}, "PrivateKey")); diff != "" {
+		if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(credential{}, mockTokenCredential{}, azcfg.Entra{}), cmpopts.IgnoreFields(azcfg.Entra{}, "PrivateKey")); diff != "" {
 			t.Errorf("WithTokenCredential() = unexpected result (-want +got)\n%s\n", diff)
 		}
 	})
@@ -34,13 +38,18 @@ func TestWithTokenCredential(t *testing.T) {
 func TestCredential_Token(t *testing.T) {
 	var tests = []struct {
 		name    string
-		input   mockTokenCredential
+		input   func() *credential
 		want    auth.Token
 		wantErr error
 	}{
 		{
-			name:  "success",
-			input: mockTokenCredential{},
+			name: "get token",
+			input: func() *credential {
+				return &credential{
+					TokenCredential: mockTokenCredential{},
+					tokens:          map[string]*auth.Token{},
+				}
+			},
 			want: auth.Token{
 				AccessToken: "ey12345",
 				ExpiresOn:   _testNow,
@@ -48,9 +57,44 @@ func TestCredential_Token(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "get token from cache",
+			input: func() *credential {
+				return &credential{
+					TokenCredential: mockTokenCredential{},
+					tokens: map[string]*auth.Token{
+						_testScope: {
+							AccessToken: "ey54321",
+							ExpiresOn:   _testNow.Add(time.Hour),
+						},
+					},
+				}
+			},
+			want: auth.Token{
+				AccessToken: "ey54321",
+			},
+			wantErr: nil,
+		},
+		{
+			name: "get token from cache (expired)",
+			input: func() *credential {
+				return &credential{
+					TokenCredential: mockTokenCredential{},
+					tokens: map[string]*auth.Token{
+						_testScope: {
+							AccessToken: "ey54321",
+							ExpiresOn:   time.Now().Add(time.Hour * -3),
+						},
+					},
+				}
+			},
+			want: auth.Token{
+				AccessToken: "ey12345",
+			},
+		},
+		{
 			name: "error",
-			input: mockTokenCredential{
-				err: errTest,
+			input: func() *credential {
+				return &credential{TokenCredential: mockTokenCredential{err: errTest}}
 			},
 			want:    auth.Token{},
 			wantErr: errTest,
@@ -59,10 +103,12 @@ func TestCredential_Token(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			cred := credential{TokenCredential: &test.input, tokens: map[string]*auth.Token{}}
-			got, gotErr := cred.Token(context.Background())
+			cred := test.input()
+			got, gotErr := cred.Token(context.Background(), func(o *auth.TokenOptions) {
+				o.Scope = _testScope
+			})
 
-			if diff := cmp.Diff(test.want, got); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmpopts.IgnoreFields(auth.Token{}, "ExpiresOn")); diff != "" {
 				t.Errorf("Token() = unexpected result (-want +got)\n%s\n", diff)
 			}
 

@@ -17,7 +17,7 @@ func splitTrim(s, sep string) []string {
 	if len(sep) == 0 {
 		sep = ","
 	}
-	return strings.Split(regexp.MustCompile(sep+`\s+`).ReplaceAllString(s, sep), sep)
+	return strings.Split(regexp.MustCompile(`\s+`).ReplaceAllString(s, ""), sep)
 }
 
 // coelesceString returns the first non-empty string (if any).
@@ -52,8 +52,7 @@ func parseLabels(labels string) map[string]string {
 		return nil
 	}
 
-	re := regexp.MustCompile(`\s+`)
-	parts := strings.Split(re.ReplaceAllString(labels, ""), ",")
+	parts := splitTrim(labels, ",")
 	m := make(map[string]string, len(parts))
 	for i := range parts {
 		p := strings.Split(parts[i], "=")

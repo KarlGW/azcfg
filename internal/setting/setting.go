@@ -3,6 +3,7 @@ package setting
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -44,6 +45,13 @@ func (s Setting) GetValue() string {
 	return s.Value
 }
 
+// AccessKey contains the id and secret for access key
+// authentication.
+type AccessKey struct {
+	ID     string
+	Secret string
+}
+
 // secretClient is the interface that wraps around method Get, Vault and
 // SetVault.
 type secretClient interface {
@@ -75,10 +83,10 @@ type ClientOption func(c *Client)
 // NewClient creates and returns a new *Client.
 func NewClient(appConfiguration string, cred auth.Credential, options ...ClientOption) (*Client, error) {
 	if len(appConfiguration) == 0 {
-		return nil, ErrEmptyAppConfigurationName
+		return nil, errors.New("empty app configuration name")
 	}
 	if cred == nil {
-		return nil, ErrNilCredential
+		return nil, errors.New("nil credential")
 	}
 
 	c := newClient(appConfiguration, options...)
@@ -86,29 +94,24 @@ func NewClient(appConfiguration string, cred auth.Credential, options ...ClientO
 	return c, nil
 }
 
-// AccessKey contains the id and secret for access key
-// authentication.
-type AccessKey struct {
-	ID     string
-	Secret string
-}
-
 // NewClientWithAccessKey creates and returns a new *Client with the provided
 // access key.
 func NewClientWithAccessKey(appConfiguration string, key AccessKey, options ...ClientOption) (*Client, error) {
 	if len(appConfiguration) == 0 {
-		return nil, ErrEmptyAppConfigurationName
+		return nil, errors.New("empty app configuration name")
 	}
 	if len(key.ID) == 0 {
-		return nil, ErrMissingAccessKeyID
+		return nil, errors.New("empty access key ID")
 	}
 	if len(key.Secret) == 0 {
-		return nil, ErrMissingAccessKeySecret
+		return nil, errors.New("empty access key secret")
 	}
 
 	c := newClient(appConfiguration, options...)
-	c.accessKey.ID = key.ID
-	c.accessKey.Secret = key.Secret
+	c.accessKey = AccessKey{
+		ID:     key.ID,
+		Secret: key.Secret,
+	}
 	return c, nil
 }
 
@@ -212,7 +215,7 @@ func (c *Client) Get(ctx context.Context, key string, options ...Option) (Settin
 			headers.Add(k, v[0])
 		}
 	} else {
-		return Setting{}, ErrNoCredential
+		return Setting{}, errors.New("no credential provided")
 	}
 
 	resp, err := request.Do(ctx, c.c, headers, http.MethodGet, u, nil)
@@ -365,7 +368,7 @@ func (c *Client) getSettings(ctx context.Context, keys []string, options ...Opti
 func vaultAndSecret(rawURL string) (string, string, error) {
 	u, err := url.Parse(rawURL)
 	if err != nil || len(u.Scheme) == 0 {
-		return "", "", ErrParseSecretURL
+		return "", "", errors.New("failed to parse secret URL for setting")
 	}
 
 	vault := strings.Split(u.Hostname(), ".")[0]

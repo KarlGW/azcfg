@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"path"
@@ -378,5 +377,5 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 
 var (
 	errRequest = errors.New("request error")
-	errServer  = fmt.Errorf("internal server error")
+	errServer  = errors.New("internal server error")
 )

@@ -3,6 +3,7 @@ package secret
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -56,10 +57,10 @@ type ClientOption func(c *Client)
 // NewClient creates and returns a new *Client.
 func NewClient(vault string, cred auth.Credential, options ...ClientOption) (*Client, error) {
 	if len(vault) == 0 {
-		return nil, ErrEmptyKeyVaultName
+		return nil, errors.New("empty key vault name")
 	}
 	if cred == nil {
-		return nil, ErrNilCredential
+		return nil, errors.New("nil credential")
 	}
 	c := &Client{
 		cred:        cred,

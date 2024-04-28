@@ -133,7 +133,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				envs: map[string]string{},
 			},
 			want:    nil,
-			wantErr: ErrInvalidClientID,
+			wantErr: cmpopts.AnyError,
 		},
 		{
 			name: "new managed identity credential (invalid resource id)",
@@ -147,7 +147,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				envs: map[string]string{},
 			},
 			want:    nil,
-			wantErr: ErrInvalidManagedIdentityResourceID,
+			wantErr: cmpopts.AnyError,
 		},
 		{
 			name: "new managed identity credential (unsupported)",
@@ -161,7 +161,7 @@ func TestNewManagedIdentityCredential(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: ErrUnsupportedManagedIdentityType,
+			wantErr: cmpopts.AnyError,
 		},
 	}
 

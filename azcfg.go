@@ -60,7 +60,7 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 			defer wg.Done()
 			secrets, err := secretClient.GetSecrets(ctx, secretFields)
 			if err != nil {
-				errCh <- err
+				errCh <- fmt.Errorf("%w: %s", ErrSecretRetrieval, err.Error())
 				return
 			}
 
@@ -72,7 +72,7 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 					errCh <- requiredSecretsError{message: requiredErrorMessage(secrets, requiredSecrets, "secret")}
 					return
 				}
-				errCh <- err
+				errCh <- fmt.Errorf("%w: %s", ErrSetField, err.Error())
 				return
 			}
 		}()
@@ -85,7 +85,7 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 			defer wg.Done()
 			settings, err := settingClient.GetSettings(ctx, settingFields, setting.WithLabel(opts.label), setting.WithLabels(opts.labels))
 			if err != nil {
-				errCh <- err
+				errCh <- fmt.Errorf("%w: %s", ErrSettingRetrieval, err.Error())
 				return
 			}
 
@@ -97,7 +97,7 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 					errCh <- requiredSettingsError{message: requiredErrorMessage(settings, requiredSettings, "setting")}
 					return
 				}
-				errCh <- err
+				errCh <- fmt.Errorf("%w: %s", ErrSetField, err.Error())
 				return
 			}
 		}()
@@ -174,7 +174,7 @@ func setFields[V hasValue](v reflect.Value, values map[string]V, tag string) err
 			tags := strings.Split(value, ",")
 			if val, ok := values[tags[0]]; ok {
 				if len(val.GetValue()) == 0 && isRequired(tags) {
-					return fmt.Errorf("%w: %s", errRequired, tags[0])
+					return errRequired
 				} else if len(val.GetValue()) == 0 {
 					continue
 				}

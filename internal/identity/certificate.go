@@ -7,17 +7,6 @@ import (
 	"errors"
 )
 
-var (
-	// ErrNoCertificates is returned when no certificates are found in the PEM.
-	ErrNoCertificates = errors.New("no certificates found")
-	// ErrNoPrivateKey is returned when no private key is found in the PEM.
-	ErrNoPrivateKey = errors.New("no private key found")
-	// ErrMultiplePrivateKeys is returned when multiple private keys are found in the PEM.
-	ErrMultiplePrivateKeys = errors.New("multiple private keys found")
-	// ErrKeyNotRSA is returned when the private key is not an RSA key.
-	ErrKeyNotRSA = errors.New("private key is not an RSA key")
-)
-
 // CertificatesAndKeyFromPEM extracts the x509 certificates and private key from the given PEM.
 func CertificatesAndKeyFromPEM(pem []byte) ([]*x509.Certificate, *rsa.PrivateKey, error) {
 	if len(pem) == 0 {
@@ -41,7 +30,7 @@ func CertificatesAndKeyFromPEM(pem []byte) ([]*x509.Certificate, *rsa.PrivateKey
 
 		case "RSA PRIVATE KEY":
 			if privateKey != nil {
-				return nil, nil, ErrMultiplePrivateKeys
+				return nil, nil, errors.New("multiple private keys found")
 			}
 			key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 			if err != nil {
@@ -51,7 +40,7 @@ func CertificatesAndKeyFromPEM(pem []byte) ([]*x509.Certificate, *rsa.PrivateKey
 
 		case "PRIVATE KEY":
 			if privateKey != nil {
-				return nil, nil, ErrMultiplePrivateKeys
+				return nil, nil, errors.New("multiple private keys found")
 			}
 			key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 			if err != nil {
@@ -59,7 +48,7 @@ func CertificatesAndKeyFromPEM(pem []byte) ([]*x509.Certificate, *rsa.PrivateKey
 			}
 			k, ok := key.(*rsa.PrivateKey)
 			if !ok {
-				return nil, nil, ErrKeyNotRSA
+				return nil, nil, errors.New("private key is not an RSA key")
 			}
 			privateKey = k
 		}
@@ -67,10 +56,10 @@ func CertificatesAndKeyFromPEM(pem []byte) ([]*x509.Certificate, *rsa.PrivateKey
 	}
 
 	if certs == nil {
-		return nil, nil, ErrNoCertificates
+		return nil, nil, errors.New("no certificates found")
 	}
 	if privateKey == nil {
-		return nil, nil, ErrNoPrivateKey
+		return nil, nil, errors.New("no private key found")
 	}
 
 	return certs, privateKey, nil

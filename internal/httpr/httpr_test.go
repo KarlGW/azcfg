@@ -255,7 +255,7 @@ func setupClient(target string, rp RetryPolicy, emptyClient bool, err error) *Cl
 	if emptyClient {
 		return &Client{cl: &http.Client{Transport: tr}}
 	} else {
-		return NewClient(WithTransport(tr), WithRetryPolicy(rp), WithTimeout(time.Millisecond*5))
+		return NewClient(WithTransport(tr), WithRetryPolicy(rp), WithTimeout(time.Millisecond*10))
 	}
 
 }

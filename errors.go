@@ -11,8 +11,18 @@ var (
 )
 
 var (
-	// ErrInvalidCredential is returned when a credential is not valid.
-	ErrInvalidCredential = errors.New("invalid credential")
+	// ErrSetField is returned when a field cannot be set.
+	ErrSetField = errors.New("set field error")
+	// ErrCredential is returned when a credential error occurs.
+	ErrCredential = errors.New("credential error")
+	// ErrSecretClient is returned when a secret client error occurs.
+	ErrSecretClient = errors.New("secret client error")
+	// ErrSecretRetrieval is returned when a secret retrieval error occurs.
+	ErrSecretRetrieval = errors.New("secret retrieval error")
+	// ErrSettingClient is returned when a setting client error occurs.
+	ErrSettingClient = errors.New("setting client error")
+	// ErrSettingRetrieval is returned when a setting retrieval error occurs.
+	ErrSettingRetrieval = errors.New("setting retrieval error")
 )
 
 // RequiredFieldsError represents an error when either secrets or settings
@@ -23,7 +33,7 @@ type RequiredFieldsError struct {
 
 // Error returns the combined error messages from the errors
 // contained in RequiredFieldsError.
-func (e *RequiredFieldsError) Error() string {
+func (e RequiredFieldsError) Error() string {
 	var msgs []string
 	for _, err := range e.errors {
 		msgs = append(msgs, err.Error())
@@ -93,22 +103,19 @@ func buildErr(errs ...error) error {
 	if len(errs) == 0 {
 		return nil
 	}
-	var reqErr *RequiredFieldsError
+
+	var reqErr RequiredFieldsError
 	var msgs []string
 	for _, err := range errs {
-		if errors.Is(err, requiredSecretsError{}) || errors.Is(err, requiredSettingsError{}) {
-			if reqErr == nil {
-				reqErr = &RequiredFieldsError{
-					errors: []error{err},
-				}
-			} else {
-				reqErr.errors = append(reqErr.errors, err)
-			}
+		var reqSecretsErr requiredSecretsError
+		var reqSettingsErr requiredSettingsError
+		if errors.As(err, &reqSecretsErr) || errors.As(err, &reqSettingsErr) {
+			reqErr.errors = append(reqErr.errors, err)
 		} else {
 			msgs = append(msgs, err.Error())
 		}
 	}
-	if reqErr != nil {
+	if len(reqErr.errors) > 0 {
 		return reqErr
 	}
 	return errors.New(strings.Join(msgs, "\n"))

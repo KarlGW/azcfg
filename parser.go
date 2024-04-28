@@ -58,7 +58,7 @@ func NewParser(options ...Option) (*parser, error) {
 		if cred == nil {
 			cred, err = setupCredential(opts.Cloud, opts.Authentication.Entra)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("%w: %s", ErrCredential, err.Error())
 			}
 		}
 
@@ -76,7 +76,7 @@ func NewParser(options ...Option) (*parser, error) {
 			secret.WithCloud(opts.Cloud),
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w: %s", ErrSecretClient, err.Error())
 		}
 	} else {
 		secretClient = opts.SecretClient
@@ -89,7 +89,7 @@ func NewParser(options ...Option) (*parser, error) {
 			if cred == nil {
 				cred, err = setupCredential(opts.Cloud, opts.Authentication.Entra)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("%w: %s", ErrCredential, err.Error())
 				}
 			}
 		}
@@ -116,7 +116,7 @@ func NewParser(options ...Option) (*parser, error) {
 			options...,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w: %s", ErrSettingClient, err.Error())
 		}
 	} else {
 		settingClient = opts.SettingClient
@@ -200,7 +200,7 @@ func setupCredential(cloud cloud.Cloud, entra Entra) (auth.Credential, error) {
 		return newClientAssertionCredential(entra.TenantID, entra.ClientID, entra.Assertion, identity.WithCloud(cloud))
 	}
 
-	return nil, fmt.Errorf("%w: could not determine and create Entra credential", ErrInvalidCredential)
+	return nil, errors.New("could not determine and create entra credential")
 }
 
 // settings contains the necessary values for setting client creation.
@@ -238,7 +238,7 @@ func newSettingClient(settings settings, options ...setting.ClientOption) (setti
 		)
 	}
 
-	return nil, fmt.Errorf("%w: could not determine and create app configuration credential", ErrInvalidCredential)
+	return nil, errors.New("could not determine and create app configuration credential")
 }
 
 // certificatesAndKeyFromPEM extracts the x509 certificates and private key from the given PEM.

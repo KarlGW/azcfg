@@ -69,7 +69,7 @@ func TestNewClientCredential(t *testing.T) {
 				options:  []CredentialOption{},
 			},
 			want:    nil,
-			wantErr: ErrInvalidTenantID,
+			wantErr: cmpopts.AnyError,
 		},
 		{
 			name: "invalid client ID",
@@ -83,7 +83,7 @@ func TestNewClientCredential(t *testing.T) {
 				options:  []CredentialOption{},
 			},
 			want:    nil,
-			wantErr: ErrInvalidClientID,
+			wantErr: cmpopts.AnyError,
 		},
 	}
 

@@ -18,7 +18,8 @@ const (
 	requiredTag = "required"
 )
 
-// Parse secrets from an Azure Key Vault into a struct.
+// Parse secrets from an Azure Key Vault and settings from an
+// Azure App Configuration into the provided struct.
 func Parse(v any, options ...Option) error {
 	parser, err := NewParser(options...)
 	if err != nil {

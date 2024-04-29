@@ -93,7 +93,7 @@ type Options struct {
 	// Authentication contains authentication settings for the parser.
 	Authentication Authentication
 	// Concurrency is the amount of secrets/settings that will be retrieved
-	// concurrently. Shared for all clients. Defaults to 20.
+	// concurrently. Shared between the secret and the setting client. Defaults to 20.
 	Concurrency int
 	// Timeout is the total timeout for retrieval of secrets and settings.
 	// Shared for all clients. Defaults to 10 seconds.
@@ -204,6 +204,7 @@ func WithAppConfiguration(appConfiguration string) Option {
 }
 
 // WithConcurrency sets the concurrency of the parser.
+// Shared between the secret and the setting client.
 func WithConcurrency(c int) Option {
 	return func(o *Options) {
 		o.Concurrency = c

@@ -1,7 +1,6 @@
 on:
   push:
     branches:
-    - main
     - dev
     - dev/*
     - development
@@ -11,9 +10,15 @@ on:
     - 'v[0-9]+.[0-9]+.[0-9]+'
     paths-ignore:
     - '**.md'
+    - 'scripts/**'
+    - 'authopts/**'
   pull_request:
     branches:
     - main
+    paths-ignore:
+    - '**.md'
+    - 'scripts/**'
+    - 'authopts/**'
 
 jobs:
   test:
@@ -41,7 +46,7 @@ jobs:
     needs: [test]
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Create release
       run: gh release create $TAG --generate-notes

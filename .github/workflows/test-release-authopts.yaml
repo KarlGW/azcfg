@@ -1,0 +1,108 @@
+on:
+  push:
+    branches:
+    - dev
+    - dev/*
+    - development
+    - development/*
+    - feature/*
+    - chore/*
+    tags:
+    - 'authopts/v[0-9]+.[0-9]+.[0-9]+'
+    paths:
+    - 'authopts/**'
+    - '!authopts/**.md'
+    - '!authopts/scripts/**'
+  pull_request:
+    branches:
+    - main
+    paths:
+    - 'authopts/**'
+    - '!authopts/**.md'
+    - '!authopts/scripts/**'
+  release:
+    types:
+    - created
+
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        version: [ '1.20', '1.21', '1.22' ]
+        os: [ ubuntu-latest, 'windows-latest' ]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.version }}
+    
+    - name: Download dependencies
+      run: go get
+    
+    - name: Test
+      run: go vet ./... && go test -v ./...
+
+  update:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    needs: [test]
+    defaults:
+      run:
+        working-directory: authopts
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Checkout branch
+      run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git checkout -b chore/update-dependencies-azcfg-$TAG
+      env:
+        TAG: ${{ github.ref_name }}
+
+    - name: Update dependencies 
+      run: |
+        echo "go get -u github.com/KarlGW/azcfg@$TAG"
+        echo "go get -u github.com/Azure/azure-sdk-for-go/sdk/azcore"
+        echo "go get -u github.com/google/go-cmp"
+      env:
+        TAG: ${{ github.ref_name }}
+
+    - name: Generate LICENSE-THIRD-PARTY.md
+      run: |
+        go install github.com/google/go-licenses@latest
+        go-licenses report ./... \
+          --include_tests \
+          --ignore github.com/KarlGW/azcfg \
+          --ignore github.com/KarlGW/azcfg/authopts \
+          --template _tmpl/licenses.tpl > LICENSE-THIRD-PARTY.md
+
+    - name: Create pull request
+      run: |
+        git go.mod go.sum LICENSE-THIRD-PARTY.md
+        git commit -m "chore(authopts): update dependency to azcfg@$TAG"
+        git push -u origin chore/update-dependencies-azcfg-$TAG
+        gh pr create \
+          --title "chore(authopts): update dependency to azcfg@$TAG" \
+          --base main \
+          --body "This pull request updates the dependency to azcfg@$TAG."
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ github.ref_name }}
+  
+  release:
+    if: ${{ startsWith(github.ref, 'refs/tags/authopts/v') }}
+    needs: [test]
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Create release
+      run: gh release create $TAG --generate-notes
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ github.ref_name }}

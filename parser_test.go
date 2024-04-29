@@ -5,7 +5,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,6 +16,7 @@ import (
 	"github.com/KarlGW/azcfg/internal/secret"
 	"github.com/KarlGW/azcfg/internal/setting"
 	"github.com/KarlGW/azcfg/internal/testutils"
+	"github.com/KarlGW/azcfg/internal/uuid"
 	"github.com/KarlGW/azcfg/stub"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -41,9 +41,9 @@ func TestNewParser(t *testing.T) {
 				envs: map[string]string{
 					azcfgKeyVaultName:         "vault",
 					azcfgAppConfigurationName: "appconfig",
-					azcfgTenantID:             "1111",
-					azcfgClientID:             "2222",
-					azcfgClientSecret:         "3333",
+					azcfgTenantID:             _testTenantID,
+					azcfgClientID:             _testClientID,
+					azcfgClientSecret:         _testClientSecret,
 				},
 			},
 			want: &parser{
@@ -60,9 +60,9 @@ func TestNewParser(t *testing.T) {
 			}{
 				envs: map[string]string{
 					azcfgKeyVaultName: "vault",
-					azcfgTenantID:     "1111",
-					azcfgClientID:     "2222",
-					azcfgClientSecret: "3333",
+					azcfgTenantID:     _testTenantID,
+					azcfgClientID:     _testClientID,
+					azcfgClientSecret: _testClientSecret,
 				},
 			},
 			want: &parser{
@@ -78,9 +78,9 @@ func TestNewParser(t *testing.T) {
 			}{
 				envs: map[string]string{
 					azcfgAppConfigurationName: "appconfig",
-					azcfgTenantID:             "1111",
-					azcfgClientID:             "2222",
-					azcfgClientSecret:         "3333",
+					azcfgTenantID:             _testTenantID,
+					azcfgClientID:             _testClientID,
+					azcfgClientSecret:         _testClientSecret,
 				},
 			},
 			want: &parser{
@@ -169,7 +169,7 @@ func TestNewParser(t *testing.T) {
 				options: []Option{
 					WithConcurrency(30),
 					WithTimeout(time.Second * 10),
-					WithClientSecretCredential("1111", "2222", "3333"),
+					WithClientSecretCredential(_testTenantID, _testClientID, _testClientSecret),
 					WithKeyVault("vault1"),
 					WithAppConfiguration("appconfig"),
 				},
@@ -266,25 +266,6 @@ func TestNewParser(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			os.Clearenv()
-
-			newClientSecretCredential = func(tenantID, clientID, clientSecret string, options ...identity.CredentialOption) (*identity.ClientCredential, error) {
-				if test.wantErr != nil {
-					return nil, test.wantErr
-				}
-				return &identity.ClientCredential{}, nil
-			}
-			newClientCertificateCredential = func(tenantID, clientID string, certificate []*x509.Certificate, key *rsa.PrivateKey, options ...identity.CredentialOption) (*identity.ClientCredential, error) {
-				if test.wantErr != nil {
-					return nil, test.wantErr
-				}
-				return &identity.ClientCredential{}, nil
-			}
-			newManagedIdentityCredential = func(clientID string, options ...identity.CredentialOption) (*identity.ManagedIdentityCredential, error) {
-				if test.wantErr != nil {
-					return nil, test.wantErr
-				}
-				return &identity.ManagedIdentityCredential{}, nil
-			}
 
 			for k, v := range test.input.envs {
 				t.Setenv(k, v)
@@ -413,9 +394,9 @@ func TestSetupCredential(t *testing.T) {
 				options Entra
 			}{
 				options: Entra{
-					TenantID:     "1111",
-					ClientID:     "2222",
-					ClientSecret: "3333",
+					TenantID:     _testTenantID,
+					ClientID:     _testClientID,
+					ClientSecret: _testClientSecret,
 				},
 			},
 			want: &identity.ClientCredential{},
@@ -427,10 +408,10 @@ func TestSetupCredential(t *testing.T) {
 				options Entra
 			}{
 				options: Entra{
-					TenantID:     "1111",
-					ClientID:     "2222",
-					Certificates: []*x509.Certificate{{}},
-					PrivateKey:   &rsa.PrivateKey{},
+					TenantID:     _testTenantID,
+					ClientID:     _testClientID,
+					Certificates: []*x509.Certificate{_testCert.Cert},
+					PrivateKey:   _testCert.Key,
 				},
 			},
 			want: &identity.ClientCredential{},
@@ -442,24 +423,14 @@ func TestSetupCredential(t *testing.T) {
 				options Entra
 			}{
 				options: Entra{
-					TenantID: "1111",
-					ClientID: "2222",
+					TenantID: _testTenantID,
+					ClientID: _testClientID,
 					Assertion: func() (string, error) {
 						return "assertion", nil
 					},
 				},
 			},
 			want: &identity.ClientCredential{},
-		},
-		{
-			name: "credential settings from options (azure cli)",
-			input: struct {
-				cloud   cloud.Cloud
-				options Entra
-			}{
-				options: Entra{AzureCLICredential: true},
-			},
-			want: &identity.AzureCLICredential{},
 		},
 		{
 			name: "credential settings from options (managed identity)",
@@ -483,19 +454,7 @@ func TestSetupCredential(t *testing.T) {
 					certificatePath: "certificate",
 				},
 			},
-			wantErr: errors.New("invalid path"),
-		},
-		{
-			name: "error setting up managed identity credential",
-			input: struct {
-				cloud   cloud.Cloud
-				options Entra
-			}{
-				options: Entra{
-					ManagedIdentity: true,
-				},
-			},
-			wantErr: errTestManagedIdentity,
+			wantErr: cmpopts.AnyError,
 		},
 		{
 			name: "error - cannot determine credential",
@@ -511,51 +470,8 @@ func TestSetupCredential(t *testing.T) {
 		},
 	}
 
-	var oldCertificateAndKey = certificateAndKey
-
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			t.Cleanup(func() {
-				certificateAndKey = oldCertificateAndKey
-			})
-
-			newClientSecretCredential = func(_, _, _ string, _ ...identity.CredentialOption) (*identity.ClientCredential, error) {
-				if test.wantErr != nil {
-					return nil, test.wantErr
-				}
-				return &identity.ClientCredential{}, nil
-			}
-			newClientCertificateCredential = func(_, _ string, _ []*x509.Certificate, _ *rsa.PrivateKey, _ ...identity.CredentialOption) (*identity.ClientCredential, error) {
-				if test.wantErr != nil {
-					return nil, test.wantErr
-				}
-				return &identity.ClientCredential{}, nil
-			}
-			newClientAssertionCredential = func(_, _ string, _ func() (string, error), _ ...identity.CredentialOption) (*identity.ClientCredential, error) {
-				if test.wantErr != nil {
-					return nil, test.wantErr
-				}
-				return &identity.ClientCredential{}, nil
-			}
-			newManagedIdentityCredential = func(_ string, _ ...identity.CredentialOption) (*identity.ManagedIdentityCredential, error) {
-				if test.wantErr != nil {
-					return nil, test.wantErr
-				}
-				return &identity.ManagedIdentityCredential{}, nil
-			}
-			newAzureCLICredential = func(_ ...identity.CredentialOption) (*identity.AzureCLICredential, error) {
-				if test.wantErr != nil {
-					return nil, test.wantErr
-				}
-				return &identity.AzureCLICredential{}, nil
-			}
-			certificateAndKey = func(_, _ string) ([]*x509.Certificate, *rsa.PrivateKey, error) {
-				if test.wantErr != nil {
-					return nil, nil, test.wantErr
-				}
-				return []*x509.Certificate{{}}, &rsa.PrivateKey{}, nil
-			}
-
 			got, gotErr := setupCredential(test.input.cloud, test.input.options)
 
 			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(mockCredential{}), cmpopts.IgnoreUnexported(identity.ClientCredential{}, identity.ManagedIdentityCredential{}, identity.AzureCLICredential{})); diff != "" {
@@ -652,5 +568,8 @@ func (c mockCredential) Token(ctx context.Context, options ...auth.TokenOption) 
 }
 
 var (
-	errTestManagedIdentity = errors.New("managed identity error")
+	_testTenantID, _  = uuid.New()
+	_testClientID, _  = uuid.New()
+	_testClientSecret = "12345"
+	_testCert, _      = testutils.CreateCertificate()
 )

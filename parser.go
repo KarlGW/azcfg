@@ -39,8 +39,8 @@ type parser struct {
 	timeout       time.Duration
 }
 
-// NewParser creates and returns a *Parser. With no options provided
-// it will have default settings for timeout and concurrency.
+// NewParser creates and returns a *Parser. This suits situations
+// where multiple calls to Parse are needed with the same settings.
 func NewParser(options ...Option) (*parser, error) {
 	opts := defaultOptions()
 	for _, option := range options {
@@ -129,7 +129,8 @@ func NewParser(options ...Option) (*parser, error) {
 	}, nil
 }
 
-// Parse secrets from an Azure Key Vault into a struct.
+// Parse secrets from an Azure Key Vault and settings from an
+// Azure App Configuration into the provided struct.
 //
 // The only valid option is context, the other options on the
 // parser remain unaffected.

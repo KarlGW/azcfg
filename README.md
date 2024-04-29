@@ -16,6 +16,10 @@
   * [Timeout and context](#timeout-and-context)
   * [App Configuration setting labels](#app-configuration-setting-labels)
   * [Authentication](#authentication)
+    * [Built-in credentials](#built-in-credentials)
+      * [Authentication with environment variables](#authentication-with-environment-variables)
+      * [Authentication with options](#authentication-with-options)
+      * [App Configuration with access key or connection string](#app-configuration-with-access-key-or-connection-string)
   * [Credentials](#credentials)
   * [National clouds](#national-clouds)
 
@@ -65,7 +69,7 @@ go get github.com/KarlGW/azcfg
 * Azure Key Vault (if using secrets)
   * Identity with access to secrets in the Key Vault
 * Azure App Configuration (is using settings and configuration)
-  * Identity with access to the App Configuration
+  * Identity with access to the App Configuration (if not using access key or connection string)
 
 
 ### Example
@@ -221,6 +225,8 @@ func main() {
 
 Option functions are provided by the module for convenience, see [Option](https://pkg.go.dev/github.com/KarlGW/azcfg#Option).
 
+When providing options to the `Parse` method on a `Parser`,
+only `WithContext` is valid.
 
 ### Required
 
@@ -378,7 +384,7 @@ To target speciefic settings with specific labels:
 The module supports several ways of authenticating to Azure and get secrets from the target Key Vault and settings from the target App Configuration.
 
 1. Built-in credentials that supports Service Principal (Client Credentials with secret, certificate or an assertion),
-managed identity (system and user assigned) and Azure CLI.
+managed identity (system and user assigned) and Azure CLI. These provide in-memory caching of tokens to handle repeat calls.
 2. Credentials from [`azidentity`](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity) with the submodule [`authopts`](./authopts/)
 3. Custom credential handling by implementing the `auth.Credential` interface.
 
@@ -386,10 +392,7 @@ For more information about option **2** and **3**, see [Credentials](#credential
 
 #### Built-in credentials
 
-By default the module will attempt to determine credentials and target Key Vault with
-environment variables.
-
-##### Environment variables
+##### Authentication with environment variables
 
 For all authentication scenarios the following environment variables are used:
 
@@ -409,10 +412,6 @@ For all authentication scenarios the following environment variables are used:
 * `AZCFG_CLIENT_CERTIFICATE` - Base64 encoded certificate (PEM).
 * `AZCFG_CLIENT_CERTIFICATE_PATH` - Path to certificate (PEM).
 
-**Service Principal (client assertion/federated credential)**
-
-* Use the option `WithClientAssertionCredential` with a function that returns a JWT from another identity provider.
-
 **Managed identity**
 
 * `AZCFG_CLIENT_ID` - (Optional) Client ID (also called Application ID) of the Managed Identity. Set if using a user assigned managed identity.
@@ -430,9 +429,10 @@ az login
 az account set --subscription <subscription-id>
 ```
 
-##### Options
+##### Authentication with options
 
 If more control is needed, such as custom environment variables or other means of getting the necessary values, options can be used.
+Provided options will override values set from environment variables.
 
 **Service Principal**
 
@@ -451,14 +451,10 @@ azcfg.Parse(
     azcfg.WithKeyVault(vault),
 )
 
-// Client assertion.
-azcfg.Parse(
-    &cfg,
-    func() (string, error) {
-        // Return assertion.
-    },
-    azcfg.WithKeyVault(vault),
-)
+// Client assertion/federated credentials.
+azcfg.Parse(&cfg,azcfg.WithClientAssertionCredential(tenantID, clientID, func() (string, error) {
+	return "assertion", nil
+}), azcfg.WithKeyVault(vault))
 ```
 
 **Managed identity**
@@ -484,6 +480,42 @@ azcfg.Parse(&cfg, azcfg.WithAzureCLICredential(), azcfg.WithKeyVault(vault))
 To use a credential provided from elsewhere, such as the `azidentity` module see the section about
 [Credentials](#credentials).
 
+#### App Configuration with access key or connection string
+
+In addition to using a managed identity or a service principal (the recommended methods) to access
+an app configuration, it supports the use of an access key or connection string. If one of these
+are provided, they will take precedence over the identity credential.
+
+**Access key**
+
+Either use environment variables:
+
+* `AZCFG_APPCONFIGURATION_ACCESS_KEY_ID` - ID of the access key.
+* `AZCFG_APPCONFIGURATION_ACCESS_KEY_SECRET` - Secret of the access key.
+
+Or provide an option:
+
+```go
+azcfg.Parse(&cfg, azcfg.WithAppConfigurationAccessKey(accessKeyID, accessKeySecret))
+```
+
+**Connection string**
+
+The connection string has the following format:
+
+```
+Endpoint=https://{appConfiguration}.azconfig.io;Id={accessKeyID};Secret={accessKeySecret}
+```
+
+Either use an environment variable:
+
+* `AZCFG_APPCONFIGURATION_CONNECTION_STRING`
+
+Or provide an option:
+
+```go
+azcfg.Parse(&cfg, azcfg.WithAppConfigurationConnectionString(connectionString))
+```
 
 ### Credentials
 
@@ -497,7 +529,9 @@ type Credential interface {
 }
 ```
 
-Since it is reasonable to assume that credentials retrieved with the help of the `azidentity` module might be used, a submodule, [`authopts`](./authopts/) has been provided. This make it easer to reuse credentials from `azidentity`.
+**Note**: It is up to the provided implementation to cache tokens if needed.
+
+Since it is reasonable to assume that credentials retrieved with the help of the `azidentity` module might need to be used, a submodule, [`authopts`](./authopts/) is provided. This make it easier to reuse credentials from `azidentity`.
 
 **Usage**
 ```sh
@@ -525,6 +559,9 @@ func main() {
     }
 }
 ```
+
+**Note** Like the default credential implementations, in-memory token
+caching is provided for repeat calls.
 
 For additional information about how to use `azidentity`, check its [documentation](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity).
 
@@ -579,6 +616,8 @@ func main() {
 
 Set the environment variable `AZCFG_CLOUD`.
 
-- **Azure Public**: `Azure`, `Public`, `AzurePublic`.
-- **Azure Government**: `Government`, `AzureGovernment`.
-- **Azure China**: `China`, `AzureChina`.
+- **Azure Public**: `Azure`, `Public` or `AzurePublic`.
+- **Azure Government**: `Government` or `AzureGovernment`.
+- **Azure China**: `China` or `AzureChina`.
+
+**Note**: Case insensitive.

@@ -452,9 +452,13 @@ azcfg.Parse(
 )
 
 // Client assertion/federated credentials.
-azcfg.Parse(&cfg,azcfg.WithClientAssertionCredential(tenantID, clientID, func() (string, error) {
-	return "assertion", nil
-}), azcfg.WithKeyVault(vault))
+azcfg.Parse(
+    &cfg,
+    azcfg.WithClientAssertionCredential(tenantID, clientID, func() (string, error) {
+	    return "assertion", nil
+    }),
+    azcfg.WithKeyVault(vault),
+)
 ```
 
 **Managed identity**

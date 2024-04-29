@@ -124,7 +124,7 @@ var (
 	_testPathAndQuery = "/kv/setting-a?api-version=1.0"
 	_testDate         = time.Now().UTC()
 	_testDateHttp     = _testDate.Format(http.TimeFormat)
-	_testStringToSign = stringToSign(http.MethodGet, "/kv/setting-a?api-version=1.0", _testDateHttp, "config.azconfig.io", _testHash)
+	_testStringToSign = stringToSign(http.MethodGet, _testPathAndQuery, _testDateHttp, _testHost, _testHash)
 	_testSecret       = base64.StdEncoding.EncodeToString([]byte("secret"))
 	_testSignature, _ = sign(_testStringToSign, _testSecret)
 )

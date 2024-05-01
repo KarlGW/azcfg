@@ -3,8 +3,7 @@
 ## github.com/google/go-cmp/cmp
 
 * Name: github.com/google/go-cmp/cmp
-* Version: v0.6.0
-* License: [BSD-3-Clause](https://github.com/google/go-cmp/blob/v0.6.0/LICENSE)
+* License: [BSD-3-Clause](https://github.com/google/go-cmp/LICENSE)
 
 ```
 Copyright (c) 2017 The Go Authors. All rights reserved.
@@ -36,4 +35,3 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ```
-

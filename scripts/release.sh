@@ -17,9 +17,11 @@ if [[ $(git branch --show-current) != "main" ]]; then
   exit 1
 fi
 
+msg="Version $version"
 tag=v$version
-if [ ! -z $module ]; then
+if [ ! -z "$module" ]; then
   tag=$module/$tag
+  msg="$msg of $module"
 fi
 
 echo "Creating tag $tag for version $version."
@@ -33,6 +35,7 @@ echo "Testing..."
 go test ./...
 echo ""
 
+
 echo "Creating and pushing tag..."
-git tag -a $tag -m "Version $version"
+git tag -a $tag -m "$msg"
 git push origin $tag

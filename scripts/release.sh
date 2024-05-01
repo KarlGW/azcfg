@@ -35,7 +35,6 @@ echo "Testing..."
 go test ./...
 echo ""
 
-
 echo "Creating and pushing tag..."
 git tag -a $tag -m "$msg"
 git push origin $tag

@@ -31,6 +31,8 @@ func TestParse(t *testing.T) {
 				BoolPtr:          toPtr(false),
 				BoolSetting:      false,
 				BoolSettingPtr:   toPtr(false),
+				Duration:         time.Second * 3,
+				DurationPtr:      toPtr(time.Second * 3),
 				Empty:            "",
 				EmptySetting:     "",
 				NestedStructA: NestedStructA{
@@ -67,6 +69,12 @@ func TestParse(t *testing.T) {
 				BoolSettingPtr:   toPtr(true),
 				StringSetting:    "new string setting",
 				StringSettingPtr: toPtr("new string setting ptr"),
+				Duration:         time.Second * 1,
+				DurationPtr:      toPtr(time.Second * 2),
+				Complex64:        5 + 12i,
+				Complex64Ptr:     toPtr[complex64](5 + 12i),
+				Complex128:       5 + 12i,
+				Complex128Ptr:    toPtr[complex128](5 + 12i),
 				NestedStructA: NestedStructA{
 					Int:                   100,
 					Int64:                 100,
@@ -293,16 +301,22 @@ func TestGetBitSize(t *testing.T) {
 }
 
 type Struct struct {
-	String                  string  `secret:"string"`
-	StringPtr               *string `secret:"string-ptr"`
-	StringSetting           string  `setting:"string-setting"`
-	StringSettingPtr        *string `setting:"string-setting-ptr"`
-	Bool                    bool    `secret:"bool"`
-	BoolPtr                 *bool   `secret:"bool-ptr"`
-	BoolSetting             bool    `setting:"bool-setting"`
-	BoolSettingPtr          *bool   `setting:"bool-setting-ptr"`
-	Empty                   string  `secret:"empty"`
-	EmptySetting            string  `setting:"empty-setting"`
+	String                  string         `secret:"string"`
+	StringPtr               *string        `secret:"string-ptr"`
+	StringSetting           string         `setting:"string-setting"`
+	StringSettingPtr        *string        `setting:"string-setting-ptr"`
+	Bool                    bool           `secret:"bool"`
+	BoolPtr                 *bool          `secret:"bool-ptr"`
+	BoolSetting             bool           `setting:"bool-setting"`
+	BoolSettingPtr          *bool          `setting:"bool-setting-ptr"`
+	Empty                   string         `secret:"empty"`
+	EmptySetting            string         `setting:"empty-setting"`
+	Duration                time.Duration  `secret:"duration"`
+	DurationPtr             *time.Duration `secret:"duration-ptr"`
+	Complex64               complex64      `secret:"complex64"`
+	Complex64Ptr            *complex64     `secret:"complex64-ptr"`
+	Complex128              complex128     `secret:"complex128"`
+	Complex128Ptr           *complex128    `secret:"complex128-ptr"`
 	NestedStructA           NestedStructA
 	NestedStructB           *NestedStructB
 	unexportedNestedStructA NestedStructA
@@ -383,6 +397,12 @@ var (
 		"string-slice-ptr": {Value: "a,b,c"},
 		"int-slice":        {Value: "1,2,3"},
 		"int-slice-ptr":    {Value: "1,2,3"},
+		"duration":         {Value: "1s"},
+		"duration-ptr":     {Value: "2s"},
+		"complex64":        {Value: "5+12i"},
+		"complex64-ptr":    {Value: "5+12i"},
+		"complex128":       {Value: "5+12i"},
+		"complex128-ptr":   {Value: "5+12i"},
 	}
 )
 

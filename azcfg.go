@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/KarlGW/azcfg/internal/setting"
 )
@@ -223,7 +224,16 @@ func setValue(v reflect.Value, val string) error {
 			return err
 		}
 		v.SetUint(i)
+
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if v.Kind() == reflect.Int64 && v.Type() == reflect.TypeOf(time.Duration(0)) {
+			d, err := time.ParseDuration(val)
+			if err != nil {
+				return err
+			}
+			v.SetInt(int64(d))
+			return nil
+		}
 		i, err := strconv.ParseInt(val, 10, getBitSize(v.Kind()))
 		if err != nil {
 			return err
@@ -235,6 +245,12 @@ func setValue(v reflect.Value, val string) error {
 			return err
 		}
 		v.SetFloat(f)
+	case reflect.Complex64, reflect.Complex128:
+		c, err := strconv.ParseComplex(val, getBitSize(v.Kind()))
+		if err != nil {
+			return err
+		}
+		v.SetComplex(c)
 	default:
 		return errors.New("unsupported type: " + v.Kind().String())
 	}
@@ -253,8 +269,10 @@ func getBitSize(k reflect.Kind) int {
 		bit = 16
 	case reflect.Uint32, reflect.Int32, reflect.Float32:
 		bit = 32
-	case reflect.Uint64, reflect.Int64, reflect.Float64:
+	case reflect.Uint64, reflect.Int64, reflect.Float64, reflect.Complex64:
 		bit = 64
+	case reflect.Complex128:
+		bit = 128
 	}
 	return bit
 }

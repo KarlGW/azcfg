@@ -201,6 +201,15 @@ func main() {
 
 **Note**: Pointers to the above types are supported.
 
+Slices are supported if the secret/setting are comma separated values (spaces are trimmed by the parser).
+
+**Strings**
+
+`value1,value2,value3`
+
+**Numbers**
+`1,2,3`
+
 
 ### Options
 

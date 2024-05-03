@@ -74,7 +74,7 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 					errCh <- requiredSecretsError{message: requiredErrorMessage(secrets, requiredSecrets, "secret")}
 					return
 				}
-				errCh <- fmt.Errorf("%w: %s", ErrSetField, err.Error())
+				errCh <- err
 				return
 			}
 		}()
@@ -99,7 +99,7 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 					errCh <- requiredSettingsError{message: requiredErrorMessage(settings, requiredSettings, "setting")}
 					return
 				}
-				errCh <- fmt.Errorf("%w: %s", ErrSetField, err.Error())
+				errCh <- err
 				return
 			}
 		}()
@@ -185,13 +185,13 @@ func setFields[V hasValue](v reflect.Value, values map[string]V, tag string) err
 					sl := reflect.MakeSlice(v.Field(i).Type(), len(vals), len(vals))
 					for j := 0; j < sl.Cap(); j++ {
 						if err := setValue(sl.Index(j), vals[j]); err != nil {
-							return err
+							return fmt.Errorf("%w: field %s: %s", ErrSetValue, t.Field(i).Name, err.Error())
 						}
 					}
 					v.Field(i).Set(sl)
 				} else {
 					if err := setValue(v.Field(i), val.GetValue()); err != nil {
-						return err
+						return fmt.Errorf("%w: field %s: %s", ErrSetValue, t.Field(i).Name, err.Error())
 					}
 				}
 			}
@@ -215,13 +215,13 @@ func setValue(v reflect.Value, val string) error {
 	case reflect.Bool:
 		b, err := strconv.ParseBool(val)
 		if err != nil {
-			b = false
+			return parseError(v.Type().Name())
 		}
 		v.SetBool(b)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		i, err := strconv.ParseUint(val, 10, getBitSize(v.Kind()))
 		if err != nil {
-			return err
+			return parseError(v.Type().Name())
 		}
 		v.SetUint(i)
 
@@ -229,26 +229,26 @@ func setValue(v reflect.Value, val string) error {
 		if v.Kind() == reflect.Int64 && v.Type() == reflect.TypeOf(time.Duration(0)) {
 			d, err := time.ParseDuration(val)
 			if err != nil {
-				return err
+				return parseError(v.Type().Name())
 			}
 			v.SetInt(int64(d))
 			return nil
 		}
 		i, err := strconv.ParseInt(val, 10, getBitSize(v.Kind()))
 		if err != nil {
-			return err
+			return parseError(v.Type().Name())
 		}
 		v.SetInt(i)
 	case reflect.Float32, reflect.Float64:
 		f, err := strconv.ParseFloat(val, getBitSize(v.Kind()))
 		if err != nil {
-			return err
+			return parseError(v.Type().Name())
 		}
 		v.SetFloat(f)
 	case reflect.Complex64, reflect.Complex128:
 		c, err := strconv.ParseComplex(val, getBitSize(v.Kind()))
 		if err != nil {
-			return err
+			return parseError(v.Type().Name())
 		}
 		v.SetComplex(c)
 	default:
@@ -285,4 +285,9 @@ func isRequired(values []string) bool {
 		return false
 	}
 	return values[1] == requiredTag
+}
+
+// parseError returns a new error with the provided type.
+func parseError(typ string) error {
+	return fmt.Errorf("could not parse value into type %s", typ)
 }

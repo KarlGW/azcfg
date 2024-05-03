@@ -11,8 +11,8 @@ var (
 )
 
 var (
-	// ErrSetField is returned when a field cannot be set.
-	ErrSetField = errors.New("set field error")
+	// ErrSetValue is returned when a value cannot be set.
+	ErrSetValue = errors.New("set value error")
 	// ErrCredential is returned when a credential error occurs.
 	ErrCredential = errors.New("credential error")
 	// ErrSecretClient is returned when a secret client error occurs.
@@ -24,6 +24,43 @@ var (
 	// ErrSettingRetrieval is returned when a setting retrieval error occurs.
 	ErrSettingRetrieval = errors.New("setting retrieval error")
 )
+
+// Error represents a general error type that can contain multiple errors
+// for azcfg.
+type Error struct {
+	errors []error
+}
+
+// Error returns the combined error messages from the errors
+// contained in Error.
+func (e Error) Error() string {
+	var errs []string
+	for _, err := range e.errors {
+		errs = append(errs, err.Error())
+	}
+	return strings.Join(errs, "\n")
+}
+
+// Errors returns the errors contained in Error.
+func (e Error) Errors() []error {
+	return e.errors
+}
+
+// Len returns the number of errors contained in Error.
+func (e Error) Len() int {
+	return len(e.errors)
+}
+
+// Has returns true if the provided error tyoe is found in the errors.
+// If found, the first error of the provided type is returned.
+func (e Error) Has(err error) (error, bool) {
+	for _, e := range e.errors {
+		if errors.Is(e, err) {
+			return e, true
+		}
+	}
+	return nil, false
+}
 
 // RequiredFieldsError represents an error when either secrets or settings
 // are required but not set.
@@ -105,18 +142,18 @@ func buildErr(errs ...error) error {
 	}
 
 	var reqErr RequiredFieldsError
-	var msgs []string
+	var e Error
 	for _, err := range errs {
 		var reqSecretsErr requiredSecretsError
 		var reqSettingsErr requiredSettingsError
 		if errors.As(err, &reqSecretsErr) || errors.As(err, &reqSettingsErr) {
 			reqErr.errors = append(reqErr.errors, err)
 		} else {
-			msgs = append(msgs, err.Error())
+			e.errors = append(e.errors, err)
 		}
 	}
 	if len(reqErr.errors) > 0 {
 		return reqErr
 	}
-	return errors.New(strings.Join(msgs, "\n"))
+	return e
 }

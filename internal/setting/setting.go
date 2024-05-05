@@ -231,7 +231,7 @@ func (c *Client) Get(ctx context.Context, key string, options ...Option) (Settin
 		}
 
 		if len(settingErr.Detail) == 0 {
-			settingErr = newSettingError(key, resp.StatusCode)
+			settingErr = newSettingError(resp.StatusCode)
 		} else {
 			settingErr.StatusCode = resp.StatusCode
 		}

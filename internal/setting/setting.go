@@ -386,7 +386,7 @@ func parseConnectionString(connectionString string) (string, AccessKey, error) {
 
 	var appConfiguration, id, secret string
 	for _, part := range parts {
-		kv := strings.Split(part, "=")
+		kv := strings.SplitN(part, "=", 2)
 		if len(kv) != 2 {
 			return "", AccessKey{}, fmt.Errorf("%w: missing key or value", ErrParseConnectionString)
 		}

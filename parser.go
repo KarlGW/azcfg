@@ -18,14 +18,20 @@ import (
 	"github.com/KarlGW/azcfg/internal/setting"
 )
 
+// Secret represents a secret as returned from the Key Vault REST API.
+type Secret = secret.Secret
+
 // secretClient is the interface that wraps around method GetSecrets.
 type secretClient interface {
-	GetSecrets(ctx context.Context, names []string, options ...secret.Option) (map[string]secret.Secret, error)
+	GetSecrets(ctx context.Context, names []string, options ...secret.Option) (map[string]Secret, error)
 }
+
+// Setting represents a setting as returned from the App Config REST API.
+type Setting = setting.Setting
 
 // settingClient is the interface that wraps around method GetSettings.
 type settingClient interface {
-	GetSettings(ctx context.Context, keys []string, options ...setting.Option) (map[string]setting.Setting, error)
+	GetSettings(ctx context.Context, keys []string, options ...setting.Option) (map[string]Setting, error)
 }
 
 // RetryPolicy contains rules for retries.

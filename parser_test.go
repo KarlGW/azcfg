@@ -17,7 +17,6 @@ import (
 	"github.com/KarlGW/azcfg/internal/setting"
 	"github.com/KarlGW/azcfg/internal/testutils"
 	"github.com/KarlGW/azcfg/internal/uuid"
-	"github.com/KarlGW/azcfg/stub"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -219,11 +218,11 @@ func TestNewParser(t *testing.T) {
 				envs    map[string]string
 			}{
 				options: []Option{
-					WithSecretClient(stub.NewSecretClient(nil, nil)),
+					WithSecretClient(newMockSecretClient(nil, nil)),
 				},
 			},
 			want: &parser{
-				secretClient:  stub.SecretClient{},
+				secretClient:  mockSecretClient{},
 				settingClient: nil,
 				timeout:       time.Second * 10,
 			},
@@ -235,12 +234,12 @@ func TestNewParser(t *testing.T) {
 				envs    map[string]string
 			}{
 				options: []Option{
-					WithSettingClient(stub.NewSettingClient(nil, nil)),
+					WithSettingClient(newMockSettingClient(nil, nil)),
 				},
 			},
 			want: &parser{
 				secretClient:  nil,
-				settingClient: stub.SettingClient{},
+				settingClient: mockSettingClient{},
 				timeout:       time.Second * 10,
 			},
 		},
@@ -251,13 +250,13 @@ func TestNewParser(t *testing.T) {
 				envs    map[string]string
 			}{
 				options: []Option{
-					WithSecretClient(stub.NewSecretClient(nil, nil)),
-					WithSettingClient(stub.NewSettingClient(nil, nil)),
+					WithSecretClient(newMockSecretClient(nil, nil)),
+					WithSettingClient(newMockSettingClient(nil, nil)),
 				},
 			},
 			want: &parser{
-				secretClient:  stub.SecretClient{},
-				settingClient: stub.SettingClient{},
+				secretClient:  mockSecretClient{},
+				settingClient: mockSettingClient{},
 				timeout:       time.Second * 10,
 			},
 		},
@@ -273,7 +272,7 @@ func TestNewParser(t *testing.T) {
 
 			got, gotErr := NewParser(test.input.options...)
 
-			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(parser{}, mockCredential{}), cmpopts.IgnoreUnexported(secret.Client{}, stub.SecretClient{}, setting.Client{}, stub.SettingClient{}, identity.ClientCredential{}, identity.ManagedIdentityCredential{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(parser{}, mockCredential{}), cmpopts.IgnoreUnexported(secret.Client{}, setting.Client{}, identity.ClientCredential{}, identity.ManagedIdentityCredential{}, mockSecretClient{}, mockSettingClient{})); diff != "" {
 				t.Errorf("NewParser() = unexpected result (-want +got)\n%s\n", diff)
 			}
 
@@ -290,9 +289,9 @@ func TestParser_Parse(t *testing.T) {
 		input struct {
 			s          Struct
 			options    []Option
-			secrets    map[string]string
+			secrets    map[string]Secret
 			secretErr  error
-			settings   map[string]string
+			settings   map[string]Setting
 			settingErr error
 		}
 		want    Struct
@@ -303,17 +302,17 @@ func TestParser_Parse(t *testing.T) {
 			input: struct {
 				s          Struct
 				options    []Option
-				secrets    map[string]string
+				secrets    map[string]Secret
 				secretErr  error
-				settings   map[string]string
+				settings   map[string]Setting
 				settingErr error
 			}{
 				s: Struct{},
-				secrets: map[string]string{
-					"string": "new string",
+				secrets: map[string]Secret{
+					"string": {Value: "new string"},
 				},
-				settings: map[string]string{
-					"string-setting": "new string setting",
+				settings: map[string]Setting{
+					"string-setting": {Value: "new string setting"},
 				},
 			},
 			want: Struct{
@@ -326,17 +325,17 @@ func TestParser_Parse(t *testing.T) {
 			input: struct {
 				s          Struct
 				options    []Option
-				secrets    map[string]string
+				secrets    map[string]Secret
 				secretErr  error
-				settings   map[string]string
+				settings   map[string]Setting
 				settingErr error
 			}{
 				s: Struct{},
-				secrets: map[string]string{
-					"string": "new string",
+				secrets: map[string]Secret{
+					"string": {Value: "new string"},
 				},
-				settings: map[string]string{
-					"string-setting": "new string setting",
+				settings: map[string]Setting{
+					"string-setting": {Value: "new string setting"},
 				},
 				options: []Option{
 					WithContext(context.Background()),
@@ -352,8 +351,8 @@ func TestParser_Parse(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			p := &parser{
-				secretClient:  stub.NewSecretClient(test.input.secrets, test.input.secretErr),
-				settingClient: stub.NewSettingClient(test.input.settings, test.input.settingErr),
+				secretClient:  newMockSecretClient(test.input.secrets, test.input.secretErr),
+				settingClient: newMockSettingClient(test.input.settings, test.input.settingErr),
 			}
 
 			gotErr := p.Parse(&test.input.s, test.input.options...)

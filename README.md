@@ -405,6 +405,20 @@ For more information about option **2** and **3**, see [Credentials](#credential
 
 #### Built-in credentials
 
+The built-in credential handling for managed identities have been tested on:
+
+- Azure Functions
+- Azure Container Apps
+- Azure Container Instances
+
+In addition to this it should work on:
+
+- Azure Virtual Machines (since it makes use of the IMDS endpoint like Azure Container Instances)
+- Azure App Services (since it makes us of the same endpoint as Azure Functions)
+
+For more advanced scenarios like Azure Stack or Service Fabric see the section about using [`authopts`](./authopts/)
+together with [`azidentity`](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity).
+
 ##### Authentication with environment variables
 
 For all authentication scenarios the following environment variables are used:

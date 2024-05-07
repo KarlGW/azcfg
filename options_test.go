@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/azure/cloud"
-	"github.com/KarlGW/azcfg/stub"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -164,16 +163,20 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:  "WithSecretClient",
-			input: WithSecretClient(stub.NewSecretClient(nil, nil)),
+			input: WithSecretClient(newMockSecretClient(nil, nil)),
 			want: Options{
-				SecretClient: stub.SecretClient{},
+				SecretClient: mockSecretClient{
+					secrets: map[string]Secret{},
+				},
 			},
 		},
 		{
 			name:  "WithSettingClient",
-			input: WithSettingClient(stub.NewSettingClient(nil, nil)),
+			input: WithSettingClient(newMockSettingClient(nil, nil)),
 			want: Options{
-				SettingClient: stub.SettingClient{},
+				SettingClient: mockSettingClient{
+					settings: map[string]Setting{},
+				},
 			},
 		},
 		{
@@ -223,7 +226,7 @@ func TestOptions(t *testing.T) {
 		got := Options{}
 		test.input(&got)
 
-		if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Options{}, mockCredential{}, Entra{}), cmpopts.IgnoreUnexported(stub.SecretClient{}, stub.SettingClient{}), cmpopts.IgnoreFields(Entra{}, "PrivateKey"), cmp.Comparer(compareAssertionFunc)); diff != "" {
+		if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Options{}, Entra{}, mockCredential{}, mockSecretClient{}, mockSettingClient{}), cmpopts.IgnoreFields(Entra{}, "PrivateKey"), cmp.Comparer(compareAssertionFunc)); diff != "" {
 			t.Errorf("%s() = unexpected result (-want +got)\n%s\n", test.name, diff)
 		}
 	}

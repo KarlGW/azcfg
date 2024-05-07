@@ -33,7 +33,11 @@ func defaultRetry(r *http.Response, err error) bool {
 		return true
 	}
 	switch r.StatusCode {
-	case 0, http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
+	case 0:
+		return true
+	case http.StatusTooManyRequests:
+		return true
+	case http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
 		return true
 	}
 	return false

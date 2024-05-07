@@ -176,7 +176,7 @@ func TestClient_GetSettings(t *testing.T) {
 			bodies        map[string][]byte
 			label         string
 			labels        map[string]string
-			secrets       map[string]secret.Secret
+			secrets       map[string]Secret
 			err           error
 		}
 		want    map[string]Setting
@@ -191,7 +191,7 @@ func TestClient_GetSettings(t *testing.T) {
 				bodies        map[string][]byte
 				label         string
 				labels        map[string]string
-				secrets       map[string]secret.Secret
+				secrets       map[string]Secret
 				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
@@ -217,7 +217,7 @@ func TestClient_GetSettings(t *testing.T) {
 				bodies        map[string][]byte
 				label         string
 				labels        map[string]string
-				secrets       map[string]secret.Secret
+				secrets       map[string]Secret
 				err           error
 			}{
 				withAccessKey: true,
@@ -244,7 +244,7 @@ func TestClient_GetSettings(t *testing.T) {
 				bodies        map[string][]byte
 				label         string
 				labels        map[string]string
-				secrets       map[string]secret.Secret
+				secrets       map[string]Secret
 				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
@@ -274,7 +274,7 @@ func TestClient_GetSettings(t *testing.T) {
 				bodies        map[string][]byte
 				label         string
 				labels        map[string]string
-				secrets       map[string]secret.Secret
+				secrets       map[string]Secret
 				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
@@ -310,7 +310,7 @@ func TestClient_GetSettings(t *testing.T) {
 				bodies        map[string][]byte
 				label         string
 				labels        map[string]string
-				secrets       map[string]secret.Secret
+				secrets       map[string]Secret
 				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
@@ -319,7 +319,7 @@ func TestClient_GetSettings(t *testing.T) {
 					"setting-b": []byte(`{"value":"b"}`),
 					"setting-c": []byte(`{"value":"c"}`),
 				},
-				secrets: map[string]secret.Secret{
+				secrets: map[string]Secret{
 					"secret-1": {Value: "1"},
 				},
 			},
@@ -339,7 +339,7 @@ func TestClient_GetSettings(t *testing.T) {
 				bodies        map[string][]byte
 				label         string
 				labels        map[string]string
-				secrets       map[string]secret.Secret
+				secrets       map[string]Secret
 				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
@@ -364,7 +364,7 @@ func TestClient_GetSettings(t *testing.T) {
 				bodies        map[string][]byte
 				label         string
 				labels        map[string]string
-				secrets       map[string]secret.Secret
+				secrets       map[string]Secret
 				err           error
 			}{
 				keys: []string{"setting-a"},
@@ -384,7 +384,7 @@ func TestClient_GetSettings(t *testing.T) {
 				bodies        map[string][]byte
 				label         string
 				labels        map[string]string
-				secrets       map[string]secret.Secret
+				secrets       map[string]Secret
 				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
@@ -410,7 +410,7 @@ func TestClient_GetSettings(t *testing.T) {
 				bodies        map[string][]byte
 				label         string
 				labels        map[string]string
-				secrets       map[string]secret.Secret
+				secrets       map[string]Secret
 				err           error
 			}{
 				keys: []string{"setting-a"},
@@ -432,7 +432,7 @@ func TestClient_GetSettings(t *testing.T) {
 				bodies        map[string][]byte
 				label         string
 				labels        map[string]string
-				secrets       map[string]secret.Secret
+				secrets       map[string]Secret
 				err           error
 			}{
 				keys: []string{"setting-a"},
@@ -450,14 +450,14 @@ func TestClient_GetSettings(t *testing.T) {
 				bodies        map[string][]byte
 				label         string
 				labels        map[string]string
-				secrets       map[string]secret.Secret
+				secrets       map[string]Secret
 				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
 				bodies: map[string][]byte{
 					"setting-a": []byte(`{"content_type":"` + keyVaultReferenceContentType + `","value":"{\"uri\":\"https://testvault.vault.azure.net/secrets/secret-1\"}"}`),
 				},
-				secrets: map[string]secret.Secret{
+				secrets: map[string]Secret{
 					"secret-1": {Value: "1"},
 				},
 				err: errGetSecret,
@@ -508,69 +508,69 @@ func TestClient_getSecret(t *testing.T) {
 		name  string
 		input struct {
 			secretClient secretClient
-			secrets      map[string]secret.Secret
+			secrets      map[string]Secret
 			uri          string
 			err          error
 		}
-		want    secret.Secret
+		want    Secret
 		wantErr error
 	}{
 		{
 			name: "get secret from uri",
 			input: struct {
 				secretClient secretClient
-				secrets      map[string]secret.Secret
+				secrets      map[string]Secret
 				uri          string
 				err          error
 			}{
-				secrets: map[string]secret.Secret{
+				secrets: map[string]Secret{
 					"secretname": {Value: "secret"},
 				},
 				uri: "https://testvault.vault.azure.net/secrets/secretname",
 			},
-			want: secret.Secret{Value: "secret"},
+			want: Secret{Value: "secret"},
 		},
 		{
 			name: "get secret from uri (existing client)",
 			input: struct {
 				secretClient secretClient
-				secrets      map[string]secret.Secret
+				secrets      map[string]Secret
 				uri          string
 				err          error
 			}{
 				secretClient: func() *mockSecretClient {
 					return &mockSecretClient{
-						secrets: map[string]secret.Secret{
+						secrets: map[string]Secret{
 							"secretname": {Value: "secret"},
 						},
 					}
 				}(),
 				uri: "https://testvault.vault.azure.net/secrets/secretname",
 			},
-			want: secret.Secret{Value: "secret"},
+			want: Secret{Value: "secret"},
 		},
 		{
 			name: "get secret - not found",
 			input: struct {
 				secretClient secretClient
-				secrets      map[string]secret.Secret
+				secrets      map[string]Secret
 				uri          string
 				err          error
 			}{
-				secrets: map[string]secret.Secret{},
+				secrets: map[string]Secret{},
 				uri:     "https://testvault.vault.azure.net/secrets/secretname",
 			},
-			want: secret.Secret{Value: ""},
+			want: Secret{Value: ""},
 		},
 		{
 			name: "get secret from uri - error",
 			input: struct {
 				secretClient secretClient
-				secrets      map[string]secret.Secret
+				secrets      map[string]Secret
 				uri          string
 				err          error
 			}{
-				secrets: map[string]secret.Secret{
+				secrets: map[string]Secret{
 					"secretname": {Value: "secret"},
 				},
 				uri: "https://testvault.vault.azure.net/secrets/secretname",
@@ -928,7 +928,7 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 
 type mockSecretClient struct {
 	err     error
-	secrets map[string]secret.Secret
+	secrets map[string]Secret
 	vault   string
 }
 
@@ -940,13 +940,13 @@ func (c *mockSecretClient) SetVault(vault string) {
 	c.vault = vault
 }
 
-func (c mockSecretClient) Get(ctx context.Context, name string, options ...secret.Option) (secret.Secret, error) {
+func (c mockSecretClient) Get(ctx context.Context, name string, options ...secret.Option) (Secret, error) {
 	if c.err != nil && errors.Is(c.err, errGetSecret) {
-		return secret.Secret{}, c.err
+		return Secret{}, c.err
 	}
 	s, ok := c.secrets[name]
 	if !ok {
-		return secret.Secret{}, nil
+		return Secret{}, nil
 	}
 	return s, nil
 }

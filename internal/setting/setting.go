@@ -52,10 +52,13 @@ type AccessKey struct {
 	Secret string
 }
 
+// Secret represents a secret as returned from the Key Vault REST API.
+type Secret = secret.Secret
+
 // secretClient is the interface that wraps around method Get, Vault and
 // SetVault.
 type secretClient interface {
-	Get(ctx context.Context, name string, options ...secret.Option) (secret.Secret, error)
+	Get(ctx context.Context, name string, options ...secret.Option) (Secret, error)
 	Vault() string
 	SetVault(vault string)
 }
@@ -266,13 +269,13 @@ func (c *Client) Get(ctx context.Context, key string, options ...Option) (Settin
 }
 
 // getSecret gets a secret from the provided URI.
-func (c *Client) getSecret(ctx context.Context, uri string) (secret.Secret, error) {
+func (c *Client) getSecret(ctx context.Context, uri string) (Secret, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	v, s, err := vaultAndSecret(uri)
 	if err != nil {
-		return secret.Secret{}, err
+		return Secret{}, err
 	}
 	if c.sc == nil {
 		c.sc, err = newSecretClient(v, c.cred,
@@ -281,7 +284,7 @@ func (c *Client) getSecret(ctx context.Context, uri string) (secret.Secret, erro
 			secret.WithRetryPolicy(c.retryPolicy),
 		)
 		if err != nil {
-			return secret.Secret{}, err
+			return Secret{}, err
 		}
 	} else {
 		if c.sc.Vault() != v {
@@ -290,7 +293,7 @@ func (c *Client) getSecret(ctx context.Context, uri string) (secret.Secret, erro
 	}
 	sec, err := c.sc.Get(ctx, s)
 	if err != nil {
-		return secret.Secret{}, err
+		return Secret{}, err
 	}
 	return sec, nil
 }

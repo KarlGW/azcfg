@@ -3,8 +3,6 @@ package azcfg
 import (
 	"testing"
 
-	"github.com/KarlGW/azcfg/internal/secret"
-	"github.com/KarlGW/azcfg/internal/setting"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -12,7 +10,7 @@ func TestRequiredErrorMessage_Secret(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input struct {
-			secrets  map[string]secret.Secret
+			secrets  map[string]Secret
 			required []string
 		}
 		want string
@@ -20,10 +18,10 @@ func TestRequiredErrorMessage_Secret(t *testing.T) {
 		{
 			name: "no required",
 			input: struct {
-				secrets  map[string]secret.Secret
+				secrets  map[string]Secret
 				required []string
 			}{
-				secrets:  map[string]secret.Secret{},
+				secrets:  map[string]Secret{},
 				required: []string{},
 			},
 			want: "",
@@ -31,10 +29,10 @@ func TestRequiredErrorMessage_Secret(t *testing.T) {
 		{
 			name: "1 required",
 			input: struct {
-				secrets  map[string]secret.Secret
+				secrets  map[string]Secret
 				required []string
 			}{
-				secrets: map[string]secret.Secret{
+				secrets: map[string]Secret{
 					"secret1": {Value: ""},
 				},
 				required: []string{
@@ -46,10 +44,10 @@ func TestRequiredErrorMessage_Secret(t *testing.T) {
 		{
 			name: "2 required",
 			input: struct {
-				secrets  map[string]secret.Secret
+				secrets  map[string]Secret
 				required []string
 			}{
-				secrets: map[string]secret.Secret{
+				secrets: map[string]Secret{
 					"secret1": {Value: ""},
 					"secret2": {Value: ""},
 				},
@@ -63,10 +61,10 @@ func TestRequiredErrorMessage_Secret(t *testing.T) {
 		{
 			name: "3 required",
 			input: struct {
-				secrets  map[string]secret.Secret
+				secrets  map[string]Secret
 				required []string
 			}{
-				secrets: map[string]secret.Secret{
+				secrets: map[string]Secret{
 					"secret1": {Value: ""},
 					"secret2": {Value: ""},
 					"secret3": {Value: ""},
@@ -96,7 +94,7 @@ func TestRequiredErrorMessage_Setting(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input struct {
-			settings map[string]setting.Setting
+			settings map[string]Setting
 			required []string
 		}
 		want string
@@ -104,10 +102,10 @@ func TestRequiredErrorMessage_Setting(t *testing.T) {
 		{
 			name: "no required",
 			input: struct {
-				settings map[string]setting.Setting
+				settings map[string]Setting
 				required []string
 			}{
-				settings: map[string]setting.Setting{},
+				settings: map[string]Setting{},
 				required: []string{},
 			},
 			want: "",
@@ -115,10 +113,10 @@ func TestRequiredErrorMessage_Setting(t *testing.T) {
 		{
 			name: "1 required",
 			input: struct {
-				settings map[string]setting.Setting
+				settings map[string]Setting
 				required []string
 			}{
-				settings: map[string]setting.Setting{
+				settings: map[string]Setting{
 					"setting1": {Value: ""},
 				},
 				required: []string{
@@ -130,10 +128,10 @@ func TestRequiredErrorMessage_Setting(t *testing.T) {
 		{
 			name: "2 required",
 			input: struct {
-				settings map[string]setting.Setting
+				settings map[string]Setting
 				required []string
 			}{
-				settings: map[string]setting.Setting{
+				settings: map[string]Setting{
 					"setting1": {Value: ""},
 					"setting2": {Value: ""},
 				},
@@ -147,10 +145,10 @@ func TestRequiredErrorMessage_Setting(t *testing.T) {
 		{
 			name: "3 required",
 			input: struct {
-				settings map[string]setting.Setting
+				settings map[string]Setting
 				required []string
 			}{
-				settings: map[string]setting.Setting{
+				settings: map[string]Setting{
 					"setting1": {Value: ""},
 					"setting2": {Value: ""},
 					"setting3": {Value: ""},

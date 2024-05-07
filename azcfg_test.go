@@ -191,8 +191,8 @@ func TestParse(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			secretClient := mockSecretClient{err: test.wantErr}
-			settingClient := mockSettingClient{err: test.wantErr}
+			secretClient := newMockSecretClient(responseSecrets, test.wantErr)
+			settingClient := newMockSettingClient(responseSettings, test.wantErr)
 
 			gotErr := parse(context.Background(), &test.input, parseOptions{secretClient: secretClient, settingClient: settingClient})
 			if diff := cmp.Diff(test.want, test.input, cmp.AllowUnexported(Struct{})); diff != "" {
@@ -217,8 +217,8 @@ func TestParseRequired(t *testing.T) {
 			input: StructWithRequired{},
 			wantErr: &RequiredFieldsError{
 				errors: []error{
-					requiredSecretsError{message: requiredErrorMessage(map[string]secret.Secret{"empty": {}, "empty-float64": {}}, []string{"empty", "empty-float64"}, "secret")},
-					requiredSettingsError{message: requiredErrorMessage(map[string]setting.Setting{"empty-setting": {}}, []string{"empty-setting"}, "setting")},
+					requiredSecretsError{message: requiredErrorMessage(map[string]Secret{"empty": {}, "empty-float64": {}}, []string{"empty", "empty-float64"}, "secret")},
+					requiredSettingsError{message: requiredErrorMessage(map[string]Setting{"empty-setting": {}}, []string{"empty-setting"}, "setting")},
 				},
 			},
 		},
@@ -226,8 +226,8 @@ func TestParseRequired(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			secretClient := mockSecretClient{}
-			settingClient := mockSettingClient{}
+			secretClient := mockSecretClient{secrets: responseSecrets}
+			settingClient := mockSettingClient{settings: responseSettings}
 
 			gotErr := parse(context.Background(), &test.input, parseOptions{secretClient: secretClient, settingClient: settingClient})
 			if test.wantErr != nil && gotErr == nil {
@@ -375,18 +375,29 @@ type NestedStructWithRequired struct {
 }
 
 type mockSecretClient struct {
-	err error
+	secrets map[string]Secret
+	err     error
 }
 
-func (c mockSecretClient) GetSecrets(ctx context.Context, names []string, options ...secret.Option) (map[string]secret.Secret, error) {
+func newMockSecretClient(secrets map[string]Secret, err error) mockSecretClient {
+	if secrets == nil {
+		secrets = make(map[string]Secret)
+	}
+	return mockSecretClient{
+		secrets: secrets,
+		err:     err,
+	}
+}
+
+func (c mockSecretClient) GetSecrets(ctx context.Context, names []string, options ...secret.Option) (map[string]Secret, error) {
 	if c.err != nil {
 		return nil, errors.New("could not get secrets")
 	}
-	return responseSecrets, nil
+	return c.secrets, nil
 }
 
 var (
-	responseSecrets = map[string]secret.Secret{
+	responseSecrets = map[string]Secret{
 		"string":           {Value: "new string"},
 		"string-ptr":       {Value: "new string ptr"},
 		"empty":            {Value: ""},
@@ -413,15 +424,26 @@ var (
 )
 
 type mockSettingClient struct {
-	err error
+	settings map[string]Setting
+	err      error
 }
 
-func (c mockSettingClient) GetSettings(ctx context.Context, keys []string, options ...setting.Option) (map[string]setting.Setting, error) {
+func newMockSettingClient(settings map[string]Setting, err error) mockSettingClient {
+	if settings == nil {
+		settings = make(map[string]Setting)
+	}
+	return mockSettingClient{
+		settings: settings,
+		err:      err,
+	}
+}
+
+func (c mockSettingClient) GetSettings(ctx context.Context, keys []string, options ...setting.Option) (map[string]Setting, error) {
 	time.Sleep(time.Millisecond * 10)
 	if c.err != nil {
 		return nil, errors.New("could not get settings")
 	}
-	return responseSettings, nil
+	return c.settings, nil
 }
 
 func toPtr[V any](v V) *V {
@@ -429,7 +451,7 @@ func toPtr[V any](v V) *V {
 }
 
 var (
-	responseSettings = map[string]setting.Setting{
+	responseSettings = map[string]Setting{
 		"string-setting":           {Value: "new string setting"},
 		"string-setting-ptr":       {Value: "new string setting ptr"},
 		"bool-setting":             {Value: "true"},

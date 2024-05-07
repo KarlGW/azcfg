@@ -285,6 +285,12 @@ func TestGetBitSize(t *testing.T) {
 		{
 			name: "float64", input: float64(1), want: 64,
 		},
+		{
+			name: "complex64", input: complex64(1), want: 64,
+		},
+		{
+			name: "complex128", input: complex128(1), want: 128,
+		},
 	}
 
 	for _, test := range tests {

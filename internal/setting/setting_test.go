@@ -372,7 +372,7 @@ func TestClient_GetSettings(t *testing.T) {
 			},
 			wantErr: settingError{
 				StatusCode: http.StatusForbidden,
-				Detail:     "access to key setting-a is forbidden",
+				Detail:     "forbidden",
 			},
 		},
 		{

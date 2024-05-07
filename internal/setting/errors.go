@@ -5,8 +5,6 @@ import (
 )
 
 const (
-	// SettingForbidden is the status code returned when a setting is forbidden.
-	SettingForbidden = 403
 	// SettingNotFound is the status code returned when a setting is not found.
 	SettingNotFound = 404
 )
@@ -33,11 +31,27 @@ func (e settingError) Error() string {
 }
 
 // newSettingError creates a new settingError with the provided key and status code.
-func newSettingError(key string, statusCode int) settingError {
+func newSettingError(statusCode int) settingError {
 	var detail string
 	switch statusCode {
-	case SettingForbidden:
-		detail = "access to key " + key + " is forbidden"
+	case 400:
+		detail = "bad request"
+	case 401:
+		detail = "not authorized"
+	case 403:
+		detail = "forbidden"
+	case 404:
+		detail = "not found"
+	case 500:
+		detail = "internal server error"
+	case 502:
+		detail = "bad gateway"
+	case 503:
+		detail = "service unavailable"
+	case 504:
+		detail = "gateway timeout"
+	default:
+		detail = "unknown error"
 	}
 	return settingError{
 		Detail:     detail,

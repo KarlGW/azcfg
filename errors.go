@@ -51,7 +51,7 @@ func (e Error) Len() int {
 	return len(e.errors)
 }
 
-// Has returns true if the provided error tyoe is found in the errors.
+// Has returns true if the provided error type is found in the errors.
 // If found, the first error of the provided type is returned.
 func (e Error) Has(err error) (error, bool) {
 	for _, e := range e.errors {

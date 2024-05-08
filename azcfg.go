@@ -58,7 +58,7 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 	secretFields, requiredSecrets := getFields(v, secretTag)
 	if len(secretFields) > 0 {
 		if secretClient == nil {
-			return fmt.Errorf("%w: no key vault name set", ErrSecretClient)
+			return fmt.Errorf("%w: key vault name not set", ErrSecretClient)
 		}
 		wg.Add(1)
 		go func() {
@@ -86,7 +86,7 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 	settingFields, requiredSettings := getFields(v, settingTag)
 	if len(settingFields) > 0 {
 		if settingClient == nil {
-			return fmt.Errorf("%w: no app configuration name set", ErrSettingClient)
+			return fmt.Errorf("%w: app configuration name not set", ErrSettingClient)
 		}
 
 		wg.Add(1)

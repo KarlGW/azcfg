@@ -56,7 +56,10 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 	var wg sync.WaitGroup
 
 	secretFields, requiredSecrets := getFields(v, secretTag)
-	if len(secretFields) > 0 && secretClient != nil {
+	if len(secretFields) > 0 {
+		if secretClient == nil {
+			return fmt.Errorf("%w: key vault name not set", ErrSecretClient)
+		}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -81,7 +84,11 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 	}
 
 	settingFields, requiredSettings := getFields(v, settingTag)
-	if len(settingFields) > 0 && settingClient != nil {
+	if len(settingFields) > 0 {
+		if settingClient == nil {
+			return fmt.Errorf("%w: app configuration name not set", ErrSettingClient)
+		}
+
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

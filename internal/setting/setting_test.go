@@ -177,6 +177,7 @@ func TestClient_GetSettings(t *testing.T) {
 			label         string
 			labels        map[string]string
 			secrets       map[string]Secret
+			timeout       time.Duration
 			err           error
 		}
 		want    map[string]Setting
@@ -192,6 +193,7 @@ func TestClient_GetSettings(t *testing.T) {
 				label         string
 				labels        map[string]string
 				secrets       map[string]Secret
+				timeout       time.Duration
 				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
@@ -200,6 +202,7 @@ func TestClient_GetSettings(t *testing.T) {
 					"setting-b": []byte(`{"value":"b"}`),
 					"setting-c": []byte(`{"value":"c"}`),
 				},
+				timeout: 30 * time.Millisecond,
 			},
 			want: map[string]Setting{
 				"setting-a": {Value: "a"},
@@ -218,6 +221,7 @@ func TestClient_GetSettings(t *testing.T) {
 				label         string
 				labels        map[string]string
 				secrets       map[string]Secret
+				timeout       time.Duration
 				err           error
 			}{
 				withAccessKey: true,
@@ -227,6 +231,7 @@ func TestClient_GetSettings(t *testing.T) {
 					"setting-b": []byte(`{"value":"b"}`),
 					"setting-c": []byte(`{"value":"c"}`),
 				},
+				timeout: 30 * time.Millisecond,
 			},
 			want: map[string]Setting{
 				"setting-a": {Value: "a"},
@@ -245,6 +250,7 @@ func TestClient_GetSettings(t *testing.T) {
 				label         string
 				labels        map[string]string
 				secrets       map[string]Secret
+				timeout       time.Duration
 				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
@@ -257,6 +263,7 @@ func TestClient_GetSettings(t *testing.T) {
 				options: []Option{
 					WithLabel("prod"),
 				},
+				timeout: 30 * time.Millisecond,
 			},
 			want: map[string]Setting{
 				"setting-a": {Value: "a"},
@@ -275,6 +282,7 @@ func TestClient_GetSettings(t *testing.T) {
 				label         string
 				labels        map[string]string
 				secrets       map[string]Secret
+				timeout       time.Duration
 				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
@@ -293,6 +301,7 @@ func TestClient_GetSettings(t *testing.T) {
 						"setting-c": "test",
 					}),
 				},
+				timeout: 30 * time.Millisecond,
 			},
 			want: map[string]Setting{
 				"setting-a": {Value: "a"},
@@ -311,6 +320,7 @@ func TestClient_GetSettings(t *testing.T) {
 				label         string
 				labels        map[string]string
 				secrets       map[string]Secret
+				timeout       time.Duration
 				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
@@ -322,6 +332,7 @@ func TestClient_GetSettings(t *testing.T) {
 				secrets: map[string]Secret{
 					"secret-1": {Value: "1"},
 				},
+				timeout: 30 * time.Millisecond,
 			},
 			want: map[string]Setting{
 				"setting-a": {ContentType: keyVaultReferenceContentType, Value: "1"},
@@ -340,6 +351,7 @@ func TestClient_GetSettings(t *testing.T) {
 				label         string
 				labels        map[string]string
 				secrets       map[string]Secret
+				timeout       time.Duration
 				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
@@ -347,6 +359,7 @@ func TestClient_GetSettings(t *testing.T) {
 					"setting-a": []byte(`{"value":"a"}`),
 					"setting-c": []byte(`{"value":"c"}`),
 				},
+				timeout: 30 * time.Millisecond,
 			},
 			want: map[string]Setting{
 				"setting-a": {Value: "a"},
@@ -354,6 +367,29 @@ func TestClient_GetSettings(t *testing.T) {
 				"setting-c": {Value: "c"},
 			},
 			wantErr: nil,
+		},
+		{
+			name: "get settings - context deadline exceeded",
+			input: struct {
+				withAccessKey bool
+				keys          []string
+				options       []Option
+				bodies        map[string][]byte
+				label         string
+				labels        map[string]string
+				secrets       map[string]Secret
+				timeout       time.Duration
+				err           error
+			}{
+				keys: []string{"setting-a", "setting-b", "setting-c"},
+				bodies: map[string][]byte{
+					"setting-a": []byte(`{"value":"a"}`),
+					"setting-b": []byte(`{"value":"b"}`),
+					"setting-c": []byte(`{"value":"c"}`),
+				},
+				timeout: time.Nanosecond,
+			},
+			wantErr: cmpopts.AnyError,
 		},
 		{
 			name: "setting forbidden",
@@ -365,10 +401,12 @@ func TestClient_GetSettings(t *testing.T) {
 				label         string
 				labels        map[string]string
 				secrets       map[string]Secret
+				timeout       time.Duration
 				err           error
 			}{
-				keys: []string{"setting-a"},
-				err:  errForbidden,
+				keys:    []string{"setting-a"},
+				timeout: 30 * time.Millisecond,
+				err:     errForbidden,
 			},
 			wantErr: settingError{
 				StatusCode: http.StatusForbidden,
@@ -385,6 +423,7 @@ func TestClient_GetSettings(t *testing.T) {
 				label         string
 				labels        map[string]string
 				secrets       map[string]Secret
+				timeout       time.Duration
 				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
@@ -393,6 +432,7 @@ func TestClient_GetSettings(t *testing.T) {
 					"setting-b": []byte(`{"value":"b"}`),
 					"setting-c": []byte(`{"value":"c"}`),
 				},
+				timeout: 30 * time.Millisecond,
 			},
 			want: map[string]Setting{
 				"setting-a": {ContentType: keyVaultReferenceContentType, Value: ""},
@@ -411,10 +451,12 @@ func TestClient_GetSettings(t *testing.T) {
 				label         string
 				labels        map[string]string
 				secrets       map[string]Secret
+				timeout       time.Duration
 				err           error
 			}{
-				keys: []string{"setting-a"},
-				err:  errServer,
+				keys:    []string{"setting-a"},
+				timeout: 30 * time.Millisecond,
+				err:     errServer,
 			},
 			want: nil,
 			wantErr: settingError{
@@ -433,10 +475,12 @@ func TestClient_GetSettings(t *testing.T) {
 				label         string
 				labels        map[string]string
 				secrets       map[string]Secret
+				timeout       time.Duration
 				err           error
 			}{
-				keys: []string{"setting-a"},
-				err:  errRequest,
+				keys:    []string{"setting-a"},
+				timeout: 30 * time.Millisecond,
+				err:     errRequest,
 			},
 			want:    nil,
 			wantErr: errRequest,
@@ -451,6 +495,7 @@ func TestClient_GetSettings(t *testing.T) {
 				label         string
 				labels        map[string]string
 				secrets       map[string]Secret
+				timeout       time.Duration
 				err           error
 			}{
 				keys: []string{"setting-a", "setting-b", "setting-c"},
@@ -460,7 +505,8 @@ func TestClient_GetSettings(t *testing.T) {
 				secrets: map[string]Secret{
 					"secret-1": {Value: "1"},
 				},
-				err: errGetSecret,
+				timeout: 30 * time.Millisecond,
+				err:     errGetSecret,
 			},
 			wantErr: errGetSecret,
 		},
@@ -490,7 +536,10 @@ func TestClient_GetSettings(t *testing.T) {
 				client, _ = NewClientWithAccessKey("config", AccessKey{ID: "id", Secret: base64.StdEncoding.EncodeToString([]byte(`secret`))}, opts...)
 			}
 
-			got, gotErr := client.GetSettings(context.Background(), test.input.keys, test.input.options...)
+			ctx, cancel := context.WithTimeout(context.Background(), test.input.timeout)
+			defer cancel()
+
+			got, gotErr := client.GetSettings(ctx, test.input.keys, test.input.options...)
 
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("GetSettings() = unexpected result (-want +got)\n%s\n", diff)
@@ -879,6 +928,7 @@ type mockHttpClient struct {
 }
 
 func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
+	time.Sleep(10 * time.Millisecond)
 	if c.err != nil && !errors.Is(c.err, errGetSecret) {
 		if errors.Is(c.err, errServer) {
 			return &http.Response{

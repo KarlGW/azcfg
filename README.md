@@ -13,7 +13,6 @@
   * [Required](#required)
   * [Parser](#parser)
   * [Pre-populated struct and default values](#pre-populated-struct-and-default-values)
-  * [Timeout and context](#timeout-and-context)
   * [App Configuration setting labels](#app-configuration-setting-labels)
   * [Authentication](#authentication)
     * [Built-in credentials](#built-in-credentials)
@@ -82,6 +81,10 @@ Using a managed identity as credentials on an Azure service. For other authentic
 package main
 
 import (
+    "context"
+    "fmt"
+    "time"
+
     "github.com/KarlGW/azcfg"
 )
 
@@ -100,8 +103,11 @@ type credential struct {
 }
 
 func main() {
+    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    defer cancel()
+
     cfg := config{}
-    if err := azcfg.Parse(&cfg); err != nil {
+    if err := azcfg.Parse(ctx, &cfg); err != nil {
         // Handle error.
     }
 
@@ -119,6 +125,10 @@ func main() {
 package main
 
 import (
+    "context"
+    "fmt"
+    "time"
+
     "github.com/KarlGW/azcfg"
 )
 
@@ -137,8 +147,11 @@ type credential struct {
 }
 
 func main() {
+    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    defer cancel()
+
     var cfg config
-    if err := azcfg.Parse(&cfg); err != nil {
+    if err := azcfg.Parse(ctx, &cfg); err != nil {
         // Handle error.
     }
 
@@ -156,6 +169,10 @@ func main() {
 package main
 
 import (
+    "context"
+    "fmt"
+    "time"
+
     "github.com/KarlGW/azcfg"
 )
 
@@ -174,8 +191,11 @@ type credential struct {
 }
 
 func main() {
+    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    defer cancel()
+
     var cfg config
-    if err := azcfg.Parse(&cfg); err != nil {
+    if err := azcfg.Parse(ctx, &cfg); err != nil {
         // Handle error.
     }
 
@@ -213,33 +233,39 @@ Slices are supported if the secret/setting are comma separated values (spaces ar
 
 ### Options
 
-Options can be provided to `Parse` or `NewParser`:
+Options can be set on `Parse` or the parser with `NewParser`. For the available options see [Options](https://pkg.go.dev/github.com/KarlGW/azcfg#Options).
+
+Option functions are provided by the module for convenience, see [Option](https://pkg.go.dev/github.com/KarlGW/azcfg#Option).
+
+Example with providing options with an anonymous function:
 
 ```go
 package main
 
 import (
+    "context"
+    "time"
+
     "github.com/KarlGW/azcfg"
 )
 
 func main() {
+    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    defer cancel()
+´
     var cfg config
-    if err := azcfg.Parse(&cfg, func(o *Options) {
+    if err := azcfg.Parse(ctx, &cfg, func(o *Options) {
         o.Credential = cred
         o.KeyVault = "vault"
         o.AppConfiguration = "appconfig"
         o.Concurrency = 20
-        o.Timeout = time.Millisecond * 1000 * 20
+        o.Timeout = 20 * time.Second
     }); err != nil {
         // Handle error.
     }
 }
 ```
 
-Option functions are provided by the module for convenience, see [Option](https://pkg.go.dev/github.com/KarlGW/azcfg#Option).
-
-When providing options to the `Parse` method on a `Parser`,
-only `WithContext` is valid.
 
 ### Required
 
@@ -264,6 +290,9 @@ An independent `parser` can be created and passed around inside of the applicati
 package main
 
 import (
+    "context"
+    "time"
+
     "github.com/KarlGW/azcfg"
 )
 
@@ -273,8 +302,11 @@ func main() {
         // Handle error.
     }
 
+    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    defer cancel()
+
     var cfg config
-    if err := parser.Parse(&cfg); err != nil {
+    if err := parser.Parse(ctx, &cfg); err != nil {
         // Handle error.
     }
 }
@@ -294,6 +326,10 @@ If the values for fields that are tagged are retrived, they will overwrite the c
 package main
 
 import (
+    "context"
+    "fmt"
+    "time"
+
     "github.com/KarlGW/azcfg"
 )
 
@@ -319,62 +355,14 @@ func main() {
         Password: os.Getenv("PASSWORD")
     }
 
+    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    defer cancel()
 
-    if err := azcfg.Parse(&cfg); err != nil {
+    if err := azcfg.Parse(ctx, &cfg); err != nil {
         // Handle error.
     }
 
     fmt.Printf("%+v\n", cfg)
-}
-```
-
-### Timeout and context
-
-By default the `Parse` function and `Parse` method on `Parser` creates a `context` with the configured (or default) timeout.
-For those cases that a custom `context` is desired, it can be passed with an option to `Parse`:
-
-#### With `Parse`
-
-```go
-package main
-
-import (
-    "github.com/KarlGW/azcfg"
-)
-
-func main() {
-    ctx, cancel := context.WithTimeout(context.Background(), time.Second * 30)
-    defer cancel()
-
-    var cfg Config
-    if err := azcfg.Parse(&cfg, azcfg.WithContext(ctx)); err != nil {
-        // Handle error.
-    }
-}
-```
-
-#### With `Parser`
-
-```go
-package main
-
-import (
-    "github.com/KarlGW/azcfg"
-)
-
-func main() {
-    parser, err := azcfg.NewParser()
-    if err != nil {
-        // Handle error.
-    }
-
-    ctx, cancel := context.WithTimeout(context.Background(), time.Second * 30)
-    defer cancel()
-
-    var cfg Config
-    if err := parser.Parse(&cfg, azcfg.WithContext(ctx)); err != nil {
-        // Handle error.
-    }
 }
 ```
 
@@ -466,6 +454,7 @@ Provided options will override values set from environment variables.
 ```go
 // Client Secret.
 azcfg.Parse(
+    ctx,
     &cfg,
     azcfg.WithClientSecretCredential(tenantID, clientID, clientSecret),
     azcfg.WithKeyVault(vault),
@@ -473,6 +462,7 @@ azcfg.Parse(
 
 // Client certificate.
 azcfg.Parse(
+    ctx,
     &cfg,
     azcfg.WithClientCertificateCredential(tenantID, clientID, certificates, key),
     azcfg.WithKeyVault(vault),
@@ -480,6 +470,7 @@ azcfg.Parse(
 
 // Client assertion/federated credentials.
 azcfg.Parse(
+    ctx,
     &cfg,
     azcfg.WithClientAssertionCredential(tenantID, clientID, func() (string, error) {
 	    return "assertion", nil
@@ -492,15 +483,15 @@ azcfg.Parse(
 
 ```go
 // System assigned identity.
-azcfg.Parse(&cfg, azcfg.WithManagedIdentity(), azcfg.WithKeyVault(vault))
+azcfg.Parse(ctx, &cfg, azcfg.WithManagedIdentity(), azcfg.WithKeyVault(vault))
 // User assigned identity.
-azcfg.Parse(&cfg, azcfg.WithManagedIdentity(), azcfg.WithClientID(clientID), azcfg.WithKeyVault(vault))
+azcfg.Parse(ctx, &cfg, azcfg.WithManagedIdentity(), azcfg.WithClientID(clientID), azcfg.WithKeyVault(vault))
 ```
 
 **Azure CLI**
 
 ```go
-azcfg.Parse(&cfg, azcfg.WithAzureCLICredential(), azcfg.WithKeyVault(vault))
+azcfg.Parse(ctx, &cfg, azcfg.WithAzureCLICredential(), azcfg.WithKeyVault(vault))
 ```
 
 **Note**: Azure CLI credentials are best suited for development.
@@ -527,7 +518,7 @@ Either use environment variables:
 Or provide an option:
 
 ```go
-azcfg.Parse(&cfg, azcfg.WithAppConfigurationAccessKey(accessKeyID, accessKeySecret))
+azcfg.Parse(ctx, &cfg, azcfg.WithAppConfigurationAccessKey(accessKeyID, accessKeySecret))
 ```
 
 **Connection string**
@@ -545,7 +536,7 @@ Either use an environment variable:
 Or provide an option:
 
 ```go
-azcfg.Parse(&cfg, azcfg.WithAppConfigurationConnectionString(connectionString))
+azcfg.Parse(ctx, &cfg, azcfg.WithAppConfigurationConnectionString(connectionString))
 ```
 
 ### Credentials
@@ -573,6 +564,9 @@ go get github.com/KarlGW/azcfg/authopts
 package main
 
 import (
+    "context"
+    "time"
+
     "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
     "github.com/KarlGW/azcfg"
     "github.com/KarlGW/azcfg/authopts"
@@ -584,8 +578,11 @@ func main() {
         // Handle error.
     }
 
+    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    defer cancel()
+
     var cfg config
-    if err := azcfg.Parse(&cfg, authopts.WithTokenCredential(cred)); err != nil {
+    if err := azcfg.Parse(ctx, &cfg, authopts.WithTokenCredential(cred)); err != nil {
         // Handle error.
     }
 }
@@ -614,24 +611,30 @@ The following are supported:
 package main
 
 import (
+    "context"
+    "time"
+
     "github.com/KarlGW/azcfg"
     "github.com/KarlGW/azcfg/azure/cloud"
 )
 
 func main() {
+    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    defer cancel()
+
     var cfg Config
     // Azure Public (is default, but for the case of the example).
-    if err := azcfg.Parse(&cfg, azcfg.WithCloud(cloud.AzurePublic)); err != nil {
+    if err := azcfg.Parse(ctx, &cfg, azcfg.WithCloud(cloud.AzurePublic)); err != nil {
         // Handle error.
     }
 
     // Azure Government.
-    if err := azcfg.Parse(&cfg, azcfg.WithCloud(cloud.AzureGovernment)); err != nil {
+    if err := azcfg.Parse(ctx, &cfg, azcfg.WithCloud(cloud.AzureGovernment)); err != nil {
         // Handle error.
     }
 
     // Azure China.
-    if err := azcfg.Parse(&cfg, azcfg.WithCloud(cloud.AzureChina)); err != nil {
+    if err := azcfg.Parse(ctx, &cfg, azcfg.WithCloud(cloud.AzureChina)); err != nil {
         // Handle error.
     }
 

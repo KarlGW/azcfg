@@ -320,32 +320,6 @@ func TestParser_Parse(t *testing.T) {
 				StringSetting: "new string setting",
 			},
 		},
-		{
-			name: "parse secrets and settings with context",
-			input: struct {
-				s          Struct
-				options    []Option
-				secrets    map[string]Secret
-				secretErr  error
-				settings   map[string]Setting
-				settingErr error
-			}{
-				s: Struct{},
-				secrets: map[string]Secret{
-					"string": {Value: "new string"},
-				},
-				settings: map[string]Setting{
-					"string-setting": {Value: "new string setting"},
-				},
-				options: []Option{
-					WithContext(context.Background()),
-				},
-			},
-			want: Struct{
-				String:        "new string",
-				StringSetting: "new string setting",
-			},
-		},
 	}
 
 	for _, test := range tests {
@@ -355,7 +329,7 @@ func TestParser_Parse(t *testing.T) {
 				settingClient: newMockSettingClient(test.input.settings, test.input.settingErr),
 			}
 
-			gotErr := p.Parse(&test.input.s, test.input.options...)
+			gotErr := p.Parse(context.Background(), &test.input.s)
 
 			if diff := cmp.Diff(test.want, test.input.s, cmp.AllowUnexported(Struct{})); diff != "" {
 				t.Errorf("Parse() = unexpected result (-want +got)\n%s\n", diff)

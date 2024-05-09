@@ -9,8 +9,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/KarlGW/azcfg/internal/setting"
 )
 
 const (
@@ -21,12 +19,12 @@ const (
 
 // Parse secrets from an Azure Key Vault and settings from an
 // Azure App Configuration into the provided struct.
-func Parse(v any, options ...Option) error {
+func Parse(ctx context.Context, v any, options ...Option) error {
 	parser, err := NewParser(options...)
 	if err != nil {
 		return err
 	}
-	return parser.Parse(v, options...)
+	return parser.Parse(ctx, v)
 }
 
 // parseOptions contains options for the parser.
@@ -92,7 +90,7 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			settings, err := settingClient.GetSettings(ctx, settingFields, setting.WithLabel(opts.label), setting.WithLabels(opts.labels))
+			settings, err := settingClient.GetSettings(ctx, settingFields)
 			if err != nil {
 				errCh <- fmt.Errorf("%w: %s", ErrSettingRetrieval, err.Error())
 				return

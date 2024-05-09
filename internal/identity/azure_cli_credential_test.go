@@ -112,7 +112,7 @@ func TestAzureCLICredential_Token(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			cliToken = func(ctx context.Context, _ string) (auth.Token, error) {
+			cliToken = func(_ string) (auth.Token, error) {
 				if test.wantErr != nil {
 					return auth.Token{}, test.wantErr
 				}

@@ -39,7 +39,23 @@ func WithCloud(c cloud.Cloud) ClientOption {
 	}
 }
 
-// WithLabel sets label on the on a setting request.
+// WithClientLabel sets label on the setting client.
+func WithClientLabel(label string) ClientOption {
+	return func(c *Client) {
+		c.label = label
+	}
+}
+
+// WithClientLabels sets labels on the setting client based on the provided
+// map. The key of the map should be the setting name, and the value
+// should be the label.
+func WithClientLabels(labels map[string]string) ClientOption {
+	return func(c *Client) {
+		c.labels = labels
+	}
+}
+
+// WithLabel sets label on the setting request. Overrides the client label.
 func WithLabel(label string) Option {
 	return func(o *Options) {
 		o.Label = label
@@ -48,7 +64,7 @@ func WithLabel(label string) Option {
 
 // WithLabels sets labels on the setting requests based on the provided
 // map. The key of the map should be the setting name, and the value
-// should be the label.
+// should be the label. Overrides the client labels.
 func WithLabels(labels map[string]string) Option {
 	return func(o *Options) {
 		o.Labels = labels

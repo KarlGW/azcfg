@@ -110,6 +110,8 @@ func NewParser(options ...Option) (*parser, error) {
 			setting.WithConcurrency(concurrency),
 			setting.WithRetryPolicy(opts.RetryPolicy),
 			setting.WithCloud(opts.Cloud),
+			setting.WithClientLabel(opts.Label),
+			setting.WithClientLabels(opts.Labels),
 		}
 
 		settingClient, err = newSettingClient(
@@ -140,26 +142,10 @@ func NewParser(options ...Option) (*parser, error) {
 //
 // The only valid option is context, the other options on the
 // parser remain unaffected.
-func (p *parser) Parse(v any, options ...Option) error {
-	opts := Options{}
-	for _, option := range options {
-		option(&opts)
-	}
-
-	var ctx context.Context
-	if opts.Context == nil {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(context.Background(), p.timeout)
-		defer cancel()
-	} else {
-		ctx = opts.Context
-	}
-
+func (p *parser) Parse(ctx context.Context, v any) error {
 	return parse(ctx, v, parseOptions{
 		secretClient:  p.secretClient,
 		settingClient: p.settingClient,
-		label:         coalesceString(opts.Label, os.Getenv(azcfgAppConfigurationLabel)),
-		labels:        coalesceMap(opts.Labels, parseLabels(os.Getenv(azcfgAppConfigurationLabels))),
 	})
 }
 

@@ -31,8 +31,6 @@ func Parse(ctx context.Context, v any, options ...Option) error {
 type parseOptions struct {
 	secretClient  secretClient
 	settingClient settingClient
-	labels        map[string]string
-	label         string
 }
 
 // Parse secrets into the configuration.
@@ -58,6 +56,7 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 		if secretClient == nil {
 			return fmt.Errorf("%w: key vault name not set", ErrSecretClient)
 		}
+
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

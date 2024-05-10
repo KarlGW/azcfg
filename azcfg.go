@@ -158,7 +158,6 @@ type hasValue interface {
 	GetValue() string
 }
 
-// setFields sets the values from the incoming map to the struct fields.
 func setFields[V hasValue](v reflect.Value, values map[string]V, tag string) error {
 	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {

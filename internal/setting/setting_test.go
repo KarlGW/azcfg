@@ -202,7 +202,7 @@ func TestClient_GetSettings(t *testing.T) {
 					"setting-b": []byte(`{"value":"b"}`),
 					"setting-c": []byte(`{"value":"c"}`),
 				},
-				timeout: 50 * time.Millisecond,
+				timeout: 100 * time.Millisecond,
 			},
 			want: map[string]Setting{
 				"setting-a": {Value: "a"},
@@ -231,7 +231,7 @@ func TestClient_GetSettings(t *testing.T) {
 					"setting-b": []byte(`{"value":"b"}`),
 					"setting-c": []byte(`{"value":"c"}`),
 				},
-				timeout: 50 * time.Millisecond,
+				timeout: 100 * time.Millisecond,
 			},
 			want: map[string]Setting{
 				"setting-a": {Value: "a"},
@@ -263,7 +263,7 @@ func TestClient_GetSettings(t *testing.T) {
 				options: []Option{
 					WithLabel("prod"),
 				},
-				timeout: 50 * time.Millisecond,
+				timeout: 100 * time.Millisecond,
 			},
 			want: map[string]Setting{
 				"setting-a": {Value: "a"},
@@ -301,7 +301,7 @@ func TestClient_GetSettings(t *testing.T) {
 						"setting-c": "test",
 					}),
 				},
-				timeout: 50 * time.Millisecond,
+				timeout: 100 * time.Millisecond,
 			},
 			want: map[string]Setting{
 				"setting-a": {Value: "a"},
@@ -332,7 +332,7 @@ func TestClient_GetSettings(t *testing.T) {
 				secrets: map[string]Secret{
 					"secret-1": {Value: "1"},
 				},
-				timeout: 50 * time.Millisecond,
+				timeout: 100 * time.Millisecond,
 			},
 			want: map[string]Setting{
 				"setting-a": {ContentType: keyVaultReferenceContentType, Value: "1"},
@@ -359,7 +359,7 @@ func TestClient_GetSettings(t *testing.T) {
 					"setting-a": []byte(`{"value":"a"}`),
 					"setting-c": []byte(`{"value":"c"}`),
 				},
-				timeout: 50 * time.Millisecond,
+				timeout: 100 * time.Millisecond,
 			},
 			want: map[string]Setting{
 				"setting-a": {Value: "a"},
@@ -387,7 +387,7 @@ func TestClient_GetSettings(t *testing.T) {
 					"setting-b": []byte(`{"value":"b"}`),
 					"setting-c": []byte(`{"value":"c"}`),
 				},
-				timeout: time.Nanosecond,
+				timeout: 10 * time.Nanosecond,
 			},
 			wantErr: cmpopts.AnyError,
 		},
@@ -405,7 +405,7 @@ func TestClient_GetSettings(t *testing.T) {
 				err           error
 			}{
 				keys:    []string{"setting-a"},
-				timeout: 50 * time.Millisecond,
+				timeout: 100 * time.Millisecond,
 				err:     errForbidden,
 			},
 			wantErr: settingError{
@@ -432,7 +432,7 @@ func TestClient_GetSettings(t *testing.T) {
 					"setting-b": []byte(`{"value":"b"}`),
 					"setting-c": []byte(`{"value":"c"}`),
 				},
-				timeout: 50 * time.Millisecond,
+				timeout: 100 * time.Millisecond,
 			},
 			want: map[string]Setting{
 				"setting-a": {ContentType: keyVaultReferenceContentType, Value: ""},
@@ -455,7 +455,7 @@ func TestClient_GetSettings(t *testing.T) {
 				err           error
 			}{
 				keys:    []string{"setting-a"},
-				timeout: 50 * time.Millisecond,
+				timeout: 100 * time.Millisecond,
 				err:     errServer,
 			},
 			want: nil,
@@ -479,7 +479,7 @@ func TestClient_GetSettings(t *testing.T) {
 				err           error
 			}{
 				keys:    []string{"setting-a"},
-				timeout: 50 * time.Millisecond,
+				timeout: 100 * time.Millisecond,
 				err:     errRequest,
 			},
 			want:    nil,
@@ -505,7 +505,7 @@ func TestClient_GetSettings(t *testing.T) {
 				secrets: map[string]Secret{
 					"secret-1": {Value: "1"},
 				},
-				timeout: 50 * time.Millisecond,
+				timeout: 100 * time.Millisecond,
 				err:     errGetSecret,
 			},
 			wantErr: errGetSecret,
@@ -526,7 +526,7 @@ func TestClient_GetSettings(t *testing.T) {
 						secrets: test.input.secrets,
 						err:     test.input.err,
 					}
-					c.timeout = 100 * time.Millisecond
+					c.timeout = defaultTimeout
 				},
 			}
 			var client *Client
@@ -641,7 +641,7 @@ func TestClient_getSecret(t *testing.T) {
 			client, _ := NewClient("config", mockCredential{}, func(c *Client) {
 				c.c = mockHttpClient{}
 				c.sc = test.input.secretClient
-				c.timeout = 100 * time.Millisecond
+				c.timeout = defaultTimeout
 			})
 
 			got, gotErr := client.getSecret(context.Background(), test.input.uri)

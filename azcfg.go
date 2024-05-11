@@ -102,8 +102,7 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 	var errs []error
 	for {
 		select {
-		case s := <-secretsCh:
-			secrets := s
+		case secrets := <-secretsCh:
 			if len(secrets) > 0 {
 				if err := setFields(v, secrets, secretTag); err != nil {
 					if errors.Is(err, errRequired) {
@@ -112,8 +111,7 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 					errs = append(errs, err)
 				}
 			}
-		case s := <-settingsCh:
-			settings := s
+		case settings := <-settingsCh:
 			if len(settings) > 0 {
 				if err := setFields(v, settings, settingTag); err != nil {
 					if errors.Is(err, errRequired) {

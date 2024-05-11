@@ -48,7 +48,7 @@ func TestTokenFromAuthResult(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := tokenFromAuthResult(test.input)
 
-			if diff := cmp.Diff(test.want, got, cmpopts.EquateApproxTime(time.Second*5)); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmpopts.EquateApproxTime(5*time.Second)); diff != "" {
 				t.Errorf("tokenFromAuthResult() = unexpected result (-want +got)\n%s\n", diff)
 			}
 		})

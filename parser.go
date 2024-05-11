@@ -139,9 +139,6 @@ func NewParser(options ...Option) (*parser, error) {
 
 // Parse secrets from an Azure Key Vault and settings from an
 // Azure App Configuration into the provided struct.
-//
-// The only valid option is context, the other options on the
-// parser remain unaffected.
 func (p *parser) Parse(ctx context.Context, v any) error {
 	return parse(ctx, v, parseOptions{
 		secretClient:  p.secretClient,

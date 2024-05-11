@@ -56,8 +56,8 @@ func exponentialBackoff(delay, maxDelay time.Duration, retry int) time.Duration 
 // defaultRetryPolicy creates and returns a default policy.
 func defaultRetryPolicy() RetryPolicy {
 	return RetryPolicy{
-		MinDelay:   time.Millisecond * 500,
-		MaxDelay:   time.Second * 5,
+		MinDelay:   500 * time.Millisecond,
+		MaxDelay:   5 * time.Second,
 		MaxRetries: 3,
 		Retry:      defaultRetry,
 		Backoff:    exponentialBackoff,

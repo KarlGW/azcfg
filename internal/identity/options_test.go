@@ -75,9 +75,9 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:  "WithIMDSDialTimeout",
-			input: WithIMDSDialTimeout(time.Second * 5),
+			input: WithIMDSDialTimeout(5 * time.Second),
 			want: CredentialOptions{
-				dialTimeout: time.Second * 5,
+				dialTimeout: 5 * time.Second,
 			},
 		},
 	}

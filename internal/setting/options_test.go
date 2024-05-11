@@ -25,9 +25,9 @@ func TestClientOptions(t *testing.T) {
 		},
 		{
 			name:  "WithTimeout",
-			input: WithTimeout(time.Second * 5),
+			input: WithTimeout(5 * time.Second),
 			want: &Client{
-				timeout: time.Second * 5,
+				timeout: 5 * time.Second,
 			},
 		},
 		{

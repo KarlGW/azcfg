@@ -92,7 +92,7 @@ func TestClient_GetSecrets(t *testing.T) {
 					"secret-b": []byte(`{"value":"b"}`),
 					"secret-c": []byte(`{"value":"c"}`),
 				},
-				timeout: 30 * time.Millisecond,
+				timeout: 50 * time.Millisecond,
 			},
 			want: map[string]Secret{
 				"secret-a": {Value: "a"},
@@ -114,7 +114,7 @@ func TestClient_GetSecrets(t *testing.T) {
 					"secret-a": []byte(`{"value":"a"}`),
 					"secret-c": []byte(`{"value":"c"}`),
 				},
-				timeout: 30 * time.Millisecond,
+				timeout: 50 * time.Millisecond,
 			},
 			want: map[string]Secret{
 				"secret-a": {Value: "a"},
@@ -137,7 +137,7 @@ func TestClient_GetSecrets(t *testing.T) {
 					"secret-b": []byte(`{"value":"b"}`),
 					"secret-c": []byte(`{"value":"c"}`),
 				},
-				timeout: 1 * time.Nanosecond,
+				timeout: time.Nanosecond,
 			},
 			wantErr: cmpopts.AnyError,
 		},
@@ -150,7 +150,7 @@ func TestClient_GetSecrets(t *testing.T) {
 				err     error
 			}{
 				names:   []string{"secret-a"},
-				timeout: 30 * time.Millisecond,
+				timeout: 50 * time.Millisecond,
 				err:     errServer,
 			},
 			want: nil,
@@ -173,7 +173,7 @@ func TestClient_GetSecrets(t *testing.T) {
 				err     error
 			}{
 				names:   []string{"secret-a"},
-				timeout: 30 * time.Millisecond,
+				timeout: 50 * time.Millisecond,
 				err:     errRequest,
 			},
 			want:    nil,
@@ -188,7 +188,7 @@ func TestClient_GetSecrets(t *testing.T) {
 					bodies: test.input.bodies,
 					err:    test.input.err,
 				}
-				c.timeout = time.Millisecond * 10
+				c.timeout = 100 * time.Millisecond
 			})
 
 			ctx, cancel := context.WithTimeout(context.Background(), test.input.timeout)

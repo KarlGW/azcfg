@@ -67,6 +67,7 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 				return
 			}
 			secretsCh <- secrets
+			close(secretsCh)
 		}()
 	}
 
@@ -87,6 +88,7 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 				return
 			}
 			settingsCh <- settings
+			close(settingsCh)
 		}()
 	}
 
@@ -95,8 +97,6 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 		done <- struct{}{}
 		close(done)
 		close(errCh)
-		close(secretsCh)
-		close(settingsCh)
 	}()
 
 	var errs []error

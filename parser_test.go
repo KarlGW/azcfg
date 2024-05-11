@@ -12,6 +12,7 @@ import (
 
 	"github.com/KarlGW/azcfg/auth"
 	"github.com/KarlGW/azcfg/azure/cloud"
+	"github.com/KarlGW/azcfg/internal/httpr"
 	"github.com/KarlGW/azcfg/internal/identity"
 	"github.com/KarlGW/azcfg/internal/secret"
 	"github.com/KarlGW/azcfg/internal/setting"
@@ -166,6 +167,7 @@ func TestNewParser(t *testing.T) {
 				envs    map[string]string
 			}{
 				options: []Option{
+					WithHTTPClient(&httpr.Client{}),
 					WithConcurrency(30),
 					WithTimeout(10 * time.Second),
 					WithClientSecretCredential(_testTenantID, _testClientID, _testClientSecret),

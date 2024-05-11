@@ -4,6 +4,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/KarlGW/azcfg/auth"
@@ -13,6 +14,10 @@ import (
 const (
 	// azcfgCloud is the environment variable for the (azure) cloud.
 	azcfgCloud = "AZCFG_CLOUD"
+	// azcfgConcurrency is the environment variable for the concurrency.
+	azcfgConcurrency = "AZCFG_CONCURRENCY"
+	// azcfgTimeout is the environment variable for the timeout.
+	azcfgTimeout = "AZCFG_TIMEOUT"
 	// azcfgKeyVaultName is the environment variable for the Key Vault name.
 	azcfgKeyVaultName = "AZCFG_KEYVAULT_NAME"
 	// azcfgAppConfigurationName is the environment variable for the App
@@ -43,12 +48,15 @@ const (
 	// azcfgAppConfigurationConnectionString is the environment variable for the App
 	// Configuration connection string.
 	azcfgAppConfigurationConnectionString = "AZCFG_APPCONFIGURATION_CONNECTION_STRING"
-	// azcfgAppConfigurationLabel is the environment variable for the App
-	// Configuration label.
-	azcfgAppConfigurationLabel = "AZCFG_APPCONFIGURATION_LABEL"
-	// azcfgAppConfigurationLabels is the environment variable for the App
-	// Configuration labels.
-	azcfgAppConfigurationLabels = "AZCFG_APPCONFIGURATION_LABELS"
+	// azcfgSecretsVersions is the environment variable for the secrets versions.
+	azcfgSecretsVersions = "AZCFG_SECRETS_VERSIONS"
+	// azcfgSettingsLabel is the environment variable for the settings label.
+	azcfgSettingsLabel = "AZCFG_SETTINGS_LABEL"
+	// azcfgSettingsLabels is the environment variable for the settings labels.
+	azcfgSettingsLabels = "AZCFG_SETTINGS_LABELS"
+	// azcfgManagedIdentityIMDSDialTimeout is the environment variable for the dial
+	// timeout for testing the IMDS endpoint for managed identities.
+	azcfgManagedIdentityIMDSDialTimeout = "AZCFG_MANAGED_IDENTITY_IMDS_DIAL_TIMEOUT"
 )
 
 const (
@@ -67,6 +75,8 @@ const (
 type Options struct {
 	// Credential is the credential to be used with the Client.
 	Credential auth.Credential
+	// httpClient is the HTTP client for the parser.
+	httpClient HTTPClient
 	// SecretClient is a client used to retrieve secrets.
 	SecretClient secretClient
 	// SettingClient is a client used to retrieve settings.
@@ -75,14 +85,19 @@ type Options struct {
 	Cloud cloud.Cloud
 	// KeyVault is the name of the Key Vault containing secrets.
 	KeyVault string
+	// SecretsVersions is the versions for secrets in Key Vault.
+	// They key of the map should be the secret name, and the value
+	// should be the version.
+	SecretsVersions map[string]string
 	// AppConfiguration is the name of the App Configuration containing
 	// settings.
 	AppConfiguration string
-	// Label for setting in an Azure App Configuration.
-	Label string
-	// Labels for settings in an Azure App Configuration. The key of the map
-	// should be the setting name, and the value should be the label.
-	Labels map[string]string
+	// SettingsLabel is the label for settings in App Configuration.
+	SettingsLabel string
+	// SettingsLabels is the labels for settings in an Azure App Configuration.
+	// The key of the map should be the setting name, and the value
+	// should be the label.
+	SettingsLabels map[string]string
 	// RetryPolicy is the retry policy for the clients of the parser.
 	RetryPolicy RetryPolicy
 	// Authentication contains authentication settings for the parser.
@@ -97,12 +112,28 @@ type Options struct {
 
 // defaultOptions returns the default options for the parser.
 func defaultOptions() Options {
+	concurrency, err := strconv.Atoi(os.Getenv(azcfgConcurrency))
+	if err != nil {
+		concurrency = defaultConcurrency
+	}
+
+	timeout, err := time.ParseDuration(os.Getenv(azcfgTimeout))
+	if err != nil {
+		timeout = defaultTimeout
+	}
+
+	imdsDialTimeout, err := time.ParseDuration(os.Getenv(azcfgManagedIdentityIMDSDialTimeout))
+	if err != nil {
+		imdsDialTimeout = defaultManagedIdentityIMDSDialTimeout
+	}
+
 	return Options{
 		Cloud:            parseCloud(os.Getenv(azcfgCloud)),
 		KeyVault:         os.Getenv(azcfgKeyVaultName),
+		SecretsVersions:  parseCSVKVP(os.Getenv(azcfgSecretsVersions)),
 		AppConfiguration: os.Getenv(azcfgAppConfigurationName),
-		Label:            os.Getenv(azcfgAppConfigurationLabel),
-		Labels:           parseLabels(os.Getenv(azcfgAppConfigurationLabels)),
+		SettingsLabel:    os.Getenv(azcfgSettingsLabel),
+		SettingsLabels:   parseCSVKVP(os.Getenv(azcfgSettingsLabels)),
 		Authentication: Authentication{
 			Entra: Entra{
 				TenantID:                       os.Getenv(azcfgTenantID),
@@ -111,7 +142,7 @@ func defaultOptions() Options {
 				AzureCLICredential:             parseBool(os.Getenv(azcfgAzureCLICredential)),
 				certificate:                    os.Getenv(azcfgClientCertificate),
 				certificatePath:                os.Getenv(azcfgClientCertificatePath),
-				ManagedIdentityIMDSDialTimeout: defaultManagedIdentityIMDSDialTimeout,
+				ManagedIdentityIMDSDialTimeout: imdsDialTimeout,
 			},
 			AppConfigurationAccessKey: AppConfigurationAccessKey{
 				ID:     os.Getenv(azcfgAppConfigurationAccessKeyID),
@@ -119,8 +150,8 @@ func defaultOptions() Options {
 			},
 			AppConfigurationConnectionString: os.Getenv(azcfgAppConfigurationConnectionString),
 		},
-		Timeout:     defaultTimeout,
-		Concurrency: defaultConcurrency,
+		Timeout:     timeout,
+		Concurrency: concurrency,
 	}
 }
 
@@ -297,19 +328,28 @@ func WithAppConfigurationConnectionString(connectionString string) Option {
 	}
 }
 
-// WithLabel sets the label for settings in App Configuration.
-func WithLabel(label string) Option {
+// WithSecretsVersions sets the versions for secrets in Key Vault.
+// They key of the map should be the secret name, and the value
+// should be the version.
+func WithSecretsVersions(versions map[string]string) Option {
 	return func(o *Options) {
-		o.Label = label
+		o.SecretsVersions = versions
 	}
 }
 
-// WithLabels sets labels for settings in an Azure App Configuration.
+// WithSettingsLabel sets the label for settings in App Configuration.
+func WithSettingsLabel(label string) Option {
+	return func(o *Options) {
+		o.SettingsLabel = label
+	}
+}
+
+// WithSettingsLabels sets labels for settings in an Azure App Configuration.
 // The key of the map should be the setting name, and the value
 // should be the label.
-func WithLabels(labels map[string]string) Option {
+func WithSettingsLabels(labels map[string]string) Option {
 	return func(o *Options) {
-		o.Labels = labels
+		o.SettingsLabels = labels
 	}
 }
 
@@ -320,7 +360,7 @@ func WithSecretClient(c secretClient) Option {
 	}
 }
 
-// WithSettingClient sets the client for setting retreival.
+// WithSettingClient sets the client for setting retrieval.
 func WithSettingClient(c settingClient) Option {
 	return func(o *Options) {
 		o.SettingClient = c
@@ -337,6 +377,13 @@ func WithCloud(c cloud.Cloud) Option {
 			c = cloud.AzurePublic
 		}
 		o.Cloud = c
+	}
+}
+
+// WithHTTPClient sets the HTTP client for the parser.
+func WithHTTPClient(client HTTPClient) Option {
+	return func(o *Options) {
+		o.httpClient = client
 	}
 }
 

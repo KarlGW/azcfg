@@ -60,7 +60,7 @@ func TestHMACAuthenticationHeaders(t *testing.T) {
 				t.Errorf("hmacAuthenticationHeaders() = unexpected result (-want +got)\n%s\n", diff)
 			}
 
-			if diff := cmp.Diff(test.wantErr, gotErr, cmpopts.EquateErrors(), cmpopts.EquateApproxTime(time.Second*5)); diff != "" {
+			if diff := cmp.Diff(test.wantErr, gotErr, cmpopts.EquateErrors(), cmpopts.EquateApproxTime(5*time.Second)); diff != "" {
 				t.Errorf("hmacAuthenticationHeaders() = unexpected error (-want +got)\n%s\n", diff)
 			}
 		})

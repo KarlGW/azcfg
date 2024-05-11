@@ -74,6 +74,8 @@ type Client struct {
 	scope       string
 	baseURL     string
 	userAgent   string
+	label       string
+	labels      map[string]string
 	retryPolicy httpr.RetryPolicy
 	concurrency int
 	timeout     time.Duration
@@ -173,7 +175,10 @@ func (c *Client) GetSettings(ctx context.Context, keys []string, options ...Opti
 
 // Get a setting.
 func (c *Client) Get(ctx context.Context, key string, options ...Option) (Setting, error) {
-	opts := Options{}
+	opts := Options{
+		Label:  c.label,
+		Labels: c.labels,
+	}
 	for _, option := range options {
 		option(&opts)
 	}
@@ -345,6 +350,7 @@ func (c *Client) getSettings(ctx context.Context, keys []string, options ...Opti
 					sr.setting = setting
 					srCh <- sr
 				case <-ctx.Done():
+					srCh <- settingResult{err: ctx.Err()}
 					return
 				}
 			}

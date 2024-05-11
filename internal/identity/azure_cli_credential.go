@@ -49,7 +49,7 @@ func (c *AzureCLICredential) Token(ctx context.Context, options ...auth.TokenOpt
 		return *c.tokens[opts.Scope], nil
 	}
 
-	token, err := cliToken(ctx, opts.Scope)
+	token, err := cliToken(opts.Scope)
 	if err != nil {
 		return auth.Token{}, err
 	}
@@ -59,7 +59,7 @@ func (c *AzureCLICredential) Token(ctx context.Context, options ...auth.TokenOpt
 }
 
 // cliToken retreives a token from the Azure CLI.
-var cliToken = func(ctx context.Context, scope string) (auth.Token, error) {
+var cliToken = func(scope string) (auth.Token, error) {
 	var command, flag, dir string
 	if runtime.GOOS == "windows" {
 		dir = os.Getenv("SYSTEMROOT")
@@ -72,7 +72,7 @@ var cliToken = func(ctx context.Context, scope string) (auth.Token, error) {
 	}
 
 	arguments := "az account get-access-token --output json --resource " + strings.TrimSuffix(scope, "/.default")
-	cmd := exec.CommandContext(ctx, command, flag, arguments)
+	cmd := exec.Command(command, flag, arguments)
 	cmd.Dir = dir
 	cmd.Env = os.Environ()
 

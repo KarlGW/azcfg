@@ -202,6 +202,7 @@ func (c Client) getSecrets(ctx context.Context, names []string, options ...Optio
 					sr.secret = secret
 					srCh <- sr
 				case <-ctx.Done():
+					srCh <- secretResult{err: ctx.Err()}
 					return
 				}
 			}

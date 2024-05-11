@@ -1,7 +1,6 @@
 package azcfg
 
 import (
-	"context"
 	"crypto/rsa"
 	"crypto/x509"
 	"os"
@@ -72,10 +71,6 @@ type Options struct {
 	SecretClient secretClient
 	// SettingClient is a client used to retrieve settings.
 	SettingClient settingClient
-	// Context for parsing. By default a context is created based on
-	// the timeout set on the parser. Only applies when used together
-	// with the Parse function or parser Parse method.
-	Context context.Context
 	// Cloud is the Azure cloud to make requests to. Defaults to AzurePublic.
 	Cloud cloud.Cloud
 	// KeyVault is the name of the Key Vault containing secrets.
@@ -349,12 +344,5 @@ func WithCloud(c cloud.Cloud) Option {
 func WithRetryPolicy(r RetryPolicy) Option {
 	return func(o *Options) {
 		o.RetryPolicy = r
-	}
-}
-
-// WithContext sets the context for the call to Parse.
-func WithContext(ctx context.Context) Option {
-	return func(o *Options) {
-		o.Context = ctx
 	}
 }

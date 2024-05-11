@@ -44,13 +44,13 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 		return errors.New("provided value is not a struct")
 	}
 
-	secretClient := opts.secretClient
-	settingClient := opts.settingClient
-
-	errCh := make(chan error, 2)
-	mu := sync.RWMutex{}
 	var wg sync.WaitGroup
+	secretsCh := make(chan map[string]Secret)
+	settingsCh := make(chan map[string]Setting)
+	errCh := make(chan error)
+	done := make(chan struct{})
 
+	secretClient := opts.secretClient
 	secretFields, requiredSecrets := getFields(v, secretTag)
 	if len(secretFields) > 0 {
 		if secretClient == nil {
@@ -60,26 +60,17 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+
 			secrets, err := secretClient.GetSecrets(ctx, secretFields)
 			if err != nil {
 				errCh <- fmt.Errorf("%w: %s", ErrSecretRetrieval, err.Error())
 				return
 			}
-
-			mu.Lock()
-			defer mu.Unlock()
-
-			if err := setFields(v, secrets, secretTag); err != nil {
-				if errors.Is(err, errRequired) {
-					errCh <- requiredSecretsError{message: requiredErrorMessage(secrets, requiredSecrets, "secret")}
-					return
-				}
-				errCh <- err
-				return
-			}
+			secretsCh <- secrets
 		}()
 	}
 
+	settingClient := opts.settingClient
 	settingFields, requiredSettings := getFields(v, settingTag)
 	if len(settingFields) > 0 {
 		if settingClient == nil {
@@ -89,41 +80,59 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+
 			settings, err := settingClient.GetSettings(ctx, settingFields)
 			if err != nil {
 				errCh <- fmt.Errorf("%w: %s", ErrSettingRetrieval, err.Error())
 				return
 			}
-
-			mu.Lock()
-			defer mu.Unlock()
-
-			if err := setFields(v, settings, settingTag); err != nil {
-				if errors.Is(err, errRequired) {
-					errCh <- requiredSettingsError{message: requiredErrorMessage(settings, requiredSettings, "setting")}
-					return
-				}
-				errCh <- err
-				return
-			}
+			settingsCh <- settings
 		}()
 	}
 
 	go func() {
 		wg.Wait()
+		done <- struct{}{}
+		close(done)
 		close(errCh)
+		close(secretsCh)
+		close(settingsCh)
 	}()
 
 	var errs []error
-	for err := range errCh {
-		if err != nil {
-			errs = append(errs, err)
+	for {
+		select {
+		case s := <-secretsCh:
+			secrets := s
+			if len(secrets) > 0 {
+				if err := setFields(v, secrets, secretTag); err != nil {
+					if errors.Is(err, errRequired) {
+						err = requiredSecretsError{message: requiredErrorMessage(secrets, requiredSecrets, "secret")}
+					}
+					errs = append(errs, err)
+				}
+			}
+		case s := <-settingsCh:
+			settings := s
+			if len(settings) > 0 {
+				if err := setFields(v, settings, settingTag); err != nil {
+					if errors.Is(err, errRequired) {
+						err = requiredSettingsError{message: requiredErrorMessage(settings, requiredSettings, "setting")}
+					}
+					errs = append(errs, err)
+				}
+			}
+		case err := <-errCh:
+			if err != nil {
+				errs = append(errs, err)
+			}
+		case <-done:
+			if len(errs) > 0 {
+				return buildErr(errs...)
+			}
+			return nil
 		}
 	}
-	if len(errs) > 0 {
-		return buildErr(errs...)
-	}
-	return nil
 }
 
 // getFields gets fields with the specified tag.
@@ -158,6 +167,7 @@ type hasValue interface {
 	GetValue() string
 }
 
+// setFields sets the values from the map into the struct fields.
 func setFields[V hasValue](v reflect.Value, values map[string]V, tag string) error {
 	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {

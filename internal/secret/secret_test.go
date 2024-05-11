@@ -6,7 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -71,6 +71,7 @@ func TestClient_GetSecrets(t *testing.T) {
 		name  string
 		input struct {
 			names   []string
+			options []Option
 			bodies  map[string][]byte
 			timeout time.Duration
 			err     error
@@ -82,6 +83,7 @@ func TestClient_GetSecrets(t *testing.T) {
 			name: "get secrets",
 			input: struct {
 				names   []string
+				options []Option
 				bodies  map[string][]byte
 				timeout time.Duration
 				err     error
@@ -102,9 +104,41 @@ func TestClient_GetSecrets(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "get secrets - with versions",
+			input: struct {
+				names   []string
+				options []Option
+				bodies  map[string][]byte
+				timeout time.Duration
+				err     error
+			}{
+				names: []string{"secret-a", "secret-b", "secret-c"},
+				options: []Option{
+					WithVersions(map[string]string{
+						"secret-a": "version-a",
+						"secret-b": "version-b",
+						"secret-c": "version-c",
+					}),
+				},
+				bodies: map[string][]byte{
+					"secret-a/version-a": []byte(`{"value":"a"}`),
+					"secret-b/version-b": []byte(`{"value":"b"}`),
+					"secret-c/version-c": []byte(`{"value":"c"}`),
+				},
+				timeout: 100 * time.Millisecond,
+			},
+			want: map[string]Secret{
+				"secret-a": {Value: "a"},
+				"secret-b": {Value: "b"},
+				"secret-c": {Value: "c"},
+			},
+			wantErr: nil,
+		},
+		{
 			name: "secret not found",
 			input: struct {
 				names   []string
+				options []Option
 				bodies  map[string][]byte
 				timeout time.Duration
 				err     error
@@ -127,6 +161,7 @@ func TestClient_GetSecrets(t *testing.T) {
 			name: "get secrets - context deadline exceeded",
 			input: struct {
 				names   []string
+				options []Option
 				bodies  map[string][]byte
 				timeout time.Duration
 				err     error
@@ -145,6 +180,7 @@ func TestClient_GetSecrets(t *testing.T) {
 			name: "server error",
 			input: struct {
 				names   []string
+				options []Option
 				bodies  map[string][]byte
 				timeout time.Duration
 				err     error
@@ -168,6 +204,7 @@ func TestClient_GetSecrets(t *testing.T) {
 			name: "request error",
 			input: struct {
 				names   []string
+				options []Option
 				bodies  map[string][]byte
 				timeout time.Duration
 				err     error
@@ -194,7 +231,7 @@ func TestClient_GetSecrets(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), test.input.timeout)
 			defer cancel()
 
-			got, gotErr := client.GetSecrets(ctx, test.input.names)
+			got, gotErr := client.GetSecrets(ctx, test.input.names, test.input.options...)
 
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("GetSecrets() = unexpected result (-want +got)\n%s\n", diff)
@@ -391,7 +428,13 @@ func (c mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 		return nil, c.err
 	}
 
-	name := path.Base(req.URL.Path)
+	parts := strings.Split(req.URL.Path, "/")
+	var name string
+	if len(parts) > 3 {
+		name = strings.Join(parts[2:], "/")
+	} else {
+		name = parts[2]
+	}
 	b, ok := c.bodies[name]
 	if !ok {
 		return &http.Response{

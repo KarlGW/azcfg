@@ -46,6 +46,7 @@ type Client struct {
 	baseURL     string
 	vault       string
 	userAgent   string
+	versions    map[string]string
 	retryPolicy httpr.RetryPolicy
 	concurrency int
 	timeout     time.Duration
@@ -92,7 +93,9 @@ func NewClient(vault string, cred auth.Credential, options ...ClientOption) (*Cl
 }
 
 // Options for client operations.
-type Options struct{}
+type Options struct {
+	Versions map[string]string
+}
 
 // Option is a function that sets options for client operations.
 type Option func(o *Options)
@@ -104,9 +107,18 @@ func (c Client) GetSecrets(ctx context.Context, names []string, options ...Optio
 
 // Get a secret.
 func (c Client) Get(ctx context.Context, name string, options ...Option) (Secret, error) {
-	opts := Options{}
+	opts := Options{
+		Versions: c.versions,
+	}
 	for _, option := range options {
 		option(&opts)
+	}
+
+	if len(opts.Versions) > 0 {
+		version, ok := opts.Versions[name]
+		if ok {
+			name = name + "/" + version
+		}
 	}
 
 	u := fmt.Sprintf("%s/%s?api-version=%s", c.baseURL, name, apiVersion)
@@ -155,7 +167,7 @@ func (c *Client) SetVault(vault string) {
 	c.vault = vault
 }
 
-// secretResults contains results from retreiving secrets. Should
+// secretResults contains results from retrieving secrets. Should
 // be used with a channel for handling results and errors.
 type secretResult struct {
 	secret Secret

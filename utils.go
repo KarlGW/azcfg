@@ -20,22 +20,6 @@ func splitTrim(s, sep string) []string {
 	return strings.Split(regexp.MustCompile(`\s+`).ReplaceAllString(s, ""), sep)
 }
 
-// coelesceString returns the first non-empty string (if any).
-func coalesceString(x, y string) string {
-	if len(x) > 0 {
-		return x
-	}
-	return y
-}
-
-// coalesceMap returns the first non-empty map (if any).
-func coalesceMap[K comparable, V any](x, y map[K]V) map[K]V {
-	if len(x) > 0 {
-		return x
-	}
-	return y
-}
-
 // parseBool returns the boolean represented by the string.
 // If the string cannot be parsed, it returns false.
 func parseBool(s string) bool {
@@ -46,13 +30,14 @@ func parseBool(s string) bool {
 	return b
 }
 
-// parseLabels from the provided string. Format: setting1=label1,setting2=label2.
-func parseLabels(labels string) map[string]string {
-	if len(labels) == 0 {
+// parseCSVKVP parses the provided comma-separated key-value pair string.
+// Format: key1=value1,key2=value2.
+func parseCSVKVP(csvkvp string) map[string]string {
+	if len(csvkvp) == 0 {
 		return nil
 	}
 
-	parts := splitTrim(labels, ",")
+	parts := splitTrim(csvkvp, ",")
 	m := make(map[string]string, len(parts))
 	for i := range parts {
 		p := strings.Split(parts[i], "=")

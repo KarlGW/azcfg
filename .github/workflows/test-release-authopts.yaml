@@ -6,7 +6,6 @@ on:
     - development
     - development/*
     - feature/*
-    - chore/*
     tags:
     - 'authopts/v[0-9]+.[0-9]+.[0-9]+'
     paths:

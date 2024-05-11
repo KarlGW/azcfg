@@ -303,7 +303,7 @@ func (c *Client) getSecret(ctx context.Context, uri string) (Secret, error) {
 	return sec, nil
 }
 
-// settingResult contains result from retreiving settings. Should
+// settingResult contains result from retrieving settings. Should
 // be used with a channel for handling results and errors.
 type settingResult struct {
 	setting Setting

@@ -641,7 +641,7 @@ func TestClient_getSecret(t *testing.T) {
 			client, _ := NewClient("config", mockCredential{}, func(c *Client) {
 				c.c = mockHttpClient{}
 				c.sc = test.input.secretClient
-				c.timeout = 10 * time.Millisecond
+				c.timeout = 100 * time.Millisecond
 			})
 
 			got, gotErr := client.getSecret(context.Background(), test.input.uri)

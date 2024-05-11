@@ -87,7 +87,7 @@ func TestAzureCLICredential_Token(t *testing.T) {
 				cred, _ := NewAzureCLICredential()
 				cred.tokens[_testScope] = &auth.Token{
 					AccessToken: "ey54321",
-					ExpiresOn:   time.Now().Add(time.Hour * -3),
+					ExpiresOn:   time.Now().Add(-3 * time.Hour),
 				}
 				return cred
 			},

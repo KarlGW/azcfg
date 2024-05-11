@@ -54,13 +54,13 @@ const (
 const (
 	// defaultTimeout is the default timeout for the clients
 	// of the parser.
-	defaultTimeout = time.Second * 10
+	defaultTimeout = 30 * time.Second
 	// defaultConcurrency is the default concurrency for the
 	// clients of the parser.
 	defaultConcurrency = 20
 	// defaultManagedIdentityIMDSDialTimeout is the default dial timeout
 	// for testing the IMDS endpoint for managed identities.
-	defaultManagedIdentityIMDSDialTimeout = time.Second * 3
+	defaultManagedIdentityIMDSDialTimeout = 3 * time.Second
 )
 
 // Options contains options for the Parser.

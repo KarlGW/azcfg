@@ -23,7 +23,7 @@ const (
 	// defaultConcurrency is the default concurrency set on the client.
 	defaultConcurrency = 10
 	// defaultTimeout is the default timeout set on the client.
-	defaultTimeout = time.Second * 10
+	defaultTimeout = 30 * time.Second
 )
 
 // Secret represents a secret as returned from the Key Vault REST API.

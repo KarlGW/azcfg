@@ -48,7 +48,7 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  &secret.Client{},
 				settingClient: &setting.Client{},
-				timeout:       time.Second * 10,
+				timeout:       defaultTimeout,
 			},
 		},
 		{
@@ -66,7 +66,7 @@ func TestNewParser(t *testing.T) {
 			},
 			want: &parser{
 				secretClient: &secret.Client{},
-				timeout:      time.Second * 10,
+				timeout:      defaultTimeout,
 			},
 		},
 		{
@@ -84,7 +84,7 @@ func TestNewParser(t *testing.T) {
 			},
 			want: &parser{
 				settingClient: &setting.Client{},
-				timeout:       time.Second * 10,
+				timeout:       defaultTimeout,
 			},
 		},
 		{
@@ -101,7 +101,7 @@ func TestNewParser(t *testing.T) {
 			},
 			want: &parser{
 				settingClient: &setting.Client{},
-				timeout:       time.Second * 10,
+				timeout:       defaultTimeout,
 			},
 		},
 		{
@@ -121,7 +121,7 @@ func TestNewParser(t *testing.T) {
 			},
 			want: &parser{
 				settingClient: &setting.Client{},
-				timeout:       time.Second * 10,
+				timeout:       defaultTimeout,
 			},
 		},
 		{
@@ -137,7 +137,7 @@ func TestNewParser(t *testing.T) {
 			},
 			want: &parser{
 				settingClient: &setting.Client{},
-				timeout:       time.Second * 10,
+				timeout:       defaultTimeout,
 			},
 		},
 		{
@@ -156,7 +156,7 @@ func TestNewParser(t *testing.T) {
 			},
 			want: &parser{
 				settingClient: &setting.Client{},
-				timeout:       time.Second * 10,
+				timeout:       defaultTimeout,
 			},
 		},
 		{
@@ -167,7 +167,7 @@ func TestNewParser(t *testing.T) {
 			}{
 				options: []Option{
 					WithConcurrency(30),
-					WithTimeout(time.Second * 10),
+					WithTimeout(10 * time.Second),
 					WithClientSecretCredential(_testTenantID, _testClientID, _testClientSecret),
 					WithKeyVault("vault1"),
 					WithAppConfiguration("appconfig"),
@@ -176,7 +176,7 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  &secret.Client{},
 				settingClient: &setting.Client{},
-				timeout:       time.Second * 10,
+				timeout:       10 * time.Second,
 			},
 		},
 		{
@@ -224,7 +224,7 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  mockSecretClient{},
 				settingClient: nil,
-				timeout:       time.Second * 10,
+				timeout:       defaultTimeout,
 			},
 		},
 		{
@@ -240,7 +240,7 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  nil,
 				settingClient: mockSettingClient{},
-				timeout:       time.Second * 10,
+				timeout:       defaultTimeout,
 			},
 		},
 		{
@@ -257,7 +257,7 @@ func TestNewParser(t *testing.T) {
 			want: &parser{
 				secretClient:  mockSecretClient{},
 				settingClient: mockSettingClient{},
-				timeout:       time.Second * 10,
+				timeout:       defaultTimeout,
 			},
 		},
 	}

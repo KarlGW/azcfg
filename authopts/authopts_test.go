@@ -82,7 +82,7 @@ func TestCredential_Token(t *testing.T) {
 					tokens: map[string]*auth.Token{
 						_testScope: {
 							AccessToken: "ey54321",
-							ExpiresOn:   time.Now().Add(time.Hour * -3),
+							ExpiresOn:   time.Now().Add(-3 * time.Hour),
 						},
 					},
 				}

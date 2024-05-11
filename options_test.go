@@ -47,9 +47,9 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:  "WithTimeout",
-			input: WithTimeout(time.Second * 5),
+			input: WithTimeout(5 * time.Second),
 			want: Options{
-				Timeout: time.Second * 5,
+				Timeout: 5 * time.Second,
 			},
 		},
 		{
@@ -120,11 +120,11 @@ func TestOptions(t *testing.T) {
 		},
 		{
 			name:  "WithManagedIdentityIMDSDialTimeout",
-			input: WithManagedIdentityIMDSDialTimeout(time.Second * 10),
+			input: WithManagedIdentityIMDSDialTimeout(10 * time.Second),
 			want: Options{
 				Authentication: Authentication{
 					Entra: Entra{
-						ManagedIdentityIMDSDialTimeout: time.Second * 10,
+						ManagedIdentityIMDSDialTimeout: 10 * time.Second,
 					},
 				},
 			},
@@ -211,12 +211,12 @@ func TestOptions(t *testing.T) {
 			name: "WithRetryPolicy",
 			input: WithRetryPolicy(RetryPolicy{
 				MinDelay: time.Second,
-				MaxDelay: time.Second * 5,
+				MaxDelay: 5 * time.Second,
 			}),
 			want: Options{
 				RetryPolicy: RetryPolicy{
 					MinDelay: time.Second,
-					MaxDelay: time.Second * 5,
+					MaxDelay: 5 * time.Second,
 				},
 			},
 		},

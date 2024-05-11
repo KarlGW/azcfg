@@ -387,7 +387,7 @@ func TestClient_GetSettings(t *testing.T) {
 					"setting-b": []byte(`{"value":"b"}`),
 					"setting-c": []byte(`{"value":"c"}`),
 				},
-				timeout: time.Nanosecond,
+				timeout: time.Millisecond,
 			},
 			wantErr: cmpopts.AnyError,
 		},
@@ -526,7 +526,7 @@ func TestClient_GetSettings(t *testing.T) {
 						secrets: test.input.secrets,
 						err:     test.input.err,
 					}
-					c.timeout = time.Millisecond * 10
+					c.timeout = 10 * time.Millisecond
 				},
 			}
 			var client *Client
@@ -641,7 +641,7 @@ func TestClient_getSecret(t *testing.T) {
 			client, _ := NewClient("config", mockCredential{}, func(c *Client) {
 				c.c = mockHttpClient{}
 				c.sc = test.input.secretClient
-				c.timeout = time.Millisecond * 10
+				c.timeout = 10 * time.Millisecond
 			})
 
 			got, gotErr := client.getSecret(context.Background(), test.input.uri)
@@ -991,6 +991,7 @@ func (c *mockSecretClient) SetVault(vault string) {
 }
 
 func (c mockSecretClient) Get(ctx context.Context, name string, options ...secret.Option) (Secret, error) {
+	time.Sleep(15 * time.Millisecond)
 	if c.err != nil && errors.Is(c.err, errGetSecret) {
 		return Secret{}, c.err
 	}

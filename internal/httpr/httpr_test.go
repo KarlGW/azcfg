@@ -43,8 +43,8 @@ func TestClient_Do(t *testing.T) {
 					return req
 				},
 				retryPolicy: RetryPolicy{
-					MinDelay: time.Millisecond * 1,
-					MaxDelay: time.Millisecond * 5,
+					MinDelay: 1 * time.Millisecond,
+					MaxDelay: 5 * time.Millisecond,
 					Retry:    defaultRetry,
 					Backoff:  exponentialBackoff,
 				},
@@ -76,8 +76,8 @@ func TestClient_Do(t *testing.T) {
 					return req
 				},
 				retryPolicy: RetryPolicy{
-					MinDelay:   time.Millisecond * 1,
-					MaxDelay:   time.Millisecond * 5,
+					MinDelay:   1 * time.Millisecond,
+					MaxDelay:   5 * time.Millisecond,
 					Retry:      defaultRetry,
 					Backoff:    exponentialBackoff,
 					MaxRetries: 3,
@@ -98,8 +98,8 @@ func TestClient_Do(t *testing.T) {
 					return req
 				},
 				retryPolicy: RetryPolicy{
-					MinDelay:   time.Millisecond * 1,
-					MaxDelay:   time.Millisecond * 5,
+					MinDelay:   1 * time.Millisecond,
+					MaxDelay:   5 * time.Millisecond,
 					Retry:      defaultRetry,
 					Backoff:    exponentialBackoff,
 					MaxRetries: 3,
@@ -116,14 +116,14 @@ func TestClient_Do(t *testing.T) {
 			name: "successful GET - context exceeded",
 			input: input{
 				req: func() *http.Request {
-					ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*1)
+					ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
 					defer cancel()
 					req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://example.com", nil)
 					return req
 				},
 				retryPolicy: RetryPolicy{
-					MinDelay:   time.Millisecond * 5,
-					MaxDelay:   time.Millisecond * 10,
+					MinDelay:   5 * time.Millisecond,
+					MaxDelay:   10 * time.Millisecond,
 					Retry:      defaultRetry,
 					Backoff:    exponentialBackoff,
 					MaxRetries: 3,
@@ -145,8 +145,8 @@ func TestClient_Do(t *testing.T) {
 					return req
 				},
 				retryPolicy: RetryPolicy{
-					MinDelay: time.Millisecond * 1,
-					MaxDelay: time.Millisecond * 5,
+					MinDelay: 1 * time.Millisecond,
+					MaxDelay: 5 * time.Millisecond,
 					Retry:    defaultRetry,
 					Backoff:  exponentialBackoff,
 				},
@@ -164,8 +164,8 @@ func TestClient_Do(t *testing.T) {
 					return req
 				},
 				retryPolicy: RetryPolicy{
-					MinDelay:   time.Millisecond * 1,
-					MaxDelay:   time.Millisecond * 5,
+					MinDelay:   1 * time.Millisecond,
+					MaxDelay:   5 * time.Millisecond,
 					Retry:      defaultRetry,
 					Backoff:    exponentialBackoff,
 					MaxRetries: 3,
@@ -255,7 +255,7 @@ func setupClient(target string, rp RetryPolicy, emptyClient bool, err error) *Cl
 	if emptyClient {
 		return &Client{cl: &http.Client{Transport: tr}}
 	} else {
-		return NewClient(WithTransport(tr), WithRetryPolicy(rp), WithTimeout(time.Millisecond*20))
+		return NewClient(WithTransport(tr), WithRetryPolicy(rp), WithTimeout(20*time.Millisecond))
 	}
 
 }

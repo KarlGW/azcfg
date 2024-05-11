@@ -32,7 +32,7 @@ func newCertificateAssertion(endpoint, clientID string, cert certificate) (jwt, 
 
 	claims := claims{
 		AUD: endpoint,
-		EXP: time.Now().Add(time.Minute * 5).Unix(),
+		EXP: time.Now().Add(5 * time.Minute).Unix(),
 		ISS: clientID,
 		JTI: uuid,
 		NBF: time.Now().Unix(),

@@ -137,7 +137,7 @@ func TestClient_GetSecrets(t *testing.T) {
 					"secret-b": []byte(`{"value":"b"}`),
 					"secret-c": []byte(`{"value":"c"}`),
 				},
-				timeout: 1 * time.Nanosecond,
+				timeout: time.Millisecond,
 			},
 			wantErr: cmpopts.AnyError,
 		},
@@ -188,7 +188,7 @@ func TestClient_GetSecrets(t *testing.T) {
 					bodies: test.input.bodies,
 					err:    test.input.err,
 				}
-				c.timeout = time.Millisecond * 10
+				c.timeout = 10 * time.Millisecond
 			})
 
 			ctx, cancel := context.WithTimeout(context.Background(), test.input.timeout)

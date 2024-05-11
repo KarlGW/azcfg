@@ -31,8 +31,8 @@ func TestParse(t *testing.T) {
 				BoolPtr:          toPtr(false),
 				BoolSetting:      false,
 				BoolSettingPtr:   toPtr(false),
-				Duration:         time.Second * 3,
-				DurationPtr:      toPtr(time.Second * 3),
+				Duration:         3 * time.Second,
+				DurationPtr:      toPtr(3 * time.Second),
 				Empty:            "",
 				EmptySetting:     "",
 				NestedStructA: NestedStructA{
@@ -69,8 +69,8 @@ func TestParse(t *testing.T) {
 				BoolSettingPtr:   toPtr(true),
 				StringSetting:    "new string setting",
 				StringSettingPtr: toPtr("new string setting ptr"),
-				Duration:         time.Second * 1,
-				DurationPtr:      toPtr(time.Second * 2),
+				Duration:         1 * time.Second,
+				DurationPtr:      toPtr(2 * time.Second),
 				Complex64:        5 + 12i,
 				Complex64Ptr:     toPtr[complex64](5 + 12i),
 				Complex128:       5 + 12i,
@@ -439,7 +439,7 @@ func newMockSettingClient(settings map[string]Setting, err error) mockSettingCli
 }
 
 func (c mockSettingClient) GetSettings(ctx context.Context, keys []string, options ...setting.Option) (map[string]Setting, error) {
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(30 * time.Millisecond)
 	if c.err != nil {
 		return nil, errors.New("could not get settings")
 	}

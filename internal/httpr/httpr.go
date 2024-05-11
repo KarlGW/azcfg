@@ -8,7 +8,7 @@ import (
 
 const (
 	// defaultTimeout contains the default timeout of a *Client.
-	defaultTimeout = time.Second * 30
+	defaultTimeout = 30 * time.Second
 )
 
 // Client wraps around a standard library *http.Client with

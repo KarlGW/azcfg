@@ -1,6 +1,7 @@
 #!/bin/bash
 version=$1
 module=$2
+cwd=$(pwd)
 
 if [[ -z $version ]]; then
   echo "A version must be specified."
@@ -22,6 +23,7 @@ tag=v$version
 if [ ! -z "$module" ]; then
   tag=$module/$tag
   msg="$msg of $module"
+  cd $module
 fi
 
 echo "Creating tag $tag for version $version."
@@ -34,6 +36,7 @@ echo ""
 echo "Testing..."
 go test ./...
 echo ""
+cd $cwd
 
 echo "Creating and pushing tag..."
 git tag -a $tag -m "$msg"

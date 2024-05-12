@@ -29,7 +29,7 @@ func TestNewParser(t *testing.T) {
 			options []Option
 			envs    map[string]string
 		}
-		want    *parser
+		want    Parser
 		wantErr error
 	}{
 		{

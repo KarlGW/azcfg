@@ -279,7 +279,7 @@ func main() {
 
 #### Environment variables
 
-These are the environment variables that are available to use to configure `azcfg`.
+These are the environment variables that are available to use to configure parsing.
 
 #### General
 
@@ -413,21 +413,21 @@ func main() {
 
 ### Context and timeouts
 
-Every call to `Parse` or `parser.Parser` requires a `context.Context`. This is
-the main way of setting timeouts on the parser. However, the internal clients
+Every call to `Parse` or `parser.Parse` requires a `context.Context`. This is
+the main way of setting timeouts. However, the internal clients
 for fetching secrets and settings and their underlying HTTP client has
 a default timeout of 30 seconds. This can be configured with setting
 the `Timeout` field on the `Options` struct in an option function, or
-using the dedicated function function, `WithTimeout`.
+using the dedicated option function, `WithTimeout`.
 
 ### Key Vault secret versions
 
 Secrets in Key Vault have versions associated with them. By default the latest version
 is retrieved.
 
-To target specific versions for specific settings:
+To target specific versions for specific secrets:
 
-- Set the secrets with their associated versions to the environment variable `AZCFG_SECRETS_VERSIONS` with format `secret1=version1,secret2=version2`.
+- Set the secret names with their associated versions to the environment variable `AZCFG_SECRETS_VERSIONS` with format `secret1=version1,secret2=version2`.
 - Use the option function `WithSecretsVersions` and provide a `map[string]string` with the secret name as key and version as value.
 
 ### App Configuration setting labels
@@ -441,7 +441,7 @@ To target a specific label for all settings:
 
 To target speciefic settings with specific labels:
 
-- Set the settings with their associated labels to the environment variable `AZCFG_SETTINGS_LABELS` with format: `setting1=label1,setting2=label2`.
+- Set the setting names with their associated labels to the environment variable `AZCFG_SETTINGS_LABELS` with format: `setting1=label1,setting2=label2`.
 - Use the option function `WithSettingsLabels` and provide a `map[string]string` with the setting name as key and label as value.
 
 ### Authentication
@@ -468,7 +468,7 @@ In addition to this it should work on:
 - Azure Virtual Machines (since it makes use of the IMDS endpoint like Azure Container Instances)
 - Azure App Services (since it makes us of the same endpoint as Azure Functions)
 
-**Note**: Sometimes it can take some time for the IMDS endpoint to start up on Azure Contaier instances, resulting
+**Note**: Sometimes it can take some time for the IMDS endpoint to start up on Azure Container instances, resulting
 in authentication failures. If these issues occur, either:
 
 * Set the environment variable `AZCFG_MANAGED_IDENTITY_IMDS_DIAL_TIMEOUT` with a longer [duration string](https://pkg.go.dev/time#ParseDuration), example: `5s`.

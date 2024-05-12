@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.11.1
-	github.com/KarlGW/azcfg v0.21.0
+	github.com/KarlGW/azcfg v0.22.0
 	github.com/google/go-cmp v0.6.0
 )
 

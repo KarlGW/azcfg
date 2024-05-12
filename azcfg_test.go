@@ -194,7 +194,7 @@ func TestParse(t *testing.T) {
 			secretClient := newMockSecretClient(responseSecrets, test.wantErr)
 			settingClient := newMockSettingClient(responseSettings, test.wantErr)
 
-			gotErr := parse(context.Background(), &test.input, parseOptions{secretClient: secretClient, settingClient: settingClient})
+			gotErr := parse(context.Background(), &test.input, secretClient, settingClient)
 			if diff := cmp.Diff(test.want, test.input, cmp.AllowUnexported(Struct{})); diff != "" {
 				t.Errorf("parse() = unexpected result, (-want, +got)\n%s\n", diff)
 			}
@@ -216,10 +216,9 @@ func TestParseRequired(t *testing.T) {
 			name:  "required",
 			input: StructWithRequired{},
 			wantErr: &RequiredFieldsError{
-				errors: []error{
-					requiredSecretsError{message: requiredErrorMessage(map[string]Secret{"empty": {}, "empty-float64": {}}, []string{"empty", "empty-float64"}, "secret")},
-					requiredSettingsError{message: requiredErrorMessage(map[string]Setting{"empty-setting": {}}, []string{"empty-setting"}, "setting")},
-				},
+				message:  "secrets: empty and empty-float64 are required\nsetting: empty-setting is required",
+				required: []string{"empty", "empty-float64", "empty-setting"},
+				missing:  []string{"empty", "empty-float64", "empty-setting"},
 			},
 		},
 	}
@@ -229,7 +228,7 @@ func TestParseRequired(t *testing.T) {
 			secretClient := mockSecretClient{secrets: responseSecrets}
 			settingClient := mockSettingClient{settings: responseSettings}
 
-			gotErr := parse(context.Background(), &test.input, parseOptions{secretClient: secretClient, settingClient: settingClient})
+			gotErr := parse(context.Background(), &test.input, secretClient, settingClient)
 			if test.wantErr != nil && gotErr == nil {
 				t.Errorf("Unexpected result, should return error\n")
 			}

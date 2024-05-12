@@ -33,7 +33,7 @@ type Error struct {
 
 // Error returns the combined error messages from the errors
 // contained in Error.
-func (e Error) Error() string {
+func (e *Error) Error() string {
 	var errs []string
 	for _, err := range e.errors {
 		errs = append(errs, err.Error())
@@ -42,18 +42,18 @@ func (e Error) Error() string {
 }
 
 // Errors returns the errors contained in Error.
-func (e Error) Errors() []error {
+func (e *Error) Errors() []error {
 	return e.errors
 }
 
 // Len returns the number of errors contained in Error.
-func (e Error) Len() int {
+func (e *Error) Len() int {
 	return len(e.errors)
 }
 
 // Has returns true if the provided error type is found in the errors.
 // If found, the first error of the provided type is returned.
-func (e Error) Has(err error) (error, bool) {
+func (e *Error) Has(err error) (error, bool) {
 	for _, e := range e.errors {
 		if errors.Is(e, err) {
 			return e, true
@@ -62,98 +62,87 @@ func (e Error) Has(err error) (error, bool) {
 	return nil, false
 }
 
-// RequiredFieldsError represents an error when either secrets or settings
-// are required but not set.
-type RequiredFieldsError struct {
-	errors []error
-}
-
-// Error returns the combined error messages from the errors
-// contained in RequiredFieldsError.
-func (e RequiredFieldsError) Error() string {
-	var msgs []string
-	for _, err := range e.errors {
-		msgs = append(msgs, err.Error())
-	}
-	return strings.Join(msgs, "\n")
-}
-
-// requiredSecretsError represents an error when secrets are required
-// but not set.
-type requiredSecretsError struct {
-	message string
-}
-
-// Error returns the message set in requiredSecretsError.
-func (e requiredSecretsError) Error() string {
-	return e.message
-}
-
-// requiredSettingsError represents an error when settings are required
-// but not set.
-type requiredSettingsError struct {
-	message string
-}
-
-// Error returns the message set in requiredSettingsError.
-func (e requiredSettingsError) Error() string {
-	return e.message
-}
-
-// requiredErrorMessage builds a message based on the provided map[string]V (HasValue)
-// and []string (required).
-func requiredErrorMessage[V hasValue](values map[string]V, required []string, t string) string {
-	if len(required) == 0 {
-		return ""
-	}
-
-	req := make([]string, 0)
-	l := 0
-	for _, r := range required {
-		if len(values[r].GetValue()) == 0 {
-			req = append(req, r)
-			l++
-		}
-	}
-
-	var message strings.Builder
-	if l == 1 {
-		message.WriteString(t + ": " + req[0] + " is required")
-		return message.String()
-	}
-	message.WriteString(t + "s: ")
-	for i, r := range req {
-		message.WriteString(r)
-		if i < l-1 && l > 2 && i != l-2 {
-			message.WriteString(", ")
-		}
-		if i == l-2 {
-			message.WriteString(" and ")
-		}
-	}
-	message.WriteString(" are required")
-	return message.String()
-}
-
-// buildErr builds the resulting error and returns it.
-func buildErr(errs ...error) error {
+// newError creates a new Error with the provided errors.
+func newError(errs ...error) *Error {
 	if len(errs) == 0 {
 		return nil
 	}
 
-	var reqErr RequiredFieldsError
-	var e Error
-	for _, err := range errs {
-		var reqSecretsErr requiredSecretsError
-		var reqSettingsErr requiredSettingsError
-		if errors.As(err, &reqSecretsErr) || errors.As(err, &reqSettingsErr) {
-			reqErr.errors = append(reqErr.errors, err)
-		} else {
-			e.errors = append(e.errors, err)
-		}
-	}
-	if len(reqErr.errors) > 0 {
-		return reqErr
-	}
+	e := &Error{}
+	e.errors = append(e.errors, errs...)
 	return e
+}
+
+// RequiredFieldsError represents an error when either secrets or settings
+// are required but not set.
+type RequiredFieldsError struct {
+	message  string
+	required []string
+	missing  []string
+}
+
+// Error returns the combined error messages from the errors
+// contained in RequiredFieldsError.
+func (e *RequiredFieldsError) Error() string {
+	return e.message
+}
+
+// Required returns the fields that are required.
+func (e *RequiredFieldsError) Required() []string {
+	return e.required
+}
+
+// Missing returns the fields that are missing the required values.
+func (e *RequiredFieldsError) Missing() []string {
+	return e.missing
+}
+
+// newRequiredFieldsError creates a new RequiredFieldsError.
+func newRequiredFieldsError(values map[string]string, requiredFields ...requiredFields) *RequiredFieldsError {
+	if len(requiredFields) == 0 {
+		return nil
+	}
+
+	var messages []string
+	var required []string
+	var missing []string
+	for _, rfs := range requiredFields {
+		if len(rfs.f) == 0 {
+			continue
+		}
+		required = append(required, rfs.f...)
+		l := 0
+		mfs := make([]string, 0)
+		for _, r := range rfs.f {
+			if len(values[r]) == 0 {
+				mfs = append(mfs, r)
+				l++
+			}
+		}
+		missing = append(missing, mfs...)
+
+		var message strings.Builder
+		if l == 1 {
+			message.WriteString(rfs.t + ": " + mfs[0] + " is required")
+		} else {
+			message.WriteString(rfs.t + "s: ")
+			for i, r := range mfs {
+				message.WriteString(r)
+				if i < l-1 && l > 2 && i != l-2 {
+					message.WriteString(", ")
+				}
+				if i == l-2 {
+					message.WriteString(" and ")
+				}
+			}
+			message.WriteString(" are required")
+		}
+		messages = append(messages, message.String())
+	}
+
+	return &RequiredFieldsError{
+		message:  strings.Join(messages, "\n"),
+		required: required,
+		missing:  missing,
+	}
 }

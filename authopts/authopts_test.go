@@ -29,7 +29,7 @@ func TestWithTokenCredential(t *testing.T) {
 			},
 		}
 
-		if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(credential{}, mockTokenCredential{}, azcfg.Entra{}), cmpopts.IgnoreFields(azcfg.Entra{}, "PrivateKey")); diff != "" {
+		if diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(credential{}, mockTokenCredential{}, azcfg.Entra{}), cmpopts.IgnoreFields(azcfg.Entra{}, "PrivateKey"), cmpopts.IgnoreFields(azcfg.Options{}, "httpClient")); diff != "" {
 			t.Errorf("WithTokenCredential() = unexpected result (-want +got)\n%s\n", diff)
 		}
 	})

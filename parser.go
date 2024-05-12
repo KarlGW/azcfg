@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -17,6 +18,11 @@ import (
 	"github.com/KarlGW/azcfg/internal/secret"
 	"github.com/KarlGW/azcfg/internal/setting"
 )
+
+// HTTPClient is an HTTP client with a Do method.
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
 
 // Secret represents a secret as returned from the Key Vault REST API.
 type Secret = secret.Secret
@@ -53,6 +59,16 @@ func NewParser(options ...Option) (*parser, error) {
 		option(&opts)
 	}
 
+	var httpClient HTTPClient
+	if opts.httpClient == nil {
+		httpClient = httpr.NewClient(
+			httpr.WithTimeout(opts.Timeout),
+			httpr.WithRetryPolicy(opts.RetryPolicy),
+		)
+	} else {
+		httpClient = opts.httpClient
+	}
+
 	var cred auth.Credential
 	if opts.Credential != nil {
 		cred = opts.Credential
@@ -76,10 +92,10 @@ func NewParser(options ...Option) (*parser, error) {
 		secretClient, err = secret.NewClient(
 			opts.KeyVault,
 			cred,
-			secret.WithTimeout(opts.Timeout),
+			secret.WithHTTPClient(httpClient),
 			secret.WithConcurrency(concurrency),
-			secret.WithRetryPolicy(opts.RetryPolicy),
 			secret.WithCloud(opts.Cloud),
+			secret.WithClientVersions(opts.SecretsVersions),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %s", ErrSecretClient, err.Error())
@@ -106,12 +122,11 @@ func NewParser(options ...Option) (*parser, error) {
 		}
 
 		options := []setting.ClientOption{
-			setting.WithTimeout(opts.Timeout),
+			setting.WithHTTPClient(httpClient),
 			setting.WithConcurrency(concurrency),
-			setting.WithRetryPolicy(opts.RetryPolicy),
 			setting.WithCloud(opts.Cloud),
-			setting.WithClientLabel(opts.Label),
-			setting.WithClientLabels(opts.Labels),
+			setting.WithClientLabel(opts.SettingsLabel),
+			setting.WithClientLabels(opts.SettingsLabels),
 		}
 
 		settingClient, err = newSettingClient(

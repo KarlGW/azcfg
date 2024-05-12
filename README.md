@@ -9,10 +9,14 @@
   * [Prerequisites](#prerequisites)
   * [Example](#example)
 * [Usage](#usage)
-  * [Options](#options)
+  * [Configuration](#configuration)
+    * [Options](#options)
+    * [Environment variables](#environment-variables)
   * [Required](#required)
   * [Parser](#parser)
   * [Pre-populated struct and default values](#pre-populated-struct-and-default-values)
+  * [Context and timeouts](#context-and-timeouts)
+  * [Key Vault secret versions](#key-vault-secret-versions)
   * [App Configuration setting labels](#app-configuration-setting-labels)
   * [Authentication](#authentication)
     * [Built-in credentials](#built-in-credentials)
@@ -73,7 +77,10 @@ go get github.com/KarlGW/azcfg
 
 ### Example
 
-Using a managed identity as credentials on an Azure service. For other authentication and credential methods see the sections [Authentication](#authentication) and [Credentials](#credentials).
+Using a system assigned managed identity as credential on an Azure service. For other authentication and credential methods see the sections [Authentication](#authentication) and [Credentials](#credentials).
+
+This scenario requires minimal configuration, as `azcfg` automatically detects if the platform is configured
+with a managed identity.
 
 ### Example with secrets (Key Vault)
 
@@ -230,8 +237,12 @@ Slices are supported if the secret/setting are comma separated values (spaces ar
 **Numbers**
 `1,2,3`
 
+### Configuration
 
-### Options
+Configuration of the parser can be done with options provided to `Parse` or to `NewParser` and environment variables.
+Options will override environment variables if provided.
+
+#### Options
 
 Options can be set on `Parse` or the parser with `NewParser`. For the available options see [Options](https://pkg.go.dev/github.com/KarlGW/azcfg#Options).
 
@@ -266,6 +277,40 @@ func main() {
 }
 ```
 
+#### Environment variables
+
+These are the environment variables that are available to use to configure parsing.
+
+#### General
+
+* `AZCFG_CLOUD` - Target Cloud (Azure Puplic, Azure Government and Azure China).
+* `AZCFG_CONCURRENCY` - Concurrency limit for secret and setting retrieval.
+* `AZCFG_TIMEOUT` - Timeout for the underlying HTTP client.
+
+#### Authentication
+
+* `AZCFG_TENANT_ID` - Tenant ID for service principal/app registration.
+* `AZCFG_CLIENT_ID` - Client/App ID for service principal/app registration or user assigned managed identity.
+* `AZCFG_CLIENT_SECRET` - Secret for service principal/app registration.
+* `AZCFG_CLIENT_CERTIFICATE` - PEM certificate encoded in Base64 for service principal/app registration.
+* `AZCFG_CLIENT_CERTIFICATE_PATH` - Path to PEM certificate for service principal/app registration.
+* `AZCFG_AZURE_CLI_CREDENTIAL` - Use Azure CLI credential.
+* `AZCFG_APPCONFIGURATION_ACCESS_KEY_ID` - Access key ID for App Configuration.
+* `AZCFG_APPCONFIGURATION_ACCESS_KEY_SECRET` - Access key secret for App Configuration.
+* `AZCFG_APPCONFIGURATION_CONNECTION_STRING` - Connection string for App Configuration.
+
+More details on how to authenticate can be found in the [Authentication](#authentication) section.
+
+#### Secrets
+
+* `AZCFG_KEYVAULT_NAME` - Name of Key Vault containing secrets.
+* `AZCFG_SECRETS_VERSIONS` - Secret names and versions when requiring specific secret versions.
+
+#### Settings
+
+* `AZCFG_APPCONFIGURATION_NAME` - Name of App Configuration containing settings.
+* `AZCFG_SETTINGS_LABEL` - Label for the intended settings.
+* `AZCFG_SETTINGS_LABELS` - Setting names and labels when requiring specific labels for specific settings.
 
 ### Required
 
@@ -366,19 +411,38 @@ func main() {
 }
 ```
 
+### Context and timeouts
+
+Every call to `Parse` or `parser.Parse` requires a `context.Context`. This is
+the main way of setting timeouts. However, the internal clients
+for fetching secrets and settings and their underlying HTTP client has
+a default timeout of 30 seconds. This can be configured with setting
+the `Timeout` field on the `Options` struct in an option function, or
+using the dedicated option function, `WithTimeout`.
+
+### Key Vault secret versions
+
+Secrets in Key Vault have versions associated with them. By default the latest version
+is retrieved.
+
+To target specific versions for specific secrets:
+
+- Set the secret names with their associated versions to the environment variable `AZCFG_SECRETS_VERSIONS` with format `secret1=version1,secret2=version2`.
+- Use the option function `WithSecretsVersions` and provide a `map[string]string` with the secret name as key and version as value.
+
 ### App Configuration setting labels
 
 Settings in App Configuration can have labels associated with them.
 
 To target a specific label for all settings:
 
-- Set the label to the environment variable `AZCFG_APPCONFIGURATION_LABEL`.
-- Use the option function `WithLabel`.
+- Set the label to the environment variable `AZCFG_SETTINGS_LABEL`.
+- Use the option function `WithSettingsLabel`.
 
 To target speciefic settings with specific labels:
 
-- Set the labels to the environment variable `AZCFG_APPCONFIGURATION_LABELS` with format: `setting1=label1,setting2=label2`.
-- Use the option function `WithLabels` and provide a `map[string]string` with the setting as key and label as value.
+- Set the setting names with their associated labels to the environment variable `AZCFG_SETTINGS_LABELS` with format: `setting1=label1,setting2=label2`.
+- Use the option function `WithSettingsLabels` and provide a `map[string]string` with the setting name as key and label as value.
 
 ### Authentication
 
@@ -404,8 +468,14 @@ In addition to this it should work on:
 - Azure Virtual Machines (since it makes use of the IMDS endpoint like Azure Container Instances)
 - Azure App Services (since it makes us of the same endpoint as Azure Functions)
 
-For more advanced scenarios like Azure Stack or Service Fabric see the section about using [`authopts`](./authopts/)
-together with [`azidentity`](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity).
+**Note**: Sometimes it can take some time for the IMDS endpoint to start up on Azure Container instances, resulting
+in authentication failures. If these issues occur, either:
+
+* Set the environment variable `AZCFG_MANAGED_IDENTITY_IMDS_DIAL_TIMEOUT` with a longer [duration string](https://pkg.go.dev/time#ParseDuration), example: `5s`.
+* Use the option `WithManagedIdentityIMDSDialTimeout` with a `time.Duration`.
+
+For more advanced scenarios for managed identities like Azure Stack or Service Fabric see the section
+about using [`authopts`](./authopts/) together with [`azidentity`](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity).
 
 ##### Authentication with environment variables
 

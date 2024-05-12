@@ -5,7 +5,15 @@ import (
 
 	"github.com/KarlGW/azcfg/azure/cloud"
 	"github.com/KarlGW/azcfg/internal/httpr"
+	"github.com/KarlGW/azcfg/internal/request"
 )
+
+// WithHTTPClient sets the HTTP client for secret retrieval.
+func WithHTTPClient(client request.Client) ClientOption {
+	return func(c *Client) {
+		c.c = client
+	}
+}
 
 // WithConcurrency sets the concurrency for secret retrieval.
 func WithConcurrency(n int) ClientOption {
@@ -14,7 +22,7 @@ func WithConcurrency(n int) ClientOption {
 	}
 }
 
-// WithTimeout sets timeout for secret retreival.
+// WithTimeout sets timeout for secret retrieval.
 func WithTimeout(d time.Duration) ClientOption {
 	return func(c *Client) {
 		c.timeout = d
@@ -36,5 +44,23 @@ func WithCloud(c cloud.Cloud) ClientOption {
 			cl = cloud.AzurePublic
 		}
 		c.cloud = cl
+	}
+}
+
+// WithClientVersions sets secret versions on the secret client based on the provided
+// map. The key of the map should be the secret name, and the value
+// should be the version.
+func WithClientVersions(versions map[string]string) ClientOption {
+	return func(c *Client) {
+		c.versions = versions
+	}
+}
+
+// WithVersions sets secret versions on the secret requests based on the provided
+// map. The key of the map should be the secret name, and the value
+// should be the version. Overrides the versions set on the client.
+func WithVersions(versions map[string]string) Option {
+	return func(o *Options) {
+		o.Versions = versions
 	}
 }

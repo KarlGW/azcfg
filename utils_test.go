@@ -47,115 +47,6 @@ func TestSplitTrim(t *testing.T) {
 	}
 }
 
-func TestCoalesceString(t *testing.T) {
-	var tests = []struct {
-		name  string
-		input struct {
-			x, y string
-		}
-		want string
-	}{
-		{
-			name: "x is not empty",
-			input: struct {
-				x, y string
-			}{
-				x: "x",
-				y: "y",
-			},
-			want: "x",
-		},
-		{
-			name: "x is empty",
-			input: struct {
-				x, y string
-			}{
-				x: "",
-				y: "y",
-			},
-			want: "y",
-		},
-		{
-			name: "x and y are empty",
-			input: struct {
-				x, y string
-			}{
-				x: "",
-				y: "",
-			},
-			want: "",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := coalesceString(test.input.x, test.input.y)
-
-			if test.want != got {
-				t.Errorf("coalesceString() = unexpected result, want: %s, got: %s\n", test.want, got)
-			}
-		})
-	}
-}
-
-func TestCoalesceMap(t *testing.T) {
-	var tests = []struct {
-		name  string
-		input struct {
-			x, y map[string]string
-		}
-		want map[string]string
-	}{
-		{
-			name: "x is not empty",
-			input: struct {
-				x, y map[string]string
-			}{
-				x: map[string]string{
-					"setting1": "prod",
-				},
-			},
-			want: map[string]string{
-				"setting1": "prod",
-			},
-		},
-		{
-			name: "x is empty",
-			input: struct {
-				x, y map[string]string
-			}{
-				x: nil,
-				y: map[string]string{
-					"setting1": "prod",
-				},
-			},
-			want: map[string]string{
-				"setting1": "prod",
-			},
-		},
-		{
-			name: "x and y are empty",
-			input: struct {
-				x, y map[string]string
-			}{
-				x: nil,
-				y: nil,
-			},
-			want: nil,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := coalesceMap(test.input.x, test.input.y)
-
-			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("coalesceMap() = unexpected result (-want +got)\n%s\n", diff)
-			}
-		})
-	}
-}
-
 func TestParseBool(t *testing.T) {
 	var tests = []struct {
 		name  string
@@ -205,7 +96,7 @@ func TestParseLabels(t *testing.T) {
 			want: nil,
 		},
 		{
-			name:  "with labels",
+			name:  "with comma-separated key-value pairs",
 			input: "setting1=prod,setting2=test",
 			want: map[string]string{
 				"setting1": "prod",
@@ -213,7 +104,7 @@ func TestParseLabels(t *testing.T) {
 			},
 		},
 		{
-			name:  "with labels (spaces in string)",
+			name:  "with comma-separated key-value pairs (spaces in string)",
 			input: "setting1 = prod, setting2 = test",
 			want: map[string]string{
 				"setting1": "prod",
@@ -226,7 +117,7 @@ func TestParseLabels(t *testing.T) {
 			want:  nil,
 		},
 		{
-			name:  "with malformed second label",
+			name:  "with malformed second key-value pair",
 			input: "setting1=prod,setting2",
 			want: map[string]string{
 				"setting1": "prod",
@@ -236,10 +127,10 @@ func TestParseLabels(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := parseLabels(test.input)
+			got := parseCSVKVP(test.input)
 
 			if diff := cmp.Diff(test.want, got); diff != "" {
-				t.Errorf("parseLabels() = unexpected result (-want +got)\n%s\n", diff)
+				t.Errorf("parseCSVKVP() = unexpected result (-want +got)\n%s\n", diff)
 			}
 		})
 	}

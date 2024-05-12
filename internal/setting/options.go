@@ -5,7 +5,15 @@ import (
 
 	"github.com/KarlGW/azcfg/azure/cloud"
 	"github.com/KarlGW/azcfg/internal/httpr"
+	"github.com/KarlGW/azcfg/internal/request"
 )
+
+// WithHTTPClient sets the HTTP client for setting retrieval.
+func WithHTTPClient(client request.Client) ClientOption {
+	return func(c *Client) {
+		c.c = client
+	}
+}
 
 // WithConcurrency sets the concurrency for setting retrieval.
 func WithConcurrency(n int) ClientOption {
@@ -14,7 +22,7 @@ func WithConcurrency(n int) ClientOption {
 	}
 }
 
-// WithTimeout sets timeout for setting retreival.
+// WithTimeout sets timeout for setting retrieval.
 func WithTimeout(d time.Duration) ClientOption {
 	return func(c *Client) {
 		c.timeout = d
@@ -55,7 +63,7 @@ func WithClientLabels(labels map[string]string) ClientOption {
 	}
 }
 
-// WithLabel sets label on the setting request. Overrides the client label.
+// WithLabel sets label on the setting request. Overrides the label set on the client.
 func WithLabel(label string) Option {
 	return func(o *Options) {
 		o.Label = label
@@ -64,7 +72,7 @@ func WithLabel(label string) Option {
 
 // WithLabels sets labels on the setting requests based on the provided
 // map. The key of the map should be the setting name, and the value
-// should be the label. Overrides the client labels.
+// should be the label. Overrides the labels set on the client.
 func WithLabels(labels map[string]string) Option {
 	return func(o *Options) {
 		o.Labels = labels

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/KarlGW/azcfg/azure/cloud"
+	"github.com/KarlGW/azcfg/internal/httpr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -180,17 +181,24 @@ func TestOptions(t *testing.T) {
 			},
 		},
 		{
-			name:  "WithLabel",
-			input: WithLabel("label"),
+			name:  "WithSecretsVersions",
+			input: WithSecretsVersions(map[string]string{"secret1": "version1"}),
 			want: Options{
-				Label: "label",
+				SecretsVersions: map[string]string{"secret1": "version1"},
 			},
 		},
 		{
-			name:  "WithLabels",
-			input: WithLabels(map[string]string{"setting1": "prod"}),
+			name:  "WithSettingsLabel",
+			input: WithSettingsLabel("label"),
 			want: Options{
-				Labels: map[string]string{"setting1": "prod"},
+				SettingsLabel: "label",
+			},
+		},
+		{
+			name:  "WithSettingsLabels",
+			input: WithSettingsLabels(map[string]string{"setting1": "prod"}),
+			want: Options{
+				SettingsLabels: map[string]string{"setting1": "prod"},
 			},
 		},
 		{
@@ -220,13 +228,20 @@ func TestOptions(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:  "WithHTTPClient",
+			input: WithHTTPClient(&httpr.Client{}),
+			want: Options{
+				httpClient: &httpr.Client{},
+			},
+		},
 	}
 
 	for _, test := range tests {
 		got := Options{}
 		test.input(&got)
 
-		if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Options{}, Entra{}, mockCredential{}, mockSecretClient{}, mockSettingClient{}), cmpopts.IgnoreFields(Entra{}, "PrivateKey"), cmp.Comparer(compareAssertionFunc)); diff != "" {
+		if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Options{}, Entra{}, httpr.Client{}, mockCredential{}, mockSecretClient{}, mockSettingClient{}), cmpopts.IgnoreFields(Entra{}, "PrivateKey"), cmp.Comparer(compareAssertionFunc)); diff != "" {
 			t.Errorf("%s() = unexpected result (-want +got)\n%s\n", test.name, diff)
 		}
 	}

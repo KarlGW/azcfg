@@ -58,7 +58,7 @@ func (c *AzureCLICredential) Token(ctx context.Context, options ...auth.TokenOpt
 	return *c.tokens[opts.Scope], nil
 }
 
-// cliToken retreives a token from the Azure CLI.
+// cliToken retrieves a token from the Azure CLI.
 var cliToken = func(scope string) (auth.Token, error) {
 	var command, flag, dir string
 	if runtime.GOOS == "windows" {

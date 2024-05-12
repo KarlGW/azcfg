@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -289,12 +290,10 @@ func TestParser_Parse(t *testing.T) {
 	var tests = []struct {
 		name  string
 		input struct {
-			s          Struct
-			options    []Option
-			secrets    map[string]Secret
-			secretErr  error
-			settings   map[string]Setting
-			settingErr error
+			s             Struct
+			options       []Option
+			secretClient  secretClient
+			settingClient settingClient
 		}
 		want    Struct
 		wantErr error
@@ -302,33 +301,45 @@ func TestParser_Parse(t *testing.T) {
 		{
 			name: "parse secrets and settings",
 			input: struct {
-				s          Struct
-				options    []Option
-				secrets    map[string]Secret
-				secretErr  error
-				settings   map[string]Setting
-				settingErr error
+				s             Struct
+				options       []Option
+				secretClient  secretClient
+				settingClient settingClient
 			}{
 				s: Struct{},
-				secrets: map[string]Secret{
+				secretClient: newMockSecretClient(map[string]Secret{
 					"string": {Value: "new string"},
-				},
-				settings: map[string]Setting{
+				}, nil),
+				settingClient: newMockSettingClient(map[string]Setting{
 					"string-setting": {Value: "new string setting"},
-				},
+				}, nil),
 			},
 			want: Struct{
 				String:        "new string",
 				StringSetting: "new string setting",
 			},
 		},
+		{
+			name: "parse error getting secrets and settings",
+			input: struct {
+				s             Struct
+				options       []Option
+				secretClient  secretClient
+				settingClient settingClient
+			}{
+				s:             Struct{},
+				secretClient:  newMockSecretClient(nil, fmt.Errorf("secret error")),
+				settingClient: newMockSettingClient(nil, fmt.Errorf("setting error")),
+			},
+			wantErr: cmpopts.AnyError,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			p := &parser{
-				secretClient:  newMockSecretClient(test.input.secrets, test.input.secretErr),
-				settingClient: newMockSettingClient(test.input.settings, test.input.settingErr),
+				secretClient:  test.input.secretClient,
+				settingClient: test.input.settingClient,
 			}
 
 			gotErr := p.Parse(context.Background(), &test.input.s)

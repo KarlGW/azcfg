@@ -31,11 +31,6 @@ type Secret struct {
 	Value string `json:"value"`
 }
 
-// GetValue returns the Value of the Secret.
-func (s Secret) GetValue() string {
-	return s.Value
-}
-
 // Client contains methods to call the Azure Key Vault REST API and
 // base settings for handling the requests.
 type Client struct {

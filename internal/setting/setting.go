@@ -40,11 +40,6 @@ type Setting struct {
 	Label       string `json:"label"`
 }
 
-// GetValue returns the Value of the Setting.
-func (s Setting) GetValue() string {
-	return s.Value
-}
-
 // AccessKey contains the id and secret for access key
 // authentication.
 type AccessKey struct {

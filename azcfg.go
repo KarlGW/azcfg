@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	secretTag   = "secret"
-	settingTag  = "setting"
-	requiredTag = "required"
+	// secretTag is the name of the tag for secrets.
+	secretTag = "secret"
+	// settingTag is the name of the tag for settings.
+	settingTag = "setting"
 )
 
 // Parse secrets from an Azure Key Vault and settings from an
@@ -27,14 +28,8 @@ func Parse(ctx context.Context, v any, options ...Option) error {
 	return parser.Parse(ctx, v)
 }
 
-// parseOptions contains options for the parser.
-type parseOptions struct {
-	secretClient  secretClient
-	settingClient settingClient
-}
-
 // Parse secrets into the configuration.
-func parse(ctx context.Context, d any, opts parseOptions) error {
+func parse(ctx context.Context, d any, secretClient secretClient, settingClient settingClient) error {
 	v := reflect.ValueOf(d)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("must provide a pointer to a struct")
@@ -44,13 +39,10 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 		return errors.New("provided value is not a struct")
 	}
 
+	values := &values{v: make(map[string]string)}
 	var wg sync.WaitGroup
-	secretsCh := make(chan map[string]Secret)
-	settingsCh := make(chan map[string]Setting)
 	errCh := make(chan error)
-	done := make(chan struct{})
 
-	secretClient := opts.secretClient
 	secretFields, requiredSecrets := getFields(v, secretTag)
 	if len(secretFields) > 0 {
 		if secretClient == nil {
@@ -66,12 +58,10 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 				errCh <- fmt.Errorf("%w: %s", ErrSecretRetrieval, err.Error())
 				return
 			}
-			secretsCh <- secrets
-			close(secretsCh)
+			values.addSecrets(secrets)
 		}()
 	}
 
-	settingClient := opts.settingClient
 	settingFields, requiredSettings := getFields(v, settingTag)
 	if len(settingFields) > 0 {
 		if settingClient == nil {
@@ -87,50 +77,30 @@ func parse(ctx context.Context, d any, opts parseOptions) error {
 				errCh <- fmt.Errorf("%w: %s", ErrSettingRetrieval, err.Error())
 				return
 			}
-			settingsCh <- settings
-			close(settingsCh)
+			values.addSettings(settings)
 		}()
 	}
 
 	go func() {
 		wg.Wait()
-		done <- struct{}{}
-		close(done)
 		close(errCh)
 	}()
 
 	var errs []error
-	for {
-		select {
-		case secrets := <-secretsCh:
-			if len(secrets) > 0 {
-				if err := setFields(v, secrets, secretTag); err != nil {
-					if errors.Is(err, errRequired) {
-						err = requiredSecretsError{message: requiredErrorMessage(secrets, requiredSecrets, "secret")}
-					}
-					errs = append(errs, err)
-				}
-			}
-		case settings := <-settingsCh:
-			if len(settings) > 0 {
-				if err := setFields(v, settings, settingTag); err != nil {
-					if errors.Is(err, errRequired) {
-						err = requiredSettingsError{message: requiredErrorMessage(settings, requiredSettings, "setting")}
-					}
-					errs = append(errs, err)
-				}
-			}
-		case err := <-errCh:
-			if err != nil {
-				errs = append(errs, err)
-			}
-		case <-done:
-			if len(errs) > 0 {
-				return buildErr(errs...)
-			}
-			return nil
-		}
+	for err := range errCh {
+		errs = append(errs, err)
 	}
+	if len(errs) > 0 {
+		return newError(errs...)
+	}
+
+	if err := setFields(v, values.v); err != nil {
+		if errors.Is(err, errRequired) {
+			return newRequiredFieldsError(values.v, requiredFields{f: requiredSecrets, t: "secret"}, requiredFields{f: requiredSettings, t: "setting"})
+		}
+		return newError(err)
+	}
+	return nil
 }
 
 // getFields gets fields with the specified tag.
@@ -160,49 +130,54 @@ func getFields(v reflect.Value, tag string) ([]string, []string) {
 	return fields, required
 }
 
-// hasValue wraps around method GetValue,
-type hasValue interface {
-	GetValue() string
+// fieldFromTag gets the field from the tag.
+func fieldFromTag(f reflect.StructField, tags ...string) (string, bool) {
+	for _, tag := range tags {
+		if v, ok := f.Tag.Lookup(tag); ok {
+			return v, true
+		}
+	}
+	return "", false
 }
 
 // setFields sets the values from the map into the struct fields.
-func setFields[V hasValue](v reflect.Value, values map[string]V, tag string) error {
+func setFields(v reflect.Value, values map[string]string) error {
 	t := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		if !v.Field(i).CanSet() {
 			continue
 		}
 		if v.Field(i).Kind() == reflect.Pointer && v.Field(i).Elem().Kind() == reflect.Struct {
-			if err := setFields(v.Field(i).Elem(), values, tag); err != nil {
+			if err := setFields(v.Field(i).Elem(), values); err != nil {
 				return err
 			}
 		} else if v.Field(i).Kind() == reflect.Struct {
-			if err := setFields(v.Field(i), values, tag); err != nil {
+			if err := setFields(v.Field(i), values); err != nil {
 				return err
 			}
 		} else {
-			value, ok := t.Field(i).Tag.Lookup(tag)
+			field, ok := fieldFromTag(t.Field(i), secretTag, settingTag)
 			if !ok {
 				continue
 			}
-			tags := strings.Split(value, ",")
-			if val, ok := values[tags[0]]; ok {
-				if len(val.GetValue()) == 0 && isRequired(tags) {
+			tags := strings.Split(field, ",")
+			if value, ok := values[tags[0]]; ok {
+				if len(value) == 0 && isRequired(tags) {
 					return errRequired
-				} else if len(val.GetValue()) == 0 {
+				} else if len(value) == 0 {
 					continue
 				}
 				if v.Field(i).Kind() == reflect.Slice {
-					vals := splitTrim(val.GetValue(), ",")
-					sl := reflect.MakeSlice(v.Field(i).Type(), len(vals), len(vals))
-					for j := 0; j < sl.Cap(); j++ {
-						if err := setValue(sl.Index(j), vals[j]); err != nil {
+					values := splitTrim(value, ",")
+					slice := reflect.MakeSlice(v.Field(i).Type(), len(values), len(values))
+					for j := 0; j < slice.Cap(); j++ {
+						if err := setValue(slice.Index(j), values[j]); err != nil {
 							return fmt.Errorf("%w: field %s: %s", ErrSetValue, t.Field(i).Name, err.Error())
 						}
 					}
-					v.Field(i).Set(sl)
+					v.Field(i).Set(slice)
 				} else {
-					if err := setValue(v.Field(i), val.GetValue()); err != nil {
+					if err := setValue(v.Field(i), value); err != nil {
 						return fmt.Errorf("%w: field %s: %s", ErrSetValue, t.Field(i).Name, err.Error())
 					}
 				}
@@ -296,10 +271,44 @@ func isRequired(values []string) bool {
 	if len(values) == 1 {
 		return false
 	}
-	return values[1] == requiredTag
+	return values[1] == "required"
 }
 
 // parseError returns a new error with the provided type.
 func parseError(typ string) error {
 	return fmt.Errorf("could not parse value into type %s", typ)
+}
+
+// values contains the values of the secrets and settings. Used to
+// create a common thread-safe map for the values to be used
+// when setting the fields.
+type values struct {
+	v  map[string]string
+	mu sync.RWMutex
+}
+
+// addSecrets adds the secrets to the values.
+func (v *values) addSecrets(secrets map[string]Secret) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
+	for k, val := range secrets {
+		v.v[k] = val.Value
+	}
+}
+
+// addSettings adds the settings to the values.
+func (v *values) addSettings(settings map[string]Setting) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
+	for k, val := range settings {
+		v.v[k] = val.Value
+	}
+}
+
+// requiredFields contains the fields and the type of the required fields.
+type requiredFields struct {
+	f []string
+	t string
 }

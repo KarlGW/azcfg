@@ -19,6 +19,11 @@ import (
 	"github.com/KarlGW/azcfg/internal/setting"
 )
 
+// Parser provides a method to parse secrets and settings into a struct.
+type Parser interface {
+	Parse(ctx context.Context, v any) error
+}
+
 // HTTPClient is an HTTP client with a Do method.
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
@@ -51,9 +56,9 @@ type parser struct {
 	timeout       time.Duration
 }
 
-// NewParser creates and returns a *Parser. This suits situations
+// NewParser creates and returns a Parser. This suits situations
 // where multiple calls to Parse are needed with the same settings.
-func NewParser(options ...Option) (*parser, error) {
+func NewParser(options ...Option) (Parser, error) {
 	opts := defaultOptions()
 	for _, option := range options {
 		option(&opts)
@@ -155,10 +160,7 @@ func NewParser(options ...Option) (*parser, error) {
 // Parse secrets from an Azure Key Vault and settings from an
 // Azure App Configuration into the provided struct.
 func (p *parser) Parse(ctx context.Context, v any) error {
-	return parse(ctx, v, parseOptions{
-		secretClient:  p.secretClient,
-		settingClient: p.settingClient,
-	})
+	return parse(ctx, v, p.secretClient, p.settingClient)
 }
 
 // setupCredential configures credential based on the provided

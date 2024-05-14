@@ -110,7 +110,7 @@ type credential struct {
 }
 
 func main() {
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
     cfg := config{}
@@ -154,7 +154,7 @@ type credential struct {
 }
 
 func main() {
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
     var cfg config
@@ -198,7 +198,7 @@ type credential struct {
 }
 
 func main() {
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
     var cfg config
@@ -261,7 +261,7 @@ import (
 )
 
 func main() {
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 ´
     var cfg config
@@ -347,7 +347,7 @@ func main() {
         // Handle error.
     }
 
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
     var cfg config
@@ -400,7 +400,7 @@ func main() {
         Password: os.Getenv("PASSWORD")
     }
 
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
     if err := azcfg.Parse(ctx, &cfg); err != nil {
@@ -648,7 +648,7 @@ func main() {
         // Handle error.
     }
 
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
     var cfg config
@@ -689,7 +689,7 @@ import (
 )
 
 func main() {
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
     var cfg Config

@@ -466,7 +466,7 @@ The built-in credential handling for managed identities have been tested on:
 
 In addition to this it should work on:
 
-- Azure App Services (since it makes use of a similar mechanism as Azure Functions for managed identities)
+- Azure App Services (since they make use of a similar mechanism for managed identities as Azure Functions)
 
 **Note**: Sometimes it can take some time for the IMDS endpoint to start up on Azure Container instances, resulting
 in authentication failures. If these issues occur, either:

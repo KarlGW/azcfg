@@ -1,6 +1,8 @@
 package azcfg
 
 import (
+	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -14,7 +16,33 @@ func TestNewError(t *testing.T) {
 		want  *Error
 	}{
 		{
-			name: "no errors",
+			name:  "no errors",
+			input: []error{},
+			want:  nil,
+		},
+		{
+			name: "1 error",
+			input: []error{
+				ErrCredential,
+			},
+			want: &Error{
+				errors: []error{
+					ErrCredential,
+				},
+			},
+		},
+		{
+			name: "2 errors",
+			input: []error{
+				ErrCredential,
+				ErrSetValue,
+			},
+			want: &Error{
+				errors: []error{
+					ErrCredential,
+					ErrSetValue,
+				},
+			},
 		},
 	}
 
@@ -22,55 +50,37 @@ func TestNewError(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := newError(test.input...)
 
-			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Error{})); diff != "" {
+			if diff := cmp.Diff(test.want, got, cmp.AllowUnexported(Error{}), ErrorTypeMatcher(test.want, got)); diff != "" {
 				t.Errorf("newError() = unexpected result (-want +got)\n%s\n", diff)
-			}
-
-			if test.want != nil {
-				if test.want.Len() != got.Len() {
-					t.Errorf("Len() = unexpected result, want: %d, got: %d\n", test.want.Len(), got.Len())
-				}
 			}
 		})
 	}
 }
 
-func TestError_Has(t *testing.T) {
-	var tests = []struct {
-		name  string
-		input error
-		want  struct {
-			err error
-			ok  bool
+func TestError_Error(t *testing.T) {
+	t.Run("Error()", func(t *testing.T) {
+		want := "set value error\ncredential error"
+		got := newError(ErrSetValue, ErrCredential).Error()
+
+		if want != got {
+			t.Errorf("Error() = unexpected result, want: %s, got: %s\n", want, got)
 		}
-	}{
-		{
-			name:  "has error",
-			input: ErrCredential,
-			want: struct {
-				err error
-				ok  bool
-			}{
-				err: ErrCredential,
-				ok:  true,
-			},
-		},
-	}
+	})
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			err := newError(test.input)
-			got, gotOk := err.Has(test.input)
+}
 
-			if diff := cmp.Diff(test.want.err, got, cmpopts.EquateErrors()); diff != "" {
-				t.Errorf("Has() = unexpected result (-want +got)\n%s\n", diff)
+func TestError_Errors(t *testing.T) {
+	t.Run("Errors()", func(t *testing.T) {
+		want := []error{ErrCredential, ErrSetValue}
+		errs := newError(ErrCredential, ErrSetValue).Errors()
+
+		for i, got := range errs {
+			if diff := cmp.Diff(want[i], got, cmpopts.EquateErrors()); diff != "" {
+				t.Errorf("Errors() = unexpected result (-want +got)\n%s\n", diff)
 			}
+		}
+	})
 
-			if test.want.ok != gotOk {
-				t.Errorf("Has() = unexpected result, want: %t, got: %t\n", test.want.ok, gotOk)
-			}
-		})
-	}
 }
 
 func TestNewRequiredFieldsError(t *testing.T) {
@@ -337,4 +347,45 @@ func TestNewRequiredFieldsError(t *testing.T) {
 			}
 		})
 	}
+}
+
+// ErrorTypeMatcher is a custom matcher for comparing two errors.
+// It handles sentinel errors and custom error types.
+func ErrorTypeMatcher(x, y error) cmp.Option {
+	return cmp.Comparer(func(x, y error) bool {
+		if x == nil || y == nil {
+			return x == y
+		}
+
+		xType := reflect.TypeOf(x)
+		yType := reflect.TypeOf(y)
+
+		if xType != yType {
+			return false
+		}
+
+		if xType.Kind() == reflect.Struct && yType.Kind() == reflect.Struct {
+			return errors.Is(x, y)
+		}
+
+		xValue := reflect.ValueOf(x)
+		yValue := reflect.ValueOf(y)
+
+		if xValue.IsZero() && yValue.IsZero() {
+			return true
+		}
+
+		xValue = xValue.Elem()
+		yValue = yValue.Elem()
+
+		for i := 0; i < xValue.NumField(); i++ {
+			if xValue.Type().Field(i).PkgPath != "" {
+				continue
+			}
+			if !cmp.Equal(xValue.Field(i).Interface(), yValue.Field(i).Interface()) {
+				return false
+			}
+		}
+		return true
+	})
 }

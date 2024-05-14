@@ -160,7 +160,10 @@ func NewParser(options ...Option) (Parser, error) {
 // Parse secrets from an Azure Key Vault and settings from an
 // Azure App Configuration into the provided struct.
 func (p *parser) Parse(ctx context.Context, v any) error {
-	return parse(ctx, v, p.secretClient, p.settingClient)
+	if err := parse(ctx, v, p.secretClient, p.settingClient); err != nil {
+		return fmt.Errorf("azcfg: %w", err)
+	}
+	return nil
 }
 
 // setupCredential configures credential based on the provided

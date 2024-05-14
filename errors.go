@@ -46,22 +46,6 @@ func (e *Error) Errors() []error {
 	return e.errors
 }
 
-// Len returns the number of errors contained in Error.
-func (e *Error) Len() int {
-	return len(e.errors)
-}
-
-// Has returns true if the provided error type is found in the errors.
-// If found, the first error of the provided type is returned.
-func (e *Error) Has(err error) (error, bool) {
-	for _, e := range e.errors {
-		if errors.Is(e, err) {
-			return e, true
-		}
-	}
-	return nil, false
-}
-
 // newError creates a new Error with the provided errors.
 func newError(errs ...error) *Error {
 	if len(errs) == 0 {

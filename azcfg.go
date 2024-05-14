@@ -23,7 +23,7 @@ const (
 func Parse(ctx context.Context, v any, options ...Option) error {
 	parser, err := NewParser(options...)
 	if err != nil {
-		return err
+		return fmt.Errorf("azcfg: %w", err)
 	}
 	return parser.Parse(ctx, v)
 }

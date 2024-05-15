@@ -25,6 +25,7 @@
       * [App Configuration with access key or connection string](#app-configuration-with-access-key-or-connection-string)
   * [Credentials](#credentials)
   * [National clouds](#national-clouds)
+  * [Error handling](#error-handling)
 
 This module is used to get secrets from an Azure Key Vault and settings from App Configuraion and set them into a struct. The idea of parsing
 configuration values into a struct was inspired by [`env`](https://github.com/caarlos0/env).
@@ -725,3 +726,53 @@ Set the environment variable `AZCFG_CLOUD`.
 - **Azure China**: `China` or `AzureChina`.
 
 **Note**: Case insensitive.
+
+## Error handling
+
+The module have error types and sentinel errors.
+
+### Types
+
+* `Error` - Generic error that can contain multiple errors (including the sentinel errors of the module).
+* `RequiredFieldsError` - Error for required fields. Contains the required and missing fields.
+
+These be handled with `errors.As`.
+
+**`Error`**
+
+```go
+// Generic azcfg error.
+var e *azcfg.Error
+if errors.As(err, &e) {
+    for _, err := range e.Errors() {
+        if errors.Is(err, azcfg.ErrSecretRetrieval) {
+            // Handle secret retrieval error.
+        }
+    }
+}
+```
+
+**`RequiredFieldsError`**
+
+```go
+var e *azcfg.RequiredFieldsError
+if errors.As(err, &e) {
+    // Range over required fields.
+    for _, required := range e.Required() {}
+    // Range over missing fields, required and not set.
+    for _, missing := range e.Missing() {}
+}
+```
+
+### Sentinel errors
+
+* `ErrSetValue`
+* `ErrCredential`
+* `ErrSecretClient`
+* `ErrSecretRetrieval`
+* `ErrSettingClient`
+* `ErrSettingRetrieval`
+* `ErrIMDSEndpointUnavailable`
+* `ErrParseConnectionString`
+
+These can be handled with `errors.Is`.

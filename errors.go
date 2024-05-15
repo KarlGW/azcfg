@@ -3,6 +3,9 @@ package azcfg
 import (
 	"errors"
 	"strings"
+
+	"github.com/KarlGW/azcfg/internal/identity"
+	"github.com/KarlGW/azcfg/internal/setting"
 )
 
 var (
@@ -23,6 +26,13 @@ var (
 	ErrSettingClient = errors.New("setting client")
 	// ErrSettingRetrieval is returned when a setting retrieval error occurs.
 	ErrSettingRetrieval = errors.New("setting retrieval")
+)
+
+var (
+	// ErrIMDSEndpointUnavailable is returned when the IMDS endpoint is unavailable.
+	ErrIMDSEndpointUnavailable = identity.ErrIMDSEndpointUnavailable
+	// ErrParseConnectionString is returned when a connection string cannot be parsed.
+	ErrParseConnectionString = setting.ErrParseConnectionString
 )
 
 // Error represents a general error type that can contain multiple errors

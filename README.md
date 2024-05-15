@@ -73,7 +73,7 @@ go get github.com/KarlGW/azcfg
 * Go 1.18
 * Azure Key Vault (if using secrets)
   * Identity with at least read access to secrets in the target Key Vault
-* Azure App Configuration (is using settings and configuration)
+* Azure App Configuration (is using settings)
   * Identity with at least read access to settings (key values) in the target App Configuration (if not using access key or connection string)
 
 

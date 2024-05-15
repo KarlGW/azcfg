@@ -136,6 +136,10 @@ func main() {
 Set the environment variable `AZCFG_APPCONFIGURATION_NAME` to the name of the target App Configuration.
 An alternative is to pass the option `WithAppConfiguration` to the call to `Parse`.
 
+If the settings have a label associated with them, set the environment variable `AZCFG_SETTINGS_LABEL`, or pass the option
+`WithSettingsLabel` to the call to `Parse`. More information on handling labels (including multiple labels)
+can be found in the section [App Configuration setting labels](#app-configuration-setting-labels).
+
 ```go
 package main
 
@@ -184,6 +188,7 @@ func main() {
 An alternative is to pass the option `WithKeyVault` to the call to `Parse`.
 * Set the environment variable `AZCFG_APPCONFIGURATION_NAME` to the name of the target App Configuration.
 An alternative is to pass the option `WithAppConfiguration` to the call to `Parse`.
+  * If applicable set `AZCFG_SETTINGS_LABEL`, or use the option `WithSettingsLabel`, to target a specific label for the settings.
 
 ```go
 package main

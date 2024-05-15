@@ -58,6 +58,7 @@ setting:"<setting-name>,required"
 The error message contains all fields that have been marked as required that didn't have a value associated with them.
 
 **Note**: Unexported fields will be ignored.
+**Note**: If no struct tags are set for either secrets or settings the call to `Parse` will be a no-op.
 
 ## Getting started
 
@@ -71,9 +72,9 @@ go get github.com/KarlGW/azcfg
 
 * Go 1.18
 * Azure Key Vault (if using secrets)
-  * Identity with access to secrets in the Key Vault
+  * Identity with at least read access to secrets in the target Key Vault
 * Azure App Configuration (is using settings and configuration)
-  * Identity with access to the App Configuration (if not using access key or connection string)
+  * Identity with at least read access to settings (key values) in the target App Configuration (if not using access key or connection string)
 
 
 ### Example
@@ -84,6 +85,9 @@ This scenario requires minimal configuration, as `azcfg` automatically detects i
 with a managed identity.
 
 ### Example with secrets (Key Vault)
+
+Set the environment variable `AZCFG_KEYVAULT_NAME` to the name of the target Key Vault.
+An alternative is to pass the option `WithKeyVault` to the call to `Parse`.
 
 ```go
 package main
@@ -129,6 +133,9 @@ func main() {
 
 ### Example with settings (App Configuration)
 
+Set the environment variable `AZCFG_APPCONFIGURATION_NAME` to the name of the target App Configuration.
+An alternative is to pass the option `WithAppConfiguration` to the call to `Parse`.
+
 ```go
 package main
 
@@ -172,6 +179,11 @@ func main() {
 ```
 
 ### Example using both secrets (Key Vault) and settings (App Configuration)
+
+* Set the environment variable `AZCFG_KEYVAULT_NAME` to the name of the target Key Vault.
+An alternative is to pass the option `WithKeyVault` to the call to `Parse`.
+* Set the environment variable `AZCFG_APPCONFIGURATION_NAME` to the name of the target App Configuration.
+An alternative is to pass the option `WithAppConfiguration` to the call to `Parse`.
 
 ```go
 package main

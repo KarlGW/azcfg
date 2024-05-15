@@ -25,6 +25,7 @@
       * [App Configuration with access key or connection string](#app-configuration-with-access-key-or-connection-string)
   * [Credentials](#credentials)
   * [National clouds](#national-clouds)
+  * [Error handling](#error-handling)
 
 This module is used to get secrets from an Azure Key Vault and settings from App Configuraion and set them into a struct. The idea of parsing
 configuration values into a struct was inspired by [`env`](https://github.com/caarlos0/env).
@@ -57,6 +58,7 @@ setting:"<setting-name>,required"
 The error message contains all fields that have been marked as required that didn't have a value associated with them.
 
 **Note**: Unexported fields will be ignored.
+**Note**: If no struct tags are set for either secrets or settings the call to `Parse` will be a no-op.
 
 ## Getting started
 
@@ -70,9 +72,9 @@ go get github.com/KarlGW/azcfg
 
 * Go 1.18
 * Azure Key Vault (if using secrets)
-  * Identity with access to secrets in the Key Vault
-* Azure App Configuration (is using settings and configuration)
-  * Identity with access to the App Configuration (if not using access key or connection string)
+  * Identity with at least read access to secrets in the target Key Vault
+* Azure App Configuration (is using settings)
+  * Identity with at least read access to settings (key values) in the target App Configuration (if not using access key or connection string)
 
 
 ### Example
@@ -83,6 +85,9 @@ This scenario requires minimal configuration, as `azcfg` automatically detects i
 with a managed identity.
 
 ### Example with secrets (Key Vault)
+
+Set the environment variable `AZCFG_KEYVAULT_NAME` to the name of the target Key Vault.
+An alternative is to pass the option `WithKeyVault` to the call to `Parse`.
 
 ```go
 package main
@@ -110,7 +115,7 @@ type credential struct {
 }
 
 func main() {
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
     cfg := config{}
@@ -127,6 +132,9 @@ func main() {
 ```
 
 ### Example with settings (App Configuration)
+
+Set the environment variable `AZCFG_APPCONFIGURATION_NAME` to the name of the target App Configuration.
+An alternative is to pass the option `WithAppConfiguration` to the call to `Parse`.
 
 ```go
 package main
@@ -154,7 +162,7 @@ type credential struct {
 }
 
 func main() {
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
     var cfg config
@@ -171,6 +179,11 @@ func main() {
 ```
 
 ### Example using both secrets (Key Vault) and settings (App Configuration)
+
+* Set the environment variable `AZCFG_KEYVAULT_NAME` to the name of the target Key Vault.
+An alternative is to pass the option `WithKeyVault` to the call to `Parse`.
+* Set the environment variable `AZCFG_APPCONFIGURATION_NAME` to the name of the target App Configuration.
+An alternative is to pass the option `WithAppConfiguration` to the call to `Parse`.
 
 ```go
 package main
@@ -198,7 +211,7 @@ type credential struct {
 }
 
 func main() {
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
     var cfg config
@@ -261,7 +274,7 @@ import (
 )
 
 func main() {
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 ´
     var cfg config
@@ -347,7 +360,7 @@ func main() {
         // Handle error.
     }
 
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
     var cfg config
@@ -400,7 +413,7 @@ func main() {
         Password: os.Getenv("PASSWORD")
     }
 
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
     if err := azcfg.Parse(ctx, &cfg); err != nil {
@@ -648,7 +661,7 @@ func main() {
         // Handle error.
     }
 
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
     var cfg config
@@ -689,7 +702,7 @@ import (
 )
 
 func main() {
-    ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
     var cfg Config
@@ -725,3 +738,53 @@ Set the environment variable `AZCFG_CLOUD`.
 - **Azure China**: `China` or `AzureChina`.
 
 **Note**: Case insensitive.
+
+## Error handling
+
+The module have error types and sentinel errors.
+
+### Types
+
+* `Error` - Generic error that can contain multiple errors (including the sentinel errors of the module).
+* `RequiredFieldsError` - Error for required fields. Contains the required and missing fields.
+
+These be handled with `errors.As`.
+
+**`Error`**
+
+```go
+// Generic azcfg error.
+var e *azcfg.Error
+if errors.As(err, &e) {
+    for _, err := range e.Errors() {
+        if errors.Is(err, azcfg.ErrSecretRetrieval) {
+            // Handle secret retrieval error.
+        }
+    }
+}
+```
+
+**`RequiredFieldsError`**
+
+```go
+var e *azcfg.RequiredFieldsError
+if errors.As(err, &e) {
+    // Range over required fields.
+    for _, required := range e.Required() {}
+    // Range over missing fields, required and not set.
+    for _, missing := range e.Missing() {}
+}
+```
+
+### Sentinel errors
+
+* `ErrSetValue`
+* `ErrCredential`
+* `ErrSecretClient`
+* `ErrSecretRetrieval`
+* `ErrSettingClient`
+* `ErrSettingRetrieval`
+* `ErrIMDSEndpointUnavailable`
+* `ErrParseConnectionString`
+
+These can be handled with `errors.Is`.

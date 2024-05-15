@@ -59,7 +59,7 @@ func TestNewError(t *testing.T) {
 
 func TestError_Error(t *testing.T) {
 	t.Run("Error()", func(t *testing.T) {
-		want := "set value error\ncredential error"
+		want := "set value; credential"
 		got := newError(ErrSetValue, ErrCredential).Error()
 
 		if want != got {
@@ -120,7 +120,7 @@ func TestNewRequiredFieldsError(t *testing.T) {
 				},
 			},
 			want: &RequiredFieldsError{
-				message:  "secret: secret1 is required",
+				message:  "required secret: secret1",
 				required: []string{"secret1"},
 				missing:  []string{"secret1"},
 			},
@@ -143,7 +143,7 @@ func TestNewRequiredFieldsError(t *testing.T) {
 				},
 			},
 			want: &RequiredFieldsError{
-				message:  "secrets: secret1 and secret2 are required",
+				message:  "required secrets: secret1 and secret2",
 				required: []string{"secret1", "secret2"},
 				missing:  []string{"secret1", "secret2"},
 			},
@@ -168,7 +168,7 @@ func TestNewRequiredFieldsError(t *testing.T) {
 				},
 			},
 			want: &RequiredFieldsError{
-				message:  "secrets: secret1, secret2, secret3 and secret4 are required",
+				message:  "required secrets: secret1, secret2, secret3 and secret4",
 				required: []string{"secret1", "secret2", "secret3", "secret4"},
 				missing:  []string{"secret1", "secret2", "secret3", "secret4"},
 			},
@@ -193,7 +193,7 @@ func TestNewRequiredFieldsError(t *testing.T) {
 				},
 			},
 			want: &RequiredFieldsError{
-				message:  "secrets: secret1 and secret4 are required",
+				message:  "required secrets: secret1 and secret4",
 				required: []string{"secret1", "secret2", "secret3", "secret4"},
 				missing:  []string{"secret1", "secret4"},
 			},
@@ -215,7 +215,7 @@ func TestNewRequiredFieldsError(t *testing.T) {
 				},
 			},
 			want: &RequiredFieldsError{
-				message:  "setting: setting1 is required",
+				message:  "required setting: setting1",
 				required: []string{"setting1"},
 				missing:  []string{"setting1"},
 			},
@@ -238,7 +238,7 @@ func TestNewRequiredFieldsError(t *testing.T) {
 				},
 			},
 			want: &RequiredFieldsError{
-				message:  "settings: setting1 and setting2 are required",
+				message:  "required settings: setting1 and setting2",
 				required: []string{"setting1", "setting2"},
 				missing:  []string{"setting1", "setting2"},
 			},
@@ -263,7 +263,7 @@ func TestNewRequiredFieldsError(t *testing.T) {
 				},
 			},
 			want: &RequiredFieldsError{
-				message:  "settings: setting1, setting2, setting3 and setting4 are required",
+				message:  "required settings: setting1, setting2, setting3 and setting4",
 				required: []string{"setting1", "setting2", "setting3", "setting4"},
 				missing:  []string{"setting1", "setting2", "setting3", "setting4"},
 			},
@@ -288,7 +288,7 @@ func TestNewRequiredFieldsError(t *testing.T) {
 				},
 			},
 			want: &RequiredFieldsError{
-				message:  "settings: setting1 and setting4 are required",
+				message:  "required settings: setting1 and setting4",
 				required: []string{"setting1", "setting2", "setting3", "setting4"},
 				missing:  []string{"setting1", "setting4"},
 			},
@@ -321,7 +321,7 @@ func TestNewRequiredFieldsError(t *testing.T) {
 				},
 			},
 			want: &RequiredFieldsError{
-				message:  "secrets: secret1, secret2, secret3 and secret4 are required\nsettings: setting1, setting2, setting3 and setting4 are required",
+				message:  "required secrets: secret1, secret2, secret3 and secret4; required settings: setting1, setting2, setting3 and setting4",
 				required: []string{"secret1", "secret2", "secret3", "secret4", "setting1", "setting2", "setting3", "setting4"},
 				missing:  []string{"secret1", "secret2", "secret3", "secret4", "setting1", "setting2", "setting3", "setting4"},
 			},

@@ -3,6 +3,9 @@ package azcfg
 import (
 	"errors"
 	"strings"
+
+	"github.com/KarlGW/azcfg/internal/identity"
+	"github.com/KarlGW/azcfg/internal/setting"
 )
 
 var (
@@ -12,17 +15,24 @@ var (
 
 var (
 	// ErrSetValue is returned when a value cannot be set.
-	ErrSetValue = errors.New("set value error")
+	ErrSetValue = errors.New("set value")
 	// ErrCredential is returned when a credential error occurs.
-	ErrCredential = errors.New("credential error")
+	ErrCredential = errors.New("credential")
 	// ErrSecretClient is returned when a secret client error occurs.
-	ErrSecretClient = errors.New("secret client error")
+	ErrSecretClient = errors.New("secret client")
 	// ErrSecretRetrieval is returned when a secret retrieval error occurs.
-	ErrSecretRetrieval = errors.New("secret retrieval error")
+	ErrSecretRetrieval = errors.New("secret retrieval")
 	// ErrSettingClient is returned when a setting client error occurs.
-	ErrSettingClient = errors.New("setting client error")
+	ErrSettingClient = errors.New("setting client")
 	// ErrSettingRetrieval is returned when a setting retrieval error occurs.
-	ErrSettingRetrieval = errors.New("setting retrieval error")
+	ErrSettingRetrieval = errors.New("setting retrieval")
+)
+
+var (
+	// ErrIMDSEndpointUnavailable is returned when the IMDS endpoint is unavailable.
+	ErrIMDSEndpointUnavailable = identity.ErrIMDSEndpointUnavailable
+	// ErrParseConnectionString is returned when a connection string cannot be parsed.
+	ErrParseConnectionString = setting.ErrParseConnectionString
 )
 
 // Error represents a general error type that can contain multiple errors
@@ -38,7 +48,7 @@ func (e *Error) Error() string {
 	for _, err := range e.errors {
 		errs = append(errs, err.Error())
 	}
-	return strings.Join(errs, "\n")
+	return strings.Join(errs, "; ")
 }
 
 // Errors returns the errors contained in Error.
@@ -106,8 +116,9 @@ func newRequiredFieldsError(values map[string]string, requiredFields ...required
 		missing = append(missing, mfs...)
 
 		var message strings.Builder
+		message.WriteString("required ")
 		if l == 1 {
-			message.WriteString(rfs.t + ": " + mfs[0] + " is required")
+			message.WriteString(rfs.t + ": " + mfs[0])
 		} else {
 			message.WriteString(rfs.t + "s: ")
 			for i, r := range mfs {
@@ -119,13 +130,12 @@ func newRequiredFieldsError(values map[string]string, requiredFields ...required
 					message.WriteString(" and ")
 				}
 			}
-			message.WriteString(" are required")
 		}
 		messages = append(messages, message.String())
 	}
 
 	return &RequiredFieldsError{
-		message:  strings.Join(messages, "\n"),
+		message:  strings.Join(messages, "; "),
 		required: required,
 		missing:  missing,
 	}

@@ -216,7 +216,7 @@ func TestParseRequired(t *testing.T) {
 			name:  "required",
 			input: StructWithRequired{},
 			wantErr: &RequiredFieldsError{
-				message:  "secrets: empty and empty-float64 are required\nsetting: empty-setting is required",
+				message:  "required secrets: empty and empty-float64; required setting: empty-setting",
 				required: []string{"empty", "empty-float64", "empty-setting"},
 				missing:  []string{"empty", "empty-float64", "empty-setting"},
 			},

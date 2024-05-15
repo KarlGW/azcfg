@@ -16,9 +16,11 @@ go get github.com/KarlGW/azcfg/authopts
 package main
 
 import (
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/KarlGW/azcfg"
-	"github.com/KarlGW/azcfg/authopts"
+    "context"
+
+    "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+    "github.com/KarlGW/azcfg"
+    "github.com/KarlGW/azcfg/authopts"
 )
 
 func main() {
@@ -29,10 +31,14 @@ func main() {
         // Handle error.
     }
 
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
+
     // When parsing.
-    if err := azcfg.Parse(&cfg, authopts.WithTokenCredential(cred)); err != nil {
+    if err := azcfg.Parse(ctx, &cfg, authopts.WithTokenCredential(cred)); err != nil {
         // Handle error.
     }
+
     // When creating a new parser.
     parser := azcfg.NewParser(authopts.WithTokenCredential(cred))
     if err := parser.Parse(&cfg); err != nil {

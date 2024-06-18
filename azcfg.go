@@ -29,7 +29,7 @@ func Parse(ctx context.Context, v any, options ...Option) error {
 }
 
 // Parse secrets into the configuration.
-func parse(ctx context.Context, d any, secretClient secretClient, settingClient settingClient) error {
+func parse(ctx context.Context, d any, secretClient SecretClient, settingClient SettingClient) error {
 	v := reflect.ValueOf(d)
 	if v.Kind() != reflect.Pointer {
 		return errors.New("must provide a pointer to a struct")

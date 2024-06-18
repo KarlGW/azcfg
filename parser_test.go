@@ -292,8 +292,8 @@ func TestParser_Parse(t *testing.T) {
 		input struct {
 			s             Struct
 			options       []Option
-			secretClient  secretClient
-			settingClient settingClient
+			secretClient  SecretClient
+			settingClient SettingClient
 		}
 		want    Struct
 		wantErr error
@@ -303,8 +303,8 @@ func TestParser_Parse(t *testing.T) {
 			input: struct {
 				s             Struct
 				options       []Option
-				secretClient  secretClient
-				settingClient settingClient
+				secretClient  SecretClient
+				settingClient SettingClient
 			}{
 				s: Struct{},
 				secretClient: newMockSecretClient(map[string]Secret{
@@ -324,8 +324,8 @@ func TestParser_Parse(t *testing.T) {
 			input: struct {
 				s             Struct
 				options       []Option
-				secretClient  secretClient
-				settingClient settingClient
+				secretClient  SecretClient
+				settingClient SettingClient
 			}{
 				s:             Struct{},
 				secretClient:  newMockSecretClient(nil, fmt.Errorf("secret error")),

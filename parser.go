@@ -46,10 +46,10 @@ type SecretClient interface {
 // Setting represents a setting as returned from the App Config REST API.
 type Setting = setting.Setting
 
-// SettingOptions contains options for SettingsClient operations.
+// SettingOptions contains options for SettingClient operations.
 type SettingOptions = setting.Options
 
-// SettingOption is a function that sets an option on a SettingsClient.
+// SettingOption is a function that sets an option on a SettingClient.
 type SettingOption = setting.Option
 
 // SettingClient is the interface that wraps around method GetSettings.

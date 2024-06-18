@@ -32,17 +32,29 @@ type HTTPClient interface {
 // Secret represents a secret as returned from the Key Vault REST API.
 type Secret = secret.Secret
 
-// secretClient is the interface that wraps around method GetSecrets.
-type secretClient interface {
-	GetSecrets(ctx context.Context, names []string, options ...secret.Option) (map[string]Secret, error)
+// SecretOptions contains options for SecretClient operations.
+type SecretOptions = secret.Options
+
+// SecretOption is a function that sets an option on a SecretClient.
+type SecretOption = secret.Option
+
+// SecretClient is the interface that wraps around method GetSecrets.
+type SecretClient interface {
+	GetSecrets(ctx context.Context, names []string, options ...SecretOption) (map[string]Secret, error)
 }
 
 // Setting represents a setting as returned from the App Config REST API.
 type Setting = setting.Setting
 
-// settingClient is the interface that wraps around method GetSettings.
-type settingClient interface {
-	GetSettings(ctx context.Context, keys []string, options ...setting.Option) (map[string]Setting, error)
+// SettingOptions contains options for SettingsClient operations.
+type SettingOptions = setting.Options
+
+// SettingOption is a function that sets an option on a SettingsClient.
+type SettingOption = setting.Option
+
+// SettingClient is the interface that wraps around method GetSettings.
+type SettingClient interface {
+	GetSettings(ctx context.Context, keys []string, options ...SettingOption) (map[string]Setting, error)
 }
 
 // RetryPolicy contains rules for retries.
@@ -51,8 +63,8 @@ type RetryPolicy = httpr.RetryPolicy
 // parser contains all the necessary values and settings for calls to
 // Parse.
 type parser struct {
-	secretClient  secretClient
-	settingClient settingClient
+	secretClient  SecretClient
+	settingClient SettingClient
 	timeout       time.Duration
 }
 
@@ -79,7 +91,7 @@ func NewParser(options ...Option) (Parser, error) {
 		cred = opts.Credential
 	}
 
-	var secretClient secretClient
+	var secretClient SecretClient
 	if opts.SecretClient == nil && len(opts.KeyVault) > 0 {
 		var err error
 		if cred == nil {
@@ -109,7 +121,7 @@ func NewParser(options ...Option) (Parser, error) {
 		secretClient = opts.SecretClient
 	}
 
-	var settingClient settingClient
+	var settingClient SettingClient
 	if opts.SettingClient == nil && len(opts.AppConfiguration) > 0 || len(opts.Authentication.AppConfigurationConnectionString) > 0 {
 		var err error
 		if opts.Authentication.AppConfigurationAccessKey == (AppConfigurationAccessKey{}) && len(opts.Authentication.AppConfigurationConnectionString) == 0 {
@@ -222,7 +234,7 @@ type settings struct {
 }
 
 // newSettingClient creates a new setting client based on the provided settings.
-func newSettingClient(settings settings, options ...setting.ClientOption) (settingClient, error) {
+func newSettingClient(settings settings, options ...setting.ClientOption) (SettingClient, error) {
 	if len(settings.appConfiguration) > 0 && settings.credential != nil {
 		return setting.NewClient(
 			settings.appConfiguration,

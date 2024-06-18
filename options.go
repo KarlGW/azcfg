@@ -78,9 +78,9 @@ type Options struct {
 	// httpClient is the HTTP client for the parser.
 	httpClient HTTPClient
 	// SecretClient is a client used to retrieve secrets.
-	SecretClient secretClient
+	SecretClient SecretClient
 	// SettingClient is a client used to retrieve settings.
-	SettingClient settingClient
+	SettingClient SettingClient
 	// Cloud is the Azure cloud to make requests to. Defaults to AzurePublic.
 	Cloud cloud.Cloud
 	// KeyVault is the name of the Key Vault containing secrets.
@@ -354,14 +354,14 @@ func WithSettingsLabels(labels map[string]string) Option {
 }
 
 // WithSecretClient sets the client for secret retrieval.
-func WithSecretClient(c secretClient) Option {
+func WithSecretClient(c SecretClient) Option {
 	return func(o *Options) {
 		o.SecretClient = c
 	}
 }
 
 // WithSettingClient sets the client for setting retrieval.
-func WithSettingClient(c settingClient) Option {
+func WithSettingClient(c SettingClient) Option {
 	return func(o *Options) {
 		o.SettingClient = c
 	}

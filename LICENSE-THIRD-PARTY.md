@@ -3,7 +3,7 @@
 ## github.com/google/go-cmp/cmp
 
 * Name: github.com/google/go-cmp/cmp
-* License: [BSD-3-Clause](https://github.com/google/go-cmp/LICENSE)
+* License: [BSD-3-Clause](https://github.com/google/go-cmp/blob/master/LICENSE)
 
 ```
 Copyright (c) 2017 The Go Authors. All rights reserved.

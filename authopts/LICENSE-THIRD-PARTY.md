@@ -3,7 +3,7 @@
 ## github.com/Azure/azure-sdk-for-go/sdk/azcore
 
 * Name: github.com/Azure/azure-sdk-for-go/sdk/azcore
-* License: [MIT](https://github.com/Azure/azure-sdk-for-go/blob/sdk/azcore/LICENSE.txt)
+* License: [MIT](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/azcore/LICENSE.txt)
 
 ```
 MIT License
@@ -33,7 +33,7 @@ SOFTWARE
 ## github.com/Azure/azure-sdk-for-go/sdk/internal
 
 * Name: github.com/Azure/azure-sdk-for-go/sdk/internal
-* License: [MIT](https://github.com/Azure/azure-sdk-for-go/blob/sdk/internal/LICENSE.txt)
+* License: [MIT](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/internal/LICENSE.txt)
 
 ```
 MIT License
@@ -63,7 +63,7 @@ SOFTWARE
 ## github.com/google/go-cmp/cmp
 
 * Name: github.com/google/go-cmp/cmp
-* License: [BSD-3-Clause](https://github.com/google/go-cmp/LICENSE)
+* License: [BSD-3-Clause](https://github.com/google/go-cmp/blob/master/LICENSE)
 
 ```
 Copyright (c) 2017 The Go Authors. All rights reserved.
